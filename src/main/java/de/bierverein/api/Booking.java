@@ -1,0 +1,13 @@
+package de.ffh_verwaltung.api;
+import jakarta.persistence.*; import java.math.BigDecimal; import java.time.Instant;
+@Entity @Table(name="bookings")
+public class Booking {
+ @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
+ @ManyToOne(optional=false) private Member member; @ManyToOne(optional=false) private Drink drink;
+ @Column(nullable=false) private int quantity; @Column(nullable=false) private BigDecimal unitPrice;
+ @Column(nullable=false) private BigDecimal total; @Column(nullable=false) private Instant createdAt=Instant.now();
+ public Booking(){} public Long getId(){return id;} public Member getMember(){return member;} public void setMember(Member v){member=v;}
+ public Drink getDrink(){return drink;} public void setDrink(Drink v){drink=v;} public int getQuantity(){return quantity;} public void setQuantity(int v){quantity=v;}
+ public BigDecimal getUnitPrice(){return unitPrice;} public void setUnitPrice(BigDecimal v){unitPrice=v;} public BigDecimal getTotal(){return total;}
+ public void setTotal(BigDecimal v){total=v;} public Instant getCreatedAt(){return createdAt;}
+}
