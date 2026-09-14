@@ -7,6 +7,17 @@ import org.springframework.security.crypto.password.PasswordEncoder; import org.
  @Transactional(readOnly=true) public MemberDtos.MemberResponse one(Long id){return dto(members.findById(id).orElseThrow());}
  @Transactional public MemberDtos.MemberResponse create(MemberDtos.MemberRequest r, Authentication auth){validate(r,null,auth); Member m=new Member(); apply(m,r); m=members.save(m); syncUser(m,r); return dto(members.save(m));}
  @Transactional public MemberDtos.MemberResponse update(Long id,MemberDtos.MemberRequest r, Authentication auth){Member m=members.findById(id).orElseThrow();validate(r,id,auth);apply(m,r);syncUser(m,r);return dto(members.save(m));}
+ @Transactional
+ public MemberDtos.MemberResponse deactivate(Long id, Authentication auth){
+  Member m=members.findById(id).orElseThrow();
+  AppUser u=m.getUser();
+  if(u!=null && auth!=null && u.getUsername().equals(auth.getName())){
+   throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Der aktuell angemeldete Benutzer kann nicht deaktiviert werden");
+  }
+  m.setActive(false);
+  if(u!=null) u.setEnabled(false);
+  return dto(members.save(m));
+ }
  @Transactional public MemberDtos.MemberResponse balance(Long id,MemberDtos.BalanceRequest r){if(r.amount()==null||r.amount().compareTo(BigDecimal.ZERO)==0)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Betrag darf nicht 0 sein");Member m=members.findById(id).orElseThrow();m.setBalance(m.getBalance().add(r.amount()));return dto(members.save(m));}
  private void apply(Member m,MemberDtos.MemberRequest r){m.setName(r.name().trim());m.setEmail(blank(r.email()));m.setPhone(blank(r.phone()));m.setAddress(blank(r.address()));m.setActive(r.active());}
  private void validate(MemberDtos.MemberRequest r,Long id, Authentication auth){if(r.name()==null||r.name().isBlank())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Name ist erforderlich");if(Boolean.TRUE.equals(r.loginEnabled())){if(r.role()==Role.ADMIN && (auth==null || !auth.getAuthorities().stream().anyMatch(a->a.getAuthority().equals("ROLE_ADMIN"))))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Nur Administratoren dürfen die Rolle ADMIN vergeben");if(r.username()==null||r.username().isBlank())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Benutzername ist erforderlich");Optional<AppUser> u=users.findByUsername(r.username().trim());if(u.isPresent()&&(id==null||u.get().getMember()==null||!Objects.equals(u.get().getMember().getId(),id)))throw new ResponseStatusException(HttpStatus.CONFLICT,"Benutzername existiert bereits");if(r.role()==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Rolle ist erforderlich");}}
