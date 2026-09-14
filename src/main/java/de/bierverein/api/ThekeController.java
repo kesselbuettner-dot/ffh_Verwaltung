@@ -4,7 +4,7 @@ import org.springframework.web.bind.annotation.*; import org.springframework.sec
  private static final ZoneId ZONE=ZoneId.of("Europe/Berlin");
  private final DrinkRepository drinks; private final MemberRepository members; private final OrderRepository orders; private final AppUserRepository users;
  public ThekeController(DrinkRepository d,MemberRepository m,OrderRepository o,AppUserRepository u){drinks=d;members=m;orders=o;users=u;}
- @GetMapping("/drinks") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public List<DrinkDto> drinks(){return drinks.findAll().stream().filter(Drink::isActive).map(d->new DrinkDto(d.getId(),d.getName(),d.getCategory(),d.getPrice())).toList();}
+ @GetMapping("/drinks") @PreAuthorize("hasAnyRole('ADMIN','THEKE','MEMBER')") public List<DrinkDto> drinks(){return drinks.findAll().stream().filter(Drink::isActive).map(d->new DrinkDto(d.getId(),d.getName(),d.getCategory(),d.getPrice())).toList();}
  @GetMapping("/members") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public List<MemberDto> memberSearch(@RequestParam(defaultValue="") String q){String x=q.toLowerCase().trim();return members.findAll().stream().filter(Member::isActive).filter(m->x.isBlank()||m.getName().toLowerCase().contains(x)||(m.getEmail()!=null&&m.getEmail().toLowerCase().contains(x))).limit(50).map(m->new MemberDto(m.getId(),m.getName(),m.getBalance())).toList();}
  @GetMapping("/orders") @Transactional(readOnly=true) @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public List<OrderDto> orders(@RequestParam(required=false) String date){
    LocalDate day=date==null||date.isBlank()?LocalDate.now(ZONE):parseDate(date); Instant from=day.atStartOfDay(ZONE).toInstant(); Instant to=day.plusDays(1).atStartOfDay(ZONE).toInstant();
