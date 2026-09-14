@@ -1,4 +1,4 @@
-package de.ffh_verwaltung.api;
+package de.bierverein.api;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
