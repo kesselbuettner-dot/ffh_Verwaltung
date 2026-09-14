@@ -24,12 +24,11 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    JwtDecoder jwtDecoder(JwtService jwt) {
-        return NimbusJwtDecoder
-                .withSecretKey(jwt.key())
-                .build();
-    }
+  @Bean JwtDecoder jwtDecoder(JwtService jwt){
+    return NimbusJwtDecoder.withSecretKey(jwt.key())
+            .macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS384)
+            .build();
+}
 
     @Bean
     SecurityFilterChain security(
