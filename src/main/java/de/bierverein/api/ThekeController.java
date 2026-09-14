@@ -6,11 +6,11 @@ import org.springframework.web.bind.annotation.*; import org.springframework.sec
  public ThekeController(DrinkRepository d,MemberRepository m,OrderRepository o,AppUserRepository u){drinks=d;members=m;orders=o;users=u;}
  @GetMapping("/drinks") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public List<DrinkDto> drinks(){return drinks.findAll().stream().filter(Drink::isActive).map(d->new DrinkDto(d.getId(),d.getName(),d.getCategory(),d.getPrice())).toList();}
  @GetMapping("/members") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public List<MemberDto> memberSearch(@RequestParam(defaultValue="") String q){String x=q.toLowerCase().trim();return members.findAll().stream().filter(Member::isActive).filter(m->x.isBlank()||m.getName().toLowerCase().contains(x)||(m.getEmail()!=null&&m.getEmail().toLowerCase().contains(x))).limit(50).map(m->new MemberDto(m.getId(),m.getName(),m.getBalance())).toList();}
- @GetMapping("/orders") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public List<OrderDto> orders(@RequestParam(required=false) String date){
+ @GetMapping("/orders") @Transactional(readOnly=true) @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public List<OrderDto> orders(@RequestParam(required=false) String date){
    LocalDate day=date==null||date.isBlank()?LocalDate.now(ZONE):parseDate(date); Instant from=day.atStartOfDay(ZONE).toInstant(); Instant to=day.plusDays(1).atStartOfDay(ZONE).toInstant();
    return orders.findByCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(from,to).stream().map(this::dto).toList();
  }
- @GetMapping("/orders/{id}") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public OrderDto order(@PathVariable Long id){return dto(orders.findById(id).orElseThrow(()->notFound("Bestellung nicht gefunden")));}
+ @GetMapping("/orders/{id}") @Transactional(readOnly=true) @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public OrderDto order(@PathVariable Long id){return dto(orders.findById(id).orElseThrow(()->notFound("Bestellung nicht gefunden")));}
  @PostMapping("/orders") @PreAuthorize("hasAnyRole('ADMIN','THEKE','MEMBER')") @Transactional public OrderDto create(@RequestBody OrderRequest req,Authentication auth){
    AppUser user=users.findByUsername(auth.getName()).orElseThrow(); Member member; boolean counter=user.getRole()==Role.ADMIN||user.getRole()==Role.THEKE;
    if(counter){if(req.memberId()==null)throw bad("Mitglied auswählen");member=members.findByIdForUpdate(req.memberId()).orElseThrow();}
