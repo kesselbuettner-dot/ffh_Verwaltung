@@ -13,6 +13,9 @@ public class Article {
     @Column(nullable = false, length = 150)
     private String name;
 
+    @Column(length = 40)
+    private String articleNumber;
+
     @Column(length = 80)
     private String shortName;
 
@@ -36,6 +39,8 @@ public class Article {
     public Long getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    public String getArticleNumber() { return articleNumber; }
+    public void setArticleNumber(String articleNumber) { this.articleNumber = articleNumber; }
     public String getShortName() { return shortName; }
     public void setShortName(String shortName) { this.shortName = shortName; }
     public String getCategory() { return category; }

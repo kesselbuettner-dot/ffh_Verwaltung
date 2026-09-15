@@ -61,6 +61,7 @@ public class ArticleController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bestand darf nicht negativ sein");
         }
         a.setName(req.name().trim());
+        a.setArticleNumber(clean(req.articleNumber()));
         a.setShortName(clean(req.shortName()));
         a.setCategory(clean(req.category()));
         a.setPrice(req.price());

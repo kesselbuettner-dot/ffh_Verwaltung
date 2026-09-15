@@ -7,6 +7,7 @@ public final class ArticleDtos {
 
     public record ArticleRequest(
             String name,
+            String articleNumber,
             String shortName,
             String category,
             BigDecimal price,
