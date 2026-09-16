@@ -148,3 +148,7 @@ Die öffentlich auffindbaren Quellen bestätigen dieses konkrete Response-Schema
 Marktguru-Angebote werden beim Preisvergleich nur berücksichtigt, wenn das im Artikel hinterlegte Gebinde exakt übereinstimmt: Gebinde-Anzahl, Inhalt pro Einheit und Einheit. Historische Einkaufspreise gehören zum jeweiligen Artikel und werden damit nur gegen dessen hinterlegte Gebindegröße verglichen. Ist keine Gebindegröße hinterlegt, erfolgt keine Preis-Hervorhebung.
 
 Die Gebindegröße wird im Artikelstamm über `packageQuantity`, `packageVolume` und `packageUnitShortName` gespeichert. `spring.jpa.hibernate.ddl-auto=update` ergänzt die Spalten beim nächsten Start automatisch.
+
+### Kasse und Gebinde (V11 korrigiert)
+
+Die Kasse verkauft ausschließlich einzelne Stücke. Die Gebindeangaben (`packageQuantity`, `packageVolume`, `packageUnitShortName`) dienen nur dem Einkauf, Wareneingang, Lager-/Bestandsaufbau und dem Marktguru-Preisvergleich. In der Kasse werden keine Gebindegrößen angezeigt oder als Verkaufseinheit verwendet. Der Bestand wird bei einem Verkauf um die tatsächlich verkaufte Stückzahl reduziert.
