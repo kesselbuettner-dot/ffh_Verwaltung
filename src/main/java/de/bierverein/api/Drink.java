@@ -15,6 +15,9 @@ public class Drink {
     @Column(nullable=false) private int stock = 0;
     @Column(nullable=false) private int warningThreshold = 0;
     private boolean active = true;
+    @Column(precision=10, scale=3) private BigDecimal packageQuantity;
+    @Column(precision=10, scale=3) private BigDecimal packageVolume;
+    @Column(length=20) private String packageUnitShortName;
 
     public Drink() {}
     public Long getId(){return id;}
@@ -32,4 +35,10 @@ public class Drink {
     public void setWarningThreshold(int v){warningThreshold=v;}
     public boolean isActive(){return active;}
     public void setActive(boolean v){active=v;}
+    public BigDecimal getPackageQuantity(){return packageQuantity;}
+    public void setPackageQuantity(BigDecimal v){packageQuantity=v;}
+    public BigDecimal getPackageVolume(){return packageVolume;}
+    public void setPackageVolume(BigDecimal v){packageVolume=v;}
+    public String getPackageUnitShortName(){return packageUnitShortName;}
+    public void setPackageUnitShortName(String v){packageUnitShortName=v;}
 }

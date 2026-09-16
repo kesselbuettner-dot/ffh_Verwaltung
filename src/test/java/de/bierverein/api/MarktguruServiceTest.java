@@ -99,6 +99,95 @@ class MarktguruServiceTest {
         assertEquals("2026-09-19T21:59:00Z", offer.validTo());
     }
 
+
+    @Test
+    void packageComparisonNormalizesMlAndLAndRounding() {
+        assertTrue(MarktguruService.samePackage(new BigDecimal("12"), new BigDecimal("330"), "ml",
+                new BigDecimal("12.000"), new BigDecimal("0.33"), "l"));
+        assertTrue(MarktguruService.samePackage(new BigDecimal("1"), new BigDecimal("33.0"), "cl",
+                new BigDecimal("1.000"), new BigDecimal("0.3300001"), "l"));
+        assertTrue(MarktguruService.samePackage(new BigDecimal("6.000"), new BigDecimal("0.3299999"), "l",
+                new BigDecimal("6"), new BigDecimal("330"), "ml"));
+    }
+
+    @Test
+    void packageComparisonNormalizesClAndDlToLiters() {
+        // 33 cl == 0.33 l
+        assertTrue(MarktguruService.samePackage(
+                new BigDecimal("1"), new BigDecimal("33"), "cl",
+                new BigDecimal("1"), new BigDecimal("0.33"), "l"));
+
+        // 3.3 dl == 0.33 l
+        assertTrue(MarktguruService.samePackage(
+                new BigDecimal("1"), new BigDecimal("3.3"), "dl",
+                new BigDecimal("1"), new BigDecimal("0.33"), "l"));
+
+        // 33 cl == 330 ml
+        assertTrue(MarktguruService.samePackage(
+                new BigDecimal("1"), new BigDecimal("33"), "cl",
+                new BigDecimal("1"), new BigDecimal("330"), "ml"));
+    }
+
+    @Test
+    void packageComparisonToleratesOnlySmallRoundingDifferences() {
+        assertTrue(MarktguruService.samePackage(
+                new BigDecimal("6"), new BigDecimal("0.330000"), "l",
+                new BigDecimal("6"), new BigDecimal("330.000001"), "ml"));
+
+        // Deliberately outside the configured volume tolerance.
+        assertFalse(MarktguruService.samePackage(
+                new BigDecimal("6"), new BigDecimal("0.330000"), "l",
+                new BigDecimal("6"), new BigDecimal("330.002"), "ml"));
+    }
+
+    @Test
+    void packageComparisonRequiresExactlyTheSamePackageQuantity() {
+        assertTrue(MarktguruService.samePackage(
+                new BigDecimal("12"), new BigDecimal("0.33"), "l",
+                new BigDecimal("12.0001"), new BigDecimal("330"), "ml"));
+
+        assertFalse(MarktguruService.samePackage(
+                new BigDecimal("12"), new BigDecimal("0.33"), "l",
+                new BigDecimal("6"), new BigDecimal("330"), "ml"));
+
+        assertFalse(MarktguruService.samePackage(
+                new BigDecimal("6"), new BigDecimal("0.33"), "l",
+                new BigDecimal("12"), new BigDecimal("0.33"), "l"));
+    }
+
+    @Test
+    void normalizeUnitRecognizesCommonMetricVariants() {
+        assertEquals("l", MarktguruService.normalizeUnit("Liter"));
+        assertEquals("l", MarktguruService.normalizeUnit("ltr."));
+        assertEquals("ml", MarktguruService.normalizeUnit("Milliliter"));
+        assertEquals("cl", MarktguruService.normalizeUnit("Centiliter"));
+        assertEquals("dl", MarktguruService.normalizeUnit("Deziliter"));
+    }
+
+    @Test
+    void normalizedVolumeConvertsAllLiquidUnitsToLiters() {
+        assertEquals(new BigDecimal("0.33"),
+                MarktguruService.normalizedVolume(new BigDecimal("330"), "ml"));
+        assertEquals(new BigDecimal("0.33"),
+                MarktguruService.normalizedVolume(new BigDecimal("33"), "cl"));
+        assertEquals(new BigDecimal("0.33"),
+                MarktguruService.normalizedVolume(new BigDecimal("3.3"), "dl"));
+        assertEquals(new BigDecimal("0.33"),
+                MarktguruService.normalizedVolume(new BigDecimal("0.33"), "l"));
+    }
+
+    @Test
+    void packageComparisonRejectsDifferentPackSizesOrUnits() {
+        assertFalse(MarktguruService.samePackage(new BigDecimal("6"), new BigDecimal("330"), "ml",
+                new BigDecimal("12"), new BigDecimal("330"), "ml"));
+        assertFalse(MarktguruService.samePackage(new BigDecimal("1"), new BigDecimal("0.50"), "l",
+                new BigDecimal("1"), new BigDecimal("0.33"), "l"));
+        assertFalse(MarktguruService.samePackage(new BigDecimal("1"), new BigDecimal("500"), "ml",
+                new BigDecimal("1"), new BigDecimal("0.5"), "kg"));
+        assertFalse(MarktguruService.samePackage(new BigDecimal("1"), new BigDecimal("0.5"), "l",
+                null, new BigDecimal("500"), "ml"));
+    }
+
     @Test
     void ignoresResultsWithoutPrice() throws Exception {
         String json = """

@@ -16,6 +16,9 @@ public class StockPurchase {
     private String supplier;
     private String note;
     private String createdBy;
+    @Column(precision=10, scale=3) private BigDecimal packageQuantity;
+    @Column(precision=10, scale=6) private BigDecimal packageVolume;
+    @Column(length=20) private String packageUnitShortName;
 
     public StockPurchase(){}
     public Long getId(){return id;}
@@ -33,4 +36,10 @@ public class StockPurchase {
     public void setNote(String v){note=v;}
     public String getCreatedBy(){return createdBy;}
     public void setCreatedBy(String v){createdBy=v;}
+    public BigDecimal getPackageQuantity(){return packageQuantity;}
+    public void setPackageQuantity(BigDecimal v){packageQuantity=v;}
+    public BigDecimal getPackageVolume(){return packageVolume;}
+    public void setPackageVolume(BigDecimal v){packageVolume=v;}
+    public String getPackageUnitShortName(){return packageUnitShortName;}
+    public void setPackageUnitShortName(String v){packageUnitShortName=v;}
 }

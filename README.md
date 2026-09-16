@@ -141,3 +141,10 @@ Die Antwort ist ein JSON-Objekt mit `results[]`. Ein Angebot enthält unter ande
 Die Integration wertet alle `results[]` aus und nimmt für die Einkaufsliste das günstigste Angebot mit einem gültigen Preis. Zusätzlich werden Händler, Produkt, Beschreibung, Aktionspreis, alter Preis, Referenzpreis, Gültigkeit und Kundenkarten-Hinweis an das Frontend übertragen.
 
 Die öffentlich auffindbaren Quellen bestätigen dieses konkrete Response-Schema; eine offizielle öffentliche Developer-Dokumentation von marktguru für diese Schnittstelle konnte nicht gefunden werden. Die verwendeten Header und der Endpoint stammen daher aus der beobachtbaren Web-API bzw. Community-Integrationen und sollten nur im Rahmen einer zulässigen Nutzung eingesetzt werden.
+
+
+## Marktguru Gebinde-Preisvergleich
+
+Marktguru-Angebote werden beim Preisvergleich nur berücksichtigt, wenn das im Artikel hinterlegte Gebinde exakt übereinstimmt: Gebinde-Anzahl, Inhalt pro Einheit und Einheit. Historische Einkaufspreise gehören zum jeweiligen Artikel und werden damit nur gegen dessen hinterlegte Gebindegröße verglichen. Ist keine Gebindegröße hinterlegt, erfolgt keine Preis-Hervorhebung.
+
+Die Gebindegröße wird im Artikelstamm über `packageQuantity`, `packageVolume` und `packageUnitShortName` gespeichert. `spring.jpa.hibernate.ddl-auto=update` ergänzt die Spalten beim nächsten Start automatisch.

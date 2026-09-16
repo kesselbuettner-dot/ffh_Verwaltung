@@ -154,6 +154,53 @@ public class MarktguruService {
         return n != null && n.has(key) && n.get(key).asBoolean(false);
     }
 
+    /** Canonicalizes units used for package comparison. */
+    static String normalizeUnit(String unit) {
+        if (unit == null) return null;
+        String u = unit.trim().toLowerCase(Locale.ROOT).replace(".", "");
+        return switch (u) {
+            case "l", "liter", "litre", "ltr" -> "l";
+            case "ml", "milliliter", "millilitre" -> "ml";
+            case "cl", "centiliter", "centilitre" -> "cl";
+            case "dl", "deciliter", "decilitre" -> "dl";
+            case "kg", "kilogram", "kilograms" -> "kg";
+            case "g", "gram", "grams" -> "g";
+            default -> u;
+        };
+    }
+
+    static BigDecimal normalizedVolume(BigDecimal value, String unit) {
+        if (value == null || unit == null) return null;
+        return switch (normalizeUnit(unit)) {
+            case "l" -> value;
+            case "ml" -> value.divide(new BigDecimal("1000"));
+            case "cl" -> value.divide(new BigDecimal("100"));
+            case "dl" -> value.divide(new BigDecimal("10"));
+            default -> null;
+        };
+    }
+
+    /**
+     * Compares package quantity and per-item volume independent of ml/l/cl/dl
+     * notation and harmless decimal rounding differences. Unknown/missing
+     * package data never counts as a match.
+     */
+    static boolean samePackage(BigDecimal q1, BigDecimal v1, String u1,
+                               BigDecimal q2, BigDecimal v2, String u2) {
+        if (q1 == null || v1 == null || u1 == null || q2 == null || v2 == null || u2 == null) return false;
+        if (!sameDecimal(q1, q2, new BigDecimal("0.001"))) return false;
+        String n1 = normalizeUnit(u1), n2 = normalizeUnit(u2);
+        BigDecimal nv1 = normalizedVolume(v1, n1), nv2 = normalizedVolume(v2, n2);
+        if (nv1 != null && nv2 != null) {
+            return sameDecimal(nv1, nv2, new BigDecimal("0.000001"));
+        }
+        return n1.equals(n2) && sameDecimal(v1, v2, new BigDecimal("0.000001"));
+    }
+
+    private static boolean sameDecimal(BigDecimal a, BigDecimal b, BigDecimal tolerance) {
+        return a.subtract(b).abs().compareTo(tolerance) <= 0;
+    }
+
     public record Retailer(String name, String uniqueName, String id) {}
 
     public record Validity(String from, String to) {}
