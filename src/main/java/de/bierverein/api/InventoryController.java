@@ -110,12 +110,12 @@ public class InventoryController {
                 d.getPackageQuantity(),d.getPackageVolume(),d.getPackageUnitShortName());
     }
     private ShoppingItemDto shopping(Drink d){
-        ArticleDto a=article(d); List<MarktguruOfferDto> offers=marktguru(d.getName());
-        List<MarktguruOfferDto> matching=offers.stream().filter(o->samePackage(d,o)).toList();
+        ArticleDto a=article(d); String marktguruQuery=buildMarktguruQuery(d);
+        List<MarktguruOfferDto> offers=marktguru(marktguruQuery);
+        List<MarktguruOfferDto> matching=offers.stream().filter(o->sameSize(d,o)).toList();
         MarktguruOfferDto best=matching.stream().filter(o->o.price()!=null).min(Comparator.comparing(MarktguruOfferDto::price)).orElse(null);
         List<StockPurchase> matchingPurchases=purchases.findByDrinkIdOrderByPurchaseDateDescIdDesc(d.getId()).stream()
-                .filter(p->MarktguruService.samePackage(d.getPackageQuantity(), d.getPackageVolume(), d.getPackageUnitShortName(),
-                        p.getPackageQuantity(), p.getPackageVolume(), p.getPackageUnitShortName()))
+                .filter(p->samePurchaseSize(d, p))
                 .toList();
         BigDecimal matchedLast=matchingPurchases.isEmpty()?null:matchingPurchases.get(0).getUnitPrice();
         BigDecimal sum=BigDecimal.ZERO; long qty=0;
@@ -129,11 +129,25 @@ public class InventoryController {
                 d.getPackageQuantity(),d.getPackageVolume(),d.getPackageUnitShortName(),comparable);
     }
 
-    private boolean samePackage(Drink d, MarktguruOfferDto o){
-        if(o==null || o.quantity()==null || o.volume()==null || o.unitShortName()==null) return false;
-        if(d.getPackageQuantity()==null || d.getPackageVolume()==null || d.getPackageUnitShortName()==null) return false;
-        return MarktguruService.samePackage(d.getPackageQuantity(), d.getPackageVolume(), d.getPackageUnitShortName(),
-                o.quantity(), o.volume(), o.unitShortName());
+    String buildMarktguruQuery(Drink d){
+        String name=d.getName()==null?"":d.getName().trim();
+        if(d.getPackageVolume()==null || d.getPackageUnitShortName()==null) return name;
+        return name + " " + d.getPackageVolume().stripTrailingZeros().toPlainString() + " "
+                + MarktguruService.normalizeUnit(d.getPackageUnitShortName());
+    }
+
+    private boolean sameSize(Drink d, MarktguruOfferDto o){
+        if(o==null || o.volume()==null || o.unitShortName()==null) return false;
+        if(d.getPackageVolume()==null || d.getPackageUnitShortName()==null) return false;
+        return MarktguruService.sameSize(d.getPackageVolume(), d.getPackageUnitShortName(),
+                o.volume(), o.unitShortName());
+    }
+
+    private boolean samePurchaseSize(Drink d, StockPurchase p){
+        if(p==null || p.getPackageVolume()==null || p.getPackageUnitShortName()==null) return false;
+        if(d.getPackageVolume()==null || d.getPackageUnitShortName()==null) return false;
+        return MarktguruService.sameSize(d.getPackageVolume(), d.getPackageUnitShortName(),
+                p.getPackageVolume(), p.getPackageUnitShortName());
     }
 
     private BigDecimal normalizePositive(BigDecimal v){

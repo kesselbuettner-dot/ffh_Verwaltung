@@ -156,6 +156,20 @@ class MarktguruServiceTest {
     }
 
     @Test
+    void sameSizeIgnoresPurchasePackageCountAndNormalizesUnits() {
+        assertTrue(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("330"), "ml"));
+        assertTrue(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("33"), "cl"));
+        assertTrue(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("3.3"), "dl"));
+    }
+
+    @Test
+    void sameSizeAcceptsRoundingButRejectsDifferentSize() {
+        assertTrue(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("330.000001"), "ml"));
+        assertFalse(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("330.01"), "ml"));
+        assertFalse(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("500"), "ml"));
+    }
+
+    @Test
     void normalizeUnitRecognizesCommonMetricVariants() {
         assertEquals("l", MarktguruService.normalizeUnit("Liter"));
         assertEquals("l", MarktguruService.normalizeUnit("ltr."));

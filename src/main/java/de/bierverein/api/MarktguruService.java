@@ -185,6 +185,21 @@ public class MarktguruService {
      * notation and harmless decimal rounding differences. Unknown/missing
      * package data never counts as a match.
      */
+    /**
+     * Compares the individual article size only. The purchasing package count
+     * is intentionally ignored because Marktguru is searched by article name
+     * plus single-unit size, not by the number of pieces in a case.
+     */
+    static boolean sameSize(BigDecimal v1, String u1, BigDecimal v2, String u2) {
+        if (v1 == null || u1 == null || v2 == null || u2 == null) return false;
+        String n1 = normalizeUnit(u1), n2 = normalizeUnit(u2);
+        BigDecimal nv1 = normalizedVolume(v1, n1), nv2 = normalizedVolume(v2, n2);
+        if (nv1 != null && nv2 != null) {
+            return sameDecimal(nv1, nv2, new BigDecimal("0.000001"));
+        }
+        return n1.equals(n2) && sameDecimal(v1, v2, new BigDecimal("0.000001"));
+    }
+
     static boolean samePackage(BigDecimal q1, BigDecimal v1, String u1,
                                BigDecimal q2, BigDecimal v2, String u2) {
         if (q1 == null || v1 == null || u1 == null || q2 == null || v2 == null || u2 == null) return false;
