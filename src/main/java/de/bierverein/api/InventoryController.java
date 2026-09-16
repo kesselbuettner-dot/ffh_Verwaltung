@@ -17,10 +17,11 @@ public class InventoryController {
     private final DrinkRepository drinks;
     private final StockPurchaseRepository purchases;
     private final MarktguruService marktguruService;
+    private final InventoryCountRepository inventoryCounts;
 
     public InventoryController(DrinkRepository drinks, StockPurchaseRepository purchases,
-                               MarktguruService marktguruService) {
-        this.drinks=drinks; this.purchases=purchases; this.marktguruService=marktguruService;
+                               MarktguruService marktguruService, InventoryCountRepository inventoryCounts) {
+        this.drinks=drinks; this.purchases=purchases; this.marktguruService=marktguruService; this.inventoryCounts=inventoryCounts;
     }
 
     @GetMapping("/articles")
@@ -69,6 +70,39 @@ public class InventoryController {
         p.setSupplier(req.supplier()); p.setNote(req.note()); p.setCreatedBy(auth.getName());
         d.setStock(d.getStock()+req.quantity()); drinks.save(d);
         return purchase(purchases.save(p));
+    }
+
+    @GetMapping("/inventory")
+    public List<InventoryItemDto> inventory() {
+        return drinks.findAll().stream()
+                .filter(Drink::isActive)
+                .map(d -> new InventoryItemDto(d.getId(), d.getName(), d.getCategory(), d.getStock(), d.getWarningThreshold(),
+                        sizeVolume(d), sizeUnit(d)))
+                .sorted(Comparator.comparing(InventoryItemDto::name, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    @PostMapping("/inventory")
+    @Transactional
+    public InventoryResultDto inventory(@RequestBody InventoryRequest req, org.springframework.security.core.Authentication auth) {
+        if (req == null || req.items() == null || req.items().isEmpty()) throw bad("Keine Inventurpositionen übergeben");
+        int changed = 0;
+        List<InventoryLineDto> lines = new ArrayList<>();
+        for (InventoryLineRequest line : req.items()) {
+            if (line == null || line.drinkId() == null || line.countedStock() < 0) throw bad("Ungültige Inventurposition");
+            Drink d = drinks.findById(line.drinkId()).orElseThrow(() -> notFound("Artikel nicht gefunden"));
+            if (!d.isActive()) continue;
+            int before = d.getStock();
+            int after = line.countedStock();
+            int diff = after - before;
+            if (diff != 0) { d.setStock(after); drinks.save(d); changed++; }
+            InventoryCount c = new InventoryCount();
+            c.setDrink(d); c.setPreviousStock(before); c.setCountedStock(after);
+            c.setDifference(diff); c.setCountedAt(Instant.now()); c.setCountedBy(auth.getName());
+            inventoryCounts.save(c);
+            lines.add(new InventoryLineDto(d.getId(), d.getName(), before, after, diff));
+        }
+        return new InventoryResultDto(changed, lines);
     }
 
     @GetMapping("/purchases")
@@ -183,6 +217,11 @@ public class InventoryController {
     private ResponseStatusException bad(String s){return new ResponseStatusException(HttpStatus.BAD_REQUEST,s);}
     private ResponseStatusException notFound(String s){return new ResponseStatusException(HttpStatus.NOT_FOUND,s);}
 
+    public record InventoryRequest(List<InventoryLineRequest> items){}
+    public record InventoryLineRequest(Long drinkId, int countedStock){}
+    public record InventoryItemDto(Long id,String name,String category,int stock,int warningThreshold,BigDecimal sizeVolume,String sizeUnitShortName){}
+    public record InventoryLineDto(Long id,String name,int previousStock,int countedStock,int difference){}
+    public record InventoryResultDto(int changed,List<InventoryLineDto> lines){}
     public record ArticleRequest(String name,String category,BigDecimal price,String ean,int warningThreshold,boolean active,
                                   BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName){}
     public record ArticleDto(Long id,String name,String category,BigDecimal price,String ean,int stock,int warningThreshold,boolean active,
