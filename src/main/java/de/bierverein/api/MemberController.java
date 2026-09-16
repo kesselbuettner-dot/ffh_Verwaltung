@@ -6,6 +6,5 @@ import org.springframework.web.bind.annotation.*; import org.springframework.sec
  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','VORSTAND','KASSENWART','THEKE')") public MemberDtos.MemberResponse one(@PathVariable Long id){return service.one(id);}
  @PostMapping @PreAuthorize("hasAnyRole('ADMIN','VORSTAND')") public MemberDtos.MemberResponse create(@RequestBody MemberDtos.MemberRequest r, Authentication a){return service.create(r,a);}
  @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','VORSTAND')") public MemberDtos.MemberResponse update(@PathVariable Long id,@RequestBody MemberDtos.MemberRequest r, Authentication a){return service.update(id,r,a);}
- @PatchMapping("/{id}/deactivate") @PreAuthorize("hasAnyRole('ADMIN','VORSTAND')") public MemberDtos.MemberResponse deactivate(@PathVariable Long id, Authentication a){return service.deactivate(id,a);}
  @PatchMapping("/{id}/balance") @PreAuthorize("hasAnyRole('ADMIN','VORSTAND','KASSENWART')") public MemberDtos.MemberResponse balance(@PathVariable Long id,@RequestBody MemberDtos.BalanceRequest r){return service.balance(id,r);}
 }
