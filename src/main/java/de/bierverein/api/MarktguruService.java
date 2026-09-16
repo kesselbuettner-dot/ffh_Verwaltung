@@ -71,7 +71,8 @@ public class MarktguruService {
      * the live response: advertisers[], product{}, unit{}, price,
      * oldPrice, referencePrice, volume, quantity and validityDates[].
      */
-    private List<Offer> parse(String body) throws Exception {
+    // Package-private for deterministic unit tests using captured Marktguru responses.
+    List<Offer> parse(String body) throws Exception {
         JsonNode root = mapper.readTree(body);
         JsonNode results = root.path("results");
         if (!results.isArray()) return List.of();

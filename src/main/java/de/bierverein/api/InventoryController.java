@@ -103,7 +103,7 @@ public class InventoryController {
         return new ArticleDto(d.getId(),d.getName(),d.getCategory(),d.getPrice(),d.getEan(),d.getStock(),d.getWarningThreshold(),d.isActive(),last,avg);
     }
     private ShoppingItemDto shopping(Drink d){
-        ArticleDto a=article(d); List<MarktguruOfferDto> offers=marktguru(d.getEan()!=null?d.getEan():d.getName());
+        ArticleDto a=article(d); List<MarktguruOfferDto> offers=marktguru(d.getName());
         MarktguruOfferDto best=offers.stream().filter(o->o.price()!=null).min(Comparator.comparing(MarktguruOfferDto::price)).orElse(null);
         boolean belowLast=best!=null && a.lastPurchasePrice()!=null && best.price().compareTo(a.lastPurchasePrice())<0;
         boolean belowAverage=best!=null && a.averagePurchasePrice()!=null && best.price().compareTo(a.averagePurchasePrice())<0;

@@ -113,7 +113,7 @@ Die Anfrage verwendet die Header:
 - `x-clientkey: <MARKTGURU_CLIENT_KEY>`
 - `x-apikey: <MARKTGURU_API_KEY>`
 
-Die Anwendung fragt bevorzugt die EAN/GTIN des Artikels ab. Falls keine EAN hinterlegt ist, wird der Artikelname verwendet. Die PLZ kommt aus `MARKTGURU_ZIP`.
+Die Einkaufsliste fragt Marktguru über den **Artikeltext/Namen** (`Drink.name`) ab. Die EAN wird dabei nicht mehr als Marktguru-Suchanfrage verwendet. Die PLZ kommt aus `MARKTGURU_ZIP`.
 
 ### Relevantes Antwortformat
 
