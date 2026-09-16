@@ -7,7 +7,9 @@ public class AppUser {
  @Enumerated(EnumType.STRING) @Column(nullable=false) private Role role=Role.MEMBER;
  @OneToOne(fetch=FetchType.LAZY) @JoinColumn(name="member_id", unique=true) private Member member;
  private boolean enabled=true;
+ @Column(name="registration_approved") private Boolean registrationApproved=true;
  public AppUser(){} public Long getId(){return id;} public String getUsername(){return username;} public void setUsername(String v){username=v;}
  public String getPasswordHash(){return passwordHash;} public void setPasswordHash(String v){passwordHash=v;} public Role getRole(){return role;} public void setRole(Role v){role=v;}
  public Member getMember(){return member;} public void setMember(Member v){member=v;} public boolean isEnabled(){return enabled;} public void setEnabled(boolean v){enabled=v;}
+ public boolean isRegistrationApproved(){return registrationApproved==null || registrationApproved;} public void setRegistrationApproved(Boolean v){registrationApproved=v;}
 }
