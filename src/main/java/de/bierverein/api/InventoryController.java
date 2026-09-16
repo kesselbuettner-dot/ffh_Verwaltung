@@ -81,9 +81,10 @@ public class InventoryController {
     }
 
     private MarktguruOfferDto marktguruOffer(MarktguruService.Offer o) {
-        return new MarktguruOfferDto(o.offerId(), o.retailer(), o.retailerKey(), o.price(), o.oldPrice(),
-                o.referencePrice(), o.productName(), o.description(), o.unitName(), o.unitShortName(),
-                o.validFrom(), o.validTo(), o.loyaltyRequired(), o.externalUrl(), o.leafletFlightId(), null);
+        return new MarktguruOfferDto(o.offerId(), o.retailer(), o.retailerKey(), o.retailers(), o.price(), o.oldPrice(),
+                o.referencePrice(), o.volume(), o.quantity(), o.multiProduct(), o.productName(), o.description(),
+                o.unitName(), o.unitShortName(), o.validityDates(), o.validFrom(), o.validTo(),
+                o.loyaltyRequired(), o.externalUrl(), o.leafletFlightId(), null);
     }
 
     private void apply(Drink d,ArticleRequest r){
@@ -117,6 +118,11 @@ public class InventoryController {
     public record ArticleDto(Long id,String name,String category,BigDecimal price,String ean,int stock,int warningThreshold,boolean active,BigDecimal lastPurchasePrice,BigDecimal averagePurchasePrice){}
     public record PurchaseRequest(Long drinkId,int quantity,BigDecimal unitPrice,LocalDate purchaseDate,String supplier,String note){}
     public record PurchaseDto(Long id,Long drinkId,String drinkName,int quantity,BigDecimal unitPrice,LocalDate purchaseDate,String supplier,String note,String createdBy){}
-    public record MarktguruOfferDto(String offerId,String retailer,String retailerKey,BigDecimal price,BigDecimal oldPrice,BigDecimal referencePrice,String productName,String description,String unitName,String unitShortName,String validFrom,String validTo,boolean loyaltyRequired,String externalUrl,String leafletFlightId,String error){}
+    public record MarktguruOfferDto(String offerId,String retailer,String retailerKey,List<MarktguruService.Retailer> retailers,
+                                     BigDecimal price,BigDecimal oldPrice,BigDecimal referencePrice,BigDecimal volume,
+                                     BigDecimal quantity,boolean multiProduct,String productName,String description,
+                                     String unitName,String unitShortName,List<MarktguruService.Validity> validityDates,
+                                     String validFrom,String validTo,boolean loyaltyRequired,String externalUrl,
+                                     String leafletFlightId,String error){}
     public record ShoppingItemDto(Long id,String name,String ean,int stock,int warningThreshold,int suggestedQuantity,BigDecimal lastPurchasePrice,BigDecimal averagePurchasePrice,MarktguruOfferDto marktguruOffer,boolean offerBelowLastPurchase,boolean offerBelowAveragePurchase){}
 }

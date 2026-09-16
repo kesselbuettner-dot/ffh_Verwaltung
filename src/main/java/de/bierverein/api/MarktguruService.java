@@ -65,6 +65,12 @@ public class MarktguruService {
         }
     }
 
+    /**
+     * Parses the live Marktguru /api/v1/offers/search response.
+     * The relevant offer fields are directly under results[] as observed in
+     * the live response: advertisers[], product{}, unit{}, price,
+     * oldPrice, referencePrice, volume, quantity and validityDates[].
+     */
     private List<Offer> parse(String body) throws Exception {
         JsonNode root = mapper.readTree(body);
         JsonNode results = root.path("results");
@@ -75,32 +81,61 @@ public class MarktguruService {
             BigDecimal price = decimal(n, "price");
             if (price == null) continue;
 
-            JsonNode advertiser = n.path("advertisers").isArray() && n.path("advertisers").size() > 0
-                    ? n.path("advertisers").get(0) : null;
+            List<Retailer> retailers = parseRetailers(n.path("advertisers"));
+            Retailer primaryRetailer = retailers.isEmpty() ? null : retailers.get(0);
+
             JsonNode product = n.path("product");
             JsonNode unit = n.path("unit");
-            JsonNode validity = n.path("validityDates").isArray() && n.path("validityDates").size() > 0
-                    ? n.path("validityDates").get(0) : null;
+            List<Validity> validityDates = parseValidityDates(n.path("validityDates"));
+            Validity primaryValidity = validityDates.isEmpty() ? new Validity(null, null) : validityDates.get(0);
 
             offers.add(new Offer(
                     text(n, "id"),
-                    text(advertiser, "name"),
-                    text(advertiser, "uniqueName"),
+                    primaryRetailer == null ? null : primaryRetailer.name(),
+                    primaryRetailer == null ? null : primaryRetailer.uniqueName(),
+                    retailers,
                     text(product, "name"),
                     text(n, "description"),
                     price,
                     decimal(n, "oldPrice"),
                     decimal(n, "referencePrice"),
+                    decimal(n, "volume"),
+                    decimal(n, "quantity"),
+                    bool(n, "isMultiProduct"),
                     text(unit, "name"),
                     text(unit, "shortName"),
-                    text(validity, "from"),
-                    text(validity, "to"),
+                    validityDates,
+                    primaryValidity.from(),
+                    primaryValidity.to(),
                     bool(n, "requiresLoyalityMembership"),
                     text(n, "externalUrl"),
                     text(n, "leafletFlightId")
             ));
         }
         return offers;
+    }
+
+    private static List<Retailer> parseRetailers(JsonNode node) {
+        if (!node.isArray()) return List.of();
+        List<Retailer> result = new ArrayList<>();
+        for (JsonNode r : node) {
+            String name = text(r, "name");
+            if (name != null && !name.isBlank()) {
+                result.add(new Retailer(name, text(r, "uniqueName"), text(r, "id")));
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<Validity> parseValidityDates(JsonNode node) {
+        if (!node.isArray()) return List.of();
+        List<Validity> result = new ArrayList<>();
+        for (JsonNode v : node) {
+            String from = text(v, "from");
+            String to = text(v, "to");
+            if (from != null || to != null) result.add(new Validity(from, to));
+        }
+        return List.copyOf(result);
     }
 
     private static String text(JsonNode n, String key) {
@@ -118,9 +153,29 @@ public class MarktguruService {
         return n != null && n.has(key) && n.get(key).asBoolean(false);
     }
 
-    public record Offer(String offerId, String retailer, String retailerKey, String productName,
-                        String description, BigDecimal price, BigDecimal oldPrice,
-                        BigDecimal referencePrice, String unitName, String unitShortName,
-                        String validFrom, String validTo, boolean loyaltyRequired,
-                        String externalUrl, String leafletFlightId) {}
+    public record Retailer(String name, String uniqueName, String id) {}
+
+    public record Validity(String from, String to) {}
+
+    public record Offer(
+            String offerId,
+            String retailer,
+            String retailerKey,
+            List<Retailer> retailers,
+            String productName,
+            String description,
+            BigDecimal price,
+            BigDecimal oldPrice,
+            BigDecimal referencePrice,
+            BigDecimal volume,
+            BigDecimal quantity,
+            boolean multiProduct,
+            String unitName,
+            String unitShortName,
+            List<Validity> validityDates,
+            String validFrom,
+            String validTo,
+            boolean loyaltyRequired,
+            String externalUrl,
+            String leafletFlightId) {}
 }
