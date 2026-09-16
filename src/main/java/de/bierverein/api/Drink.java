@@ -18,6 +18,8 @@ public class Drink {
     @Column(precision=10, scale=3) private BigDecimal packageQuantity;
     @Column(precision=10, scale=3) private BigDecimal packageVolume;
     @Column(length=20) private String packageUnitShortName;
+    @Column(precision=10, scale=6) private BigDecimal sizeVolume;
+    @Column(length=20) private String sizeUnitShortName;
 
     public Drink() {}
     public Long getId(){return id;}
@@ -41,4 +43,8 @@ public class Drink {
     public void setPackageVolume(BigDecimal v){packageVolume=v;}
     public String getPackageUnitShortName(){return packageUnitShortName;}
     public void setPackageUnitShortName(String v){packageUnitShortName=v;}
+    public BigDecimal getSizeVolume(){return sizeVolume;}
+    public void setSizeVolume(BigDecimal v){sizeVolume=v;}
+    public String getSizeUnitShortName(){return sizeUnitShortName;}
+    public void setSizeUnitShortName(String v){sizeUnitShortName=v;}
 }

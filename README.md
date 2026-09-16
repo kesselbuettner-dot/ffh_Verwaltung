@@ -145,10 +145,12 @@ Die öffentlich auffindbaren Quellen bestätigen dieses konkrete Response-Schema
 
 ## Marktguru Gebinde-Preisvergleich
 
-Marktguru-Angebote werden beim Preisvergleich nur berücksichtigt, wenn das im Artikel hinterlegte Gebinde exakt übereinstimmt: Gebinde-Anzahl, Inhalt pro Einheit und Einheit. Historische Einkaufspreise gehören zum jeweiligen Artikel und werden damit nur gegen dessen hinterlegte Gebindegröße verglichen. Ist keine Gebindegröße hinterlegt, erfolgt keine Preis-Hervorhebung.
+Marktguru-Angebote werden beim Preisvergleich ausschließlich anhand der **Einzelgröße** des Artikels abgeglichen. Die Anzahl des Marktguru-Einkaufsgebindes wird bewusst ignoriert. Historische Einkaufspreise werden ebenfalls nur gegen Einkäufe derselben Einzelgröße verglichen. Marktguru-Suchen verwenden `Artikelname + Einzelgröße`, niemals die Gebindeanzahl.
 
-Die Gebindegröße wird im Artikelstamm über `packageQuantity`, `packageVolume` und `packageUnitShortName` gespeichert. `spring.jpa.hibernate.ddl-auto=update` ergänzt die Spalten beim nächsten Start automatisch.
+Im Artikelstamm sind Einzelgröße (`sizeVolume`, `sizeUnitShortName`) und Einkaufsgebinde (`packageQuantity`, `packageVolume`, `packageUnitShortName`) getrennt. Für ältere Artikel dient `packageVolume/packageUnitShortName` als Rückfallwert für die Einzelgröße.
 
-### Kasse und Gebinde (V11 korrigiert)
+Marktguru-Angebotspreise werden für den Vergleich auf **Preis pro Stück** normalisiert (`price / quantity`), weil historische Einkaufspreise als Stückpreise geführt werden. Die Gebindegröße des Marktguru-Angebots bleibt nur als Anzeigeinformation erhalten. `spring.jpa.hibernate.ddl-auto=update` ergänzt die Spalten beim nächsten Start automatisch.
 
-Die Kasse verkauft ausschließlich einzelne Stücke. Die Gebindeangaben (`packageQuantity`, `packageVolume`, `packageUnitShortName`) dienen nur dem Einkauf, Wareneingang, Lager-/Bestandsaufbau und dem Marktguru-Preisvergleich. In der Kasse werden keine Gebindegrößen angezeigt oder als Verkaufseinheit verwendet. Der Bestand wird bei einem Verkauf um die tatsächlich verkaufte Stückzahl reduziert.
+### Kasse, Einzelgröße und Einkaufsgebinde
+
+Die Kasse verkauft ausschließlich einzelne Stücke. In `Kasse / Theke` wird die **Einzelgröße** (`sizeVolume + sizeUnitShortName`) angezeigt, aber niemals das Einkaufsgebinde. Der Bestand wird bei einem Verkauf um die tatsächlich verkaufte Stückzahl reduziert. Einkaufsgebinde bleiben auf Einkauf/Wareneingang und Marktguru beschränkt.

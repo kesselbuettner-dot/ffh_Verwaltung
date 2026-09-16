@@ -63,8 +63,8 @@ public class InventoryController {
         Drink d=drinks.findById(req.drinkId()).orElseThrow(()->notFound("Artikel nicht gefunden"));
         StockPurchase p=new StockPurchase(); p.setDrink(d); p.setQuantity(req.quantity());
         p.setPackageQuantity(d.getPackageQuantity());
-        p.setPackageVolume(d.getPackageVolume());
-        p.setPackageUnitShortName(MarktguruService.normalizeUnit(d.getPackageUnitShortName()));
+        p.setPackageVolume(sizeVolume(d));
+        p.setPackageUnitShortName(sizeUnit(d));
         p.setUnitPrice(req.unitPrice()); p.setPurchaseDate(req.purchaseDate()==null?LocalDate.now():req.purchaseDate());
         p.setSupplier(req.supplier()); p.setNote(req.note()); p.setCreatedBy(auth.getName());
         d.setStock(d.getStock()+req.quantity()); drinks.save(d);
@@ -84,8 +84,12 @@ public class InventoryController {
     }
 
     private MarktguruOfferDto marktguruOffer(MarktguruService.Offer o) {
-        return new MarktguruOfferDto(o.offerId(), o.retailer(), o.retailerKey(), o.retailers(), o.price(), o.oldPrice(),
-                o.referencePrice(), o.volume(), o.quantity(), o.multiProduct(), o.productName(), o.description(),
+        BigDecimal perPiece = o.price();
+        if (perPiece != null && o.quantity() != null && o.quantity().signum() > 0) {
+            perPiece = perPiece.divide(o.quantity(), 4, java.math.RoundingMode.HALF_UP);
+        }
+        return new MarktguruOfferDto(o.offerId(), o.retailer(), o.retailerKey(), o.retailers(), o.price(), perPiece,
+                o.oldPrice(), o.referencePrice(), o.volume(), o.quantity(), o.multiProduct(), o.productName(), o.description(),
                 o.unitName(), o.unitShortName(), o.validityDates(), o.validFrom(), o.validTo(),
                 o.loyaltyRequired(), o.externalUrl(), o.leafletFlightId(), null);
     }
@@ -97,7 +101,12 @@ public class InventoryController {
         d.setWarningThreshold(Math.max(0,r.warningThreshold())); d.setActive(r.active());
         d.setPackageQuantity(normalizePositive(r.packageQuantity()));
         d.setPackageVolume(normalizePositive(r.packageVolume()));
-        d.setPackageUnitShortName(r.packageUnitShortName()==null||r.packageUnitShortName().isBlank()?null:r.packageUnitShortName().trim().toLowerCase(Locale.ROOT));
+        d.setPackageUnitShortName(r.packageUnitShortName()==null||r.packageUnitShortName().isBlank()?null:MarktguruService.normalizeUnit(r.packageUnitShortName()));
+        d.setSizeVolume(normalizePositive(r.sizeVolume()));
+        d.setSizeUnitShortName(r.sizeUnitShortName()==null||r.sizeUnitShortName().isBlank()?null:MarktguruService.normalizeUnit(r.sizeUnitShortName()));
+        // Backward compatibility: older articles stored the individual size in packageVolume/packageUnit.
+        if(d.getSizeVolume()==null && d.getPackageVolume()!=null) d.setSizeVolume(d.getPackageVolume());
+        if(d.getSizeUnitShortName()==null && d.getPackageUnitShortName()!=null) d.setSizeUnitShortName(MarktguruService.normalizeUnit(d.getPackageUnitShortName()));
         if(d.getStock()<0)d.setStock(0);
     }
     private ArticleDto article(Drink d){
@@ -107,13 +116,13 @@ public class InventoryController {
         for(StockPurchase p:ps){sum=sum.add(p.getUnitPrice().multiply(BigDecimal.valueOf(p.getQuantity())));qty+=p.getQuantity();}
         BigDecimal avg=qty==0?null:sum.divide(BigDecimal.valueOf(qty),2,java.math.RoundingMode.HALF_UP);
         return new ArticleDto(d.getId(),d.getName(),d.getCategory(),d.getPrice(),d.getEan(),d.getStock(),d.getWarningThreshold(),d.isActive(),last,avg,
-                d.getPackageQuantity(),d.getPackageVolume(),d.getPackageUnitShortName());
+                d.getPackageQuantity(),d.getPackageVolume(),d.getPackageUnitShortName(),sizeVolume(d),sizeUnit(d));
     }
     private ShoppingItemDto shopping(Drink d){
         ArticleDto a=article(d); String marktguruQuery=buildMarktguruQuery(d);
         List<MarktguruOfferDto> offers=marktguru(marktguruQuery);
         List<MarktguruOfferDto> matching=offers.stream().filter(o->sameSize(d,o)).toList();
-        MarktguruOfferDto best=matching.stream().filter(o->o.price()!=null).min(Comparator.comparing(MarktguruOfferDto::price)).orElse(null);
+        MarktguruOfferDto best=matching.stream().filter(o->o.price()!=null).min(Comparator.comparing(this::pricePerPiece)).orElse(null);
         List<StockPurchase> matchingPurchases=purchases.findByDrinkIdOrderByPurchaseDateDescIdDesc(d.getId()).stream()
                 .filter(p->samePurchaseSize(d, p))
                 .toList();
@@ -122,8 +131,8 @@ public class InventoryController {
         for(StockPurchase p:matchingPurchases){sum=sum.add(p.getUnitPrice().multiply(BigDecimal.valueOf(p.getQuantity())));qty+=p.getQuantity();}
         BigDecimal matchedAverage=qty==0?null:sum.divide(BigDecimal.valueOf(qty),2,java.math.RoundingMode.HALF_UP);
         boolean comparable=best!=null && !matchingPurchases.isEmpty();
-        boolean belowLast=comparable && matchedLast!=null && best.price().compareTo(matchedLast)<0;
-        boolean belowAverage=comparable && matchedAverage!=null && best.price().compareTo(matchedAverage)<0;
+        boolean belowLast=comparable && matchedLast!=null && pricePerPiece(best).compareTo(matchedLast)<0;
+        boolean belowAverage=comparable && matchedAverage!=null && pricePerPiece(best).compareTo(matchedAverage)<0;
         return new ShoppingItemDto(a.id(),a.name(),a.ean(),a.stock(),a.warningThreshold(),
                 Math.max(0,a.warningThreshold()-a.stock()),matchedLast,matchedAverage,best,belowLast,belowAverage,
                 d.getPackageQuantity(),d.getPackageVolume(),d.getPackageUnitShortName(),comparable);
@@ -131,23 +140,39 @@ public class InventoryController {
 
     String buildMarktguruQuery(Drink d){
         String name=d.getName()==null?"":d.getName().trim();
-        if(d.getPackageVolume()==null || d.getPackageUnitShortName()==null) return name;
-        return name + " " + d.getPackageVolume().stripTrailingZeros().toPlainString() + " "
-                + MarktguruService.normalizeUnit(d.getPackageUnitShortName());
+        BigDecimal size=sizeVolume(d);
+        String unit=sizeUnit(d);
+        if(size==null || unit==null) return name;
+        return name + " " + size.stripTrailingZeros().toPlainString() + " " + unit;
     }
 
     private boolean sameSize(Drink d, MarktguruOfferDto o){
         if(o==null || o.volume()==null || o.unitShortName()==null) return false;
-        if(d.getPackageVolume()==null || d.getPackageUnitShortName()==null) return false;
-        return MarktguruService.sameSize(d.getPackageVolume(), d.getPackageUnitShortName(),
-                o.volume(), o.unitShortName());
+        BigDecimal size=sizeVolume(d); String unit=sizeUnit(d);
+        if(size==null || unit==null) return false;
+        return MarktguruService.sameSize(size, unit, o.volume(), o.unitShortName());
     }
 
     private boolean samePurchaseSize(Drink d, StockPurchase p){
         if(p==null || p.getPackageVolume()==null || p.getPackageUnitShortName()==null) return false;
-        if(d.getPackageVolume()==null || d.getPackageUnitShortName()==null) return false;
-        return MarktguruService.sameSize(d.getPackageVolume(), d.getPackageUnitShortName(),
-                p.getPackageVolume(), p.getPackageUnitShortName());
+        BigDecimal size=sizeVolume(d); String unit=sizeUnit(d);
+        if(size==null || unit==null) return false;
+        return MarktguruService.sameSize(size, unit, p.getPackageVolume(), p.getPackageUnitShortName());
+    }
+
+    private BigDecimal sizeVolume(Drink d){
+        if(d.getSizeVolume()!=null) return d.getSizeVolume();
+        return d.getPackageVolume();
+    }
+    private String sizeUnit(Drink d){
+        if(d.getSizeUnitShortName()!=null && !d.getSizeUnitShortName().isBlank()) return MarktguruService.normalizeUnit(d.getSizeUnitShortName());
+        return d.getPackageUnitShortName()==null?null:MarktguruService.normalizeUnit(d.getPackageUnitShortName());
+    }
+    private BigDecimal pricePerPiece(MarktguruOfferDto o){
+        if(o==null || o.price()==null) return null;
+        BigDecimal q=o.quantity();
+        if(q==null || q.signum()<=0) q=BigDecimal.ONE;
+        return o.price().divide(q,4,java.math.RoundingMode.HALF_UP);
     }
 
     private BigDecimal normalizePositive(BigDecimal v){
@@ -158,13 +183,13 @@ public class InventoryController {
     private ResponseStatusException notFound(String s){return new ResponseStatusException(HttpStatus.NOT_FOUND,s);}
 
     public record ArticleRequest(String name,String category,BigDecimal price,String ean,int warningThreshold,boolean active,
-                                  BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName){}
+                                  BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName){}
     public record ArticleDto(Long id,String name,String category,BigDecimal price,String ean,int stock,int warningThreshold,boolean active,
-                              BigDecimal lastPurchasePrice,BigDecimal averagePurchasePrice,BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName){}
+                              BigDecimal lastPurchasePrice,BigDecimal averagePurchasePrice,BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName){}
     public record PurchaseRequest(Long drinkId,int quantity,BigDecimal unitPrice,LocalDate purchaseDate,String supplier,String note){}
     public record PurchaseDto(Long id,Long drinkId,String drinkName,int quantity,BigDecimal unitPrice,LocalDate purchaseDate,String supplier,String note,String createdBy){}
     public record MarktguruOfferDto(String offerId,String retailer,String retailerKey,List<MarktguruService.Retailer> retailers,
-                                     BigDecimal price,BigDecimal oldPrice,BigDecimal referencePrice,BigDecimal volume,
+                                     BigDecimal price,BigDecimal pricePerPiece,BigDecimal oldPrice,BigDecimal referencePrice,BigDecimal volume,
                                      BigDecimal quantity,boolean multiProduct,String productName,String description,
                                      String unitName,String unitShortName,List<MarktguruService.Validity> validityDates,
                                      String validFrom,String validTo,boolean loyaltyRequired,String externalUrl,

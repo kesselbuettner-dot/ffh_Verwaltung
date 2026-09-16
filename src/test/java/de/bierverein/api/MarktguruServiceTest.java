@@ -229,4 +229,14 @@ class MarktguruServiceTest {
           ]
         }
         """;
+    @Test
+    void sameSizeIgnoresMarktguruOfferPackageCount() {
+        // Artikel ist 0,33 l. Marktguru darf Einzel-, 6er- und 12er-Angebote
+        // liefern; die Anzahl im Angebotsgebinde ist für die Größenprüfung irrelevant.
+        assertTrue(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("330"), "ml"));
+        assertTrue(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("33"), "cl"));
+        assertTrue(MarktguruService.sameSize(new BigDecimal("0.33"), "l", new BigDecimal("3.3"), "dl"));
+    }
+
+
 }
