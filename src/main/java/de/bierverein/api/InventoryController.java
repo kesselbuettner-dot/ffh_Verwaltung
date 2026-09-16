@@ -139,11 +139,12 @@ public class InventoryController {
     }
 
     String buildMarktguruQuery(Drink d){
-        String name=d.getName()==null?"":d.getName().trim();
-        BigDecimal size=sizeVolume(d);
-        String unit=sizeUnit(d);
-        if(size==null || unit==null) return name;
-        return name + " " + size.stripTrailingZeros().toPlainString() + " " + unit;
+        // Marktguru's text search is intentionally performed by article name only.
+        // The exact single-item size is applied locally afterwards via sameSize().
+        // Adding "0.5 l" to the API query can hide valid offers because the
+        // retailer leaflet text/product index does not necessarily contain the
+        // normalized size in the same searchable form.
+        return d.getName()==null ? "" : d.getName().trim();
     }
 
     private boolean sameSize(Drink d, MarktguruOfferDto o){
