@@ -17,8 +17,8 @@ public class AppOrderController {
     }
 
     @PostMapping
-    public AppDtos.OrderResponse create(@RequestBody AppDtos.OrderRequest request, Authentication auth) {
-        return service.create(request, auth);
+    public AppDtos.OrderResponse create(Authentication auth) {
+        return service.create(auth);
     }
 
     @GetMapping

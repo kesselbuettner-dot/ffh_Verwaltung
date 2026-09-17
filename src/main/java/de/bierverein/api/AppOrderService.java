@@ -28,15 +28,18 @@ public class AppOrderService {
     }
 
     @Transactional
-    public AppDtos.OrderResponse create(AppDtos.OrderRequest request, Authentication auth) {
+    public AppDtos.OrderResponse create(Authentication auth) {
         Member current = currentMember(auth);
         Member member = members.findByIdForUpdate(current.getId()).orElseThrow();
-        if (request == null || request.items() == null || request.items().isEmpty()) {
+        List<AppDtos.OrderItemRequest> cartItems = cart.get(auth).items().stream()
+                .map(item -> new AppDtos.OrderItemRequest(item.articleId(), item.quantity()))
+                .toList();
+        if (cartItems.isEmpty()) {
             throw bad("Warenkorb ist leer");
         }
 
         java.util.LinkedHashMap<Long, Integer> quantities = new java.util.LinkedHashMap<>();
-        for (AppDtos.OrderItemRequest requested : request.items()) {
+        for (AppDtos.OrderItemRequest requested : cartItems) {
             if (requested == null || requested.articleId() == null || requested.quantity() <= 0 || requested.quantity() > 99) {
                 throw bad("Ungültige Position");
             }
