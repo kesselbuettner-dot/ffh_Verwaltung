@@ -91,7 +91,7 @@ public class AppCartService {
             BigDecimal line = article.getPrice().multiply(BigDecimal.valueOf(item.quantity())).setScale(2);
             total = total.add(line);
             result.add(new AppDtos.CartItem(article.getId(), article.getName(), article.getType(), item.quantity(), article.getPrice(), line,
-                    article.isActive() && article.getStock().compareTo(BigDecimal.ZERO) >= 0));
+                    article.isActive() && article.getStock().compareTo(BigDecimal.ZERO) > 0));
         }
         return new AppDtos.CartResponse(result, total);
     }
