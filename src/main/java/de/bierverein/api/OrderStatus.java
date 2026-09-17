@@ -1,2 +1,5 @@
 package de.bierverein.api;
-public enum OrderStatus { COMPLETED, CANCELLED }
+
+public enum OrderStatus {
+    NEW, CONFIRMED, PREPARING, READY, COMPLETED, CANCELLED
+}

@@ -7,7 +7,7 @@ public class Order {
  @Column(nullable=false,precision=12,scale=2) private BigDecimal total;
  @Column(nullable=false) private Instant createdAt=Instant.now();
  @Column(nullable=false) private String createdBy;
- @Enumerated(EnumType.STRING) @Column(nullable=false) private OrderStatus status=OrderStatus.COMPLETED;
+ @Enumerated(EnumType.STRING) @Column(nullable=false) private OrderStatus status=OrderStatus.NEW;
  private Instant cancelledAt;
  private String cancelledBy;
  @Column(length=500) private String cancellationReason;

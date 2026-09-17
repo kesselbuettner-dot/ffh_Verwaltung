@@ -34,6 +34,10 @@ public class Article {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) default 'DRINK'")
+    private ArticleType type = ArticleType.DRINK;
+
     public Article() {}
 
     public Long getId() { return id; }
@@ -53,4 +57,6 @@ public class Article {
     public void setSearchTerm(String searchTerm) { this.searchTerm = searchTerm; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+    public ArticleType getType() { return type; }
+    public void setType(ArticleType type) { this.type = type == null ? ArticleType.DRINK : type; }
 }

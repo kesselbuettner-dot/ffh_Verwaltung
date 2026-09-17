@@ -13,7 +13,8 @@ public final class ArticleDtos {
             BigDecimal price,
             BigDecimal stock,
             String searchTerm,
-            boolean active
+            boolean active,
+            ArticleType type
     ) {}
 
     public record ActiveRequest(boolean active) {}

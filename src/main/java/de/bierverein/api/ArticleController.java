@@ -47,6 +47,7 @@ public class ArticleController {
         Article a = articles.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artikel nicht gefunden"));
         a.setActive(req.active());
+        a.setType(req.type());
         return articles.save(a);
     }
 
@@ -68,6 +69,7 @@ public class ArticleController {
         a.setStock(req.stock());
         a.setSearchTerm(clean(req.searchTerm()));
         a.setActive(req.active());
+        a.setType(req.type());
     }
 
     private String clean(String value) {

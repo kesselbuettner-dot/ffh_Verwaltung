@@ -2,8 +2,8 @@ package de.bierverein.api;
 import org.springframework.web.bind.annotation.*; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.security.core.Authentication; import org.springframework.transaction.annotation.Transactional; import org.springframework.web.server.ResponseStatusException; import org.springframework.http.HttpStatus; import java.math.*; import java.time.*; import java.util.*;
 @RestController @RequestMapping("/api/theke") public class ThekeController {
  private static final ZoneId ZONE=ZoneId.of("Europe/Berlin");
- private final DrinkRepository drinks; private final MemberRepository members; private final OrderRepository orders; private final AppUserRepository users;
- public ThekeController(DrinkRepository d,MemberRepository m,OrderRepository o,AppUserRepository u){drinks=d;members=m;orders=o;users=u;}
+ private final DrinkRepository drinks; private final ArticleRepository articles; private final MemberRepository members; private final OrderRepository orders; private final AppUserRepository users;
+ public ThekeController(DrinkRepository d,ArticleRepository a,MemberRepository m,OrderRepository o,AppUserRepository u){drinks=d;articles=a;members=m;orders=o;users=u;}
  @GetMapping("/drinks") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") public List<DrinkDto> drinks(){return drinks.findAll().stream().filter(Drink::isActive).map(d->new DrinkDto(d.getId(),d.getName(),d.getCategory(),d.getPrice(),d.getEan(),d.getStock(),d.getWarningThreshold(),sizeVolume(d),sizeUnit(d))).toList();}
  private BigDecimal sizeVolume(Drink d){return d.getSizeVolume()!=null?d.getSizeVolume():d.getPackageVolume();}
  private String sizeUnit(Drink d){return d.getSizeUnitShortName()!=null&&!d.getSizeUnitShortName().isBlank()?MarktguruService.normalizeUnit(d.getSizeUnitShortName()):d.getPackageUnitShortName()==null?null:MarktguruService.normalizeUnit(d.getPackageUnitShortName());}
@@ -24,18 +24,30 @@ import org.springframework.web.bind.annotation.*; import org.springframework.sec
    if(member.getBalance().compareTo(total)<0)throw new ResponseStatusException(HttpStatus.CONFLICT,"Guthaben reicht nicht aus. Verfügbar: "+member.getBalance()+" €");
    member.setBalance(member.getBalance().subtract(total));order.setTotal(total);order.setStatus(OrderStatus.COMPLETED);return dto(orders.save(order));
  }
+ @PutMapping("/orders/{id}/status") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") @Transactional public OrderDto status(@PathVariable Long id,@RequestBody ThekeOrderStatusRequest req,Authentication auth){
+   if(req==null||req.status()==null)throw bad("Status ist erforderlich");
+   Order order=orders.findByIdForUpdate(id).orElseThrow(()->notFound("Bestellung nicht gefunden"));
+   OrderStatus current=order.getStatus(), next=req.status();
+   boolean allowed=(current==OrderStatus.NEW && next==OrderStatus.CONFIRMED)
+       ||(current==OrderStatus.CONFIRMED && next==OrderStatus.PREPARING)
+       ||(current==OrderStatus.PREPARING && next==OrderStatus.READY)
+       ||(current==OrderStatus.READY && next==OrderStatus.COMPLETED);
+   if(!allowed)throw new ResponseStatusException(HttpStatus.CONFLICT,"Ungültiger Statuswechsel: "+current+" -> "+next);
+   order.setStatus(next);
+   return dto(orders.save(order));
+ }
  @PostMapping("/orders/{id}/cancel") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") @Transactional public OrderDto cancel(@PathVariable Long id,@RequestBody CancellationRequest req,Authentication auth){
    String reason=req==null?null:req.reason(); if(reason==null||reason.trim().length()<3||reason.trim().length()>500)throw bad("Bitte einen Stornogrund mit 3 bis 500 Zeichen angeben");
    Order order=orders.findByIdForUpdate(id).orElseThrow(()->notFound("Bestellung nicht gefunden"));
    if(order.getStatus()!=OrderStatus.COMPLETED)throw new ResponseStatusException(HttpStatus.CONFLICT,"Bestellung ist bereits storniert");
    Member member=members.findByIdForUpdate(order.getMember().getId()).orElseThrow();
    member.setBalance(member.getBalance().add(order.getTotal()));
-   for(OrderItem item: order.getItems()){ Drink d=drinks.findById(item.getDrink().getId()).orElseThrow(); d.setStock(d.getStock()+item.getQuantity()); drinks.save(d); }
+   for(OrderItem item: order.getItems()){ if(item.getArticle()!=null){ Article a=articles.findById(item.getArticle().getId()).orElseThrow(); a.setStock(a.getStock().add(BigDecimal.valueOf(item.getQuantity()))); articles.save(a); } else { Drink d=drinks.findById(item.getDrink().getId()).orElseThrow(); d.setStock(d.getStock()+item.getQuantity()); drinks.save(d); } }
    order.setStatus(OrderStatus.CANCELLED);order.setCancelledAt(Instant.now());order.setCancelledBy(auth.getName());order.setCancellationReason(reason.trim());
    return dto(orders.save(order));
  }
  private LocalDate parseDate(String value){try{return LocalDate.parse(value);}catch(DateTimeException e){throw bad("Ungültiges Datum. Erwartet wird JJJJ-MM-TT");}}
- private OrderDto dto(Order o){return new OrderDto(o.getId(),o.getMember().getId(),o.getMember().getName(),o.getTotal(),o.getCreatedAt(),o.getCreatedBy(),o.getStatus(),o.getCancelledAt(),o.getCancelledBy(),o.getCancellationReason(),o.getItems().stream().map(i->new OrderItemDto(i.getDrink().getId(),i.getDrink().getName(),i.getQuantity(),i.getUnitPrice(),i.getTotal())).toList());}
+ private OrderDto dto(Order o){return new OrderDto(o.getId(),o.getMember().getId(),o.getMember().getName(),o.getTotal(),o.getCreatedAt(),o.getCreatedBy(),o.getStatus(),o.getCancelledAt(),o.getCancelledBy(),o.getCancellationReason(),o.getItems().stream().map(i->{ if(i.getArticle()!=null) return new OrderItemDto(i.getArticle().getId(),i.getArticle().getName(),i.getQuantity(),i.getUnitPrice(),i.getTotal()); Drink d=i.getDrink(); return new OrderItemDto(d.getId(),d.getName(),i.getQuantity(),i.getUnitPrice(),i.getTotal()); }).toList());}
  private ResponseStatusException bad(String s){return new ResponseStatusException(HttpStatus.BAD_REQUEST,s);} private ResponseStatusException notFound(String s){return new ResponseStatusException(HttpStatus.NOT_FOUND,s);}
  public record DrinkDto(Long id,String name,String category,BigDecimal price,String ean,int stock,int warningThreshold,BigDecimal sizeVolume,String sizeUnitShortName){} public record MemberDto(Long id,String name,BigDecimal balance){}
  public record OrderRequest(Long memberId,List<ItemRequest> items){} public record ItemRequest(Long drinkId,int quantity){} public record CancellationRequest(String reason){}
