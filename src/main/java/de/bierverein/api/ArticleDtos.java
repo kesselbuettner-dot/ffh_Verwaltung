@@ -17,5 +17,8 @@ public final class ArticleDtos {
             ArticleType type
     ) {}
 
-    public record ActiveRequest(boolean active) {}
+    public record ActiveRequest(
+            boolean active,
+            ArticleType type
+    ) {}
 }
