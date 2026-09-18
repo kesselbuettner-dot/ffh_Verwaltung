@@ -44,6 +44,9 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/",
                     "/index.html",
+                    "/manifest.json",
+                    "/service-worker.js",
+                    "/icons/**",
                     "/api/auth/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
@@ -52,6 +55,9 @@ public class SecurityConfig {
 
                 .requestMatchers("/api/admin/**")
                     .hasRole("ADMIN")
+
+                .requestMatchers("/api/inventory/**")
+                    .hasAnyRole("ADMIN", "GETRAENKEWART")
 
                 .requestMatchers("/api/theke/**")
                     .hasAnyRole("ADMIN", "THEKE", "MEMBER")

@@ -12,7 +12,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/inventory")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'GETRAENKEWART')")
 public class InventoryController {
     private final DrinkRepository drinks;
     private final StockPurchaseRepository purchases;
@@ -76,7 +76,7 @@ public class InventoryController {
     public List<InventoryItemDto> inventory() {
         return drinks.findAll().stream()
                 .filter(Drink::isActive)
-                .map(d -> new InventoryItemDto(d.getId(), d.getName(), d.getCategory(), d.getStock(), d.getWarningThreshold(),
+                .map(d -> new InventoryItemDto(d.getId(), d.getName(), d.getCategory(), d.getEan(), d.getStock(), d.getWarningThreshold(),
                         sizeVolume(d), sizeUnit(d)))
                 .sorted(Comparator.comparing(InventoryItemDto::name, String.CASE_INSENSITIVE_ORDER))
                 .toList();
@@ -219,7 +219,7 @@ public class InventoryController {
 
     public record InventoryRequest(List<InventoryLineRequest> items){}
     public record InventoryLineRequest(Long drinkId, int countedStock){}
-    public record InventoryItemDto(Long id,String name,String category,int stock,int warningThreshold,BigDecimal sizeVolume,String sizeUnitShortName){}
+    public record InventoryItemDto(Long id,String name,String category,String ean,int stock,int warningThreshold,BigDecimal sizeVolume,String sizeUnitShortName){}
     public record InventoryLineDto(Long id,String name,int previousStock,int countedStock,int difference){}
     public record InventoryResultDto(int changed,List<InventoryLineDto> lines){}
     public record ArticleRequest(String name,String category,BigDecimal price,String ean,int warningThreshold,boolean active,
