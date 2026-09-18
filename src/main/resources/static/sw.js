@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-v5";
+const CACHE_NAME = "ffh-verwaltung-v8";
 const APP_SHELL = [
   "/",
   "/manifest.json",
