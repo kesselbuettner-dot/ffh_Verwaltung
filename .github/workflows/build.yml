@@ -1,0 +1,30 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+      - pwa-update
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build and test
+        run: mvn -B test package
+
+      - name: Build Docker image
+        run: docker build -t ffh-verwaltung:test .
