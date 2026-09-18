@@ -24,11 +24,12 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-  @Bean JwtDecoder jwtDecoder(JwtService jwt){
-    return NimbusJwtDecoder.withSecretKey(jwt.key())
-            .macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS384)
-            .build();
-}
+    @Bean
+    JwtDecoder jwtDecoder(JwtService jwt) {
+        return NimbusJwtDecoder.withSecretKey(jwt.key())
+                .macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS384)
+                .build();
+    }
 
     @Bean
     SecurityFilterChain security(
@@ -44,6 +45,13 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/",
                     "/index.html",
+                    "/manifest.json",
+                    "/sw.js",
+                    "/favicon.ico",
+                    "/icons/**",
+                    "/css/**",
+                    "/js/**",
+                    "/images/**",
                     "/api/auth/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
