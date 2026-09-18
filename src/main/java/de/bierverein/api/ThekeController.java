@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*; import org.springframework.sec
    Order order=new Order();order.setMember(member);order.setCreatedBy(user.getUsername());BigDecimal total=BigDecimal.ZERO;
    for(ItemRequest ir:req.items()){if(ir==null||ir.drinkId()==null||ir.quantity()<=0||ir.quantity()>99)throw bad("Ungültige Position");Drink d=drinks.findById(ir.drinkId()).orElseThrow();if(!d.isActive())throw bad("Getränk ist nicht verfügbar");if(d.getStock() < ir.quantity()) throw new ResponseStatusException(HttpStatus.CONFLICT,"Bestand nicht ausreichend für "+d.getName()+" (Bestand: "+d.getStock()+")");
    BigDecimal line=d.getPrice().multiply(BigDecimal.valueOf(ir.quantity())); d.setStock(d.getStock()-ir.quantity()); drinks.save(d); OrderItem item=new OrderItem();item.setDrink(d);item.setQuantity(ir.quantity());item.setUnitPrice(d.getPrice());item.setTotal(line);order.addItem(item);total=total.add(line);}
-   if(member.getBalance().compareTo(total)<0)throw new ResponseStatusException(HttpStatus.CONFLICT,"Guthaben reicht nicht aus. Verfügbar: "+member.getBalance()+" €");
+   if(member.getBalance().compareTo(total)<0)throw new ResponseStatusException(HttpStatus.CONFLICT,"Guthaben reicht nicht aus. Verfügbar: "+member.getBalance()+" €, benötigt: "+total+" €");
    member.setBalance(member.getBalance().subtract(total));order.setTotal(total);order.setStatus(OrderStatus.COMPLETED);return dto(orders.save(order));
  }
  @PutMapping("/orders/{id}/status") @PreAuthorize("hasAnyRole('ADMIN','THEKE')") @Transactional public OrderDto status(@PathVariable Long id,@RequestBody ThekeOrderStatusRequest req,Authentication auth){
