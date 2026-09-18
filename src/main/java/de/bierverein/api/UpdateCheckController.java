@@ -35,8 +35,8 @@ public class UpdateCheckController {
     }
     private int compareVersions(String a,String b) {
         try {
-            String[] x=a.replaceFirst("^v","").split("\\\\."); String[] y=b.replaceFirst("^v","").split("\\\\.");
-            for(int i=0;i<Math.max(x.length,y.length);i++){ int xi=i<x.length?Integer.parseInt(x[i].replaceAll("\\\\D.*","")):0; int yi=i<y.length?Integer.parseInt(y[i].replaceAll("\\\\D.*","")):0; if(xi!=yi)return Integer.compare(xi,yi); }
+            String[] x=a.replaceFirst("^v","").split("\\."); String[] y=b.replaceFirst("^v","").split("\\\\.");
+            for(int i=0;i<Math.max(x.length,y.length);i++){ int xi=i<x.length?Integer.parseInt(x[i].replaceAll("\\D.*","")):0; int yi=i<y.length?Integer.parseInt(y[i].replaceAll("\\\\D.*","")):0; if(xi!=yi)return Integer.compare(xi,yi); }
         } catch(Exception ignored) {}
         return a.compareToIgnoreCase(b);
     }
