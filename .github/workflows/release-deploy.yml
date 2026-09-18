@@ -1,4 +1,4 @@
-name: Release and Deploy
+name: Release
 
 on:
   push:
@@ -18,22 +18,24 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: production-release
-  cancel-in-progress: false
-
 jobs:
   release:
     name: Test and create release
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Require main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "Releases must be created from main."
+            exit 1
+          fi
 
       - name: Resolve version
         id: version
@@ -56,6 +58,9 @@ jobs:
 
       - name: Build and test
         run: mvn -B test package
+
+      - name: Build Docker image
+        run: docker build -t ffh-verwaltung:release .
 
       - name: Create tag and release
         if: github.event_name == 'workflow_dispatch'
@@ -83,90 +88,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.tag }}
         run: gh release view "$TAG" --repo "$GITHUB_REPOSITORY"
-
-      - name: Build Docker image
-        run: docker build -t ffh-verwaltung:release .
-
-  deploy:
-    name: Deploy to FFH server
-    needs: release
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Prepare SSH
-        shell: bash
-        env:
-          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
-
-      - name: Deploy release
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          VERSION: ${{ needs.release.outputs.version }}
-          TAG: ${{ needs.release.outputs.tag }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          PORT="${DEPLOY_PORT:-22}"
-          ssh -p "$PORT" "$DEPLOY_USER@$DEPLOY_HOST"             "DEPLOY_PATH='$DEPLOY_PATH' VERSION='$VERSION' TAG='$TAG' bash -s" <<'REMOTE'
-          set -euo pipefail
-
-          if [[ -z "$DEPLOY_PATH" ]]; then
-            echo "DEPLOY_PATH is required"
-            exit 1
-          fi
-
-          if [[ ! -d "$DEPLOY_PATH/.git" ]]; then
-            mkdir -p "$(dirname "$DEPLOY_PATH")"
-            git clone "https://github.com/kesselbuettner-dot/ffh_Verwaltung.git" "$DEPLOY_PATH"
-          fi
-
-          cd "$DEPLOY_PATH"
-          git fetch --prune --tags origin
-          git checkout --force "$TAG"
-          git reset --hard "$TAG"
-
-          if [[ ! -f .env ]]; then
-            echo "Missing $DEPLOY_PATH/.env"
-            exit 1
-          fi
-
-          export APP_VERSION="$VERSION"
-          export GITHUB_OWNER="kesselbuettner-dot"
-          export GITHUB_REPOSITORY="ffh_Verwaltung"
-
-          docker compose config >/dev/null
-          docker compose up -d --build --remove-orphans
-
-          for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8080/api/version >/dev/null; then
-              break
-            fi
-            if [[ "$i" == "30" ]]; then
-              docker compose ps
-              docker compose logs --tail=120 app
-              exit 1
-            fi
-            sleep 5
-          done
-
-          curl -fsS http://127.0.0.1:8080/api/version
-          docker image prune -f
-          REMOTE
-
-      - name: Deployment summary
-        run: |
-          echo "Released: ${{ needs.release.outputs.tag }}"
-          echo "Version:  ${{ needs.release.outputs.version }}"
-          echo "Deployment completed successfully."
