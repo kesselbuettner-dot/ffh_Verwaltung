@@ -1,84 +1,108 @@
 import os
 import subprocess
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
 
 TOKEN = os.environ.get("UPDATER_TOKEN", "")
 WORKSPACE = os.environ.get("UPDATER_WORKSPACE", "/workspace")
 PORT = int(os.environ.get("UPDATER_PORT", "8090"))
 REPO = os.environ.get("GITHUB_REPOSITORY", "kesselbuettner-dot/ffh_Verwaltung")
-
+ALLOWED_METHOD = "POST"
 running = False
 lock = threading.Lock()
 
-def run(cmd):
-    print("RUN:", " ".join(cmd), flush=True)
-    subprocess.run(cmd, cwd=WORKSPACE, check=True)
+def run_git(args):
+    subprocess.run(["git", *args], cwd=WORKSPACE, check=True, timeout=180)
 
 def update():
     global running
     with lock:
         if running:
-            print("Update already running", flush=True)
             return
         running = True
-
     try:
-        run(["git", "fetch", "--prune", "--tags", "origin"])
-        tag = subprocess.check_output(
-            ["git", "tag", "--sort=-version:refname", "--list", "v*"],
-            cwd=WORKSPACE,
-            text=True
-        ).splitlines()[0]
+        # Only fetch tags from the configured repository.
+        run_git(["fetch", "--prune", "--tags", "origin"])
+        tags = subprocess.check_output(
+            ["git", "tag", "--sort=-version:refname", "--list", "v*.*.*"],
+            cwd=WORKSPACE, text=True, timeout=30
+        ).splitlines()
+        if not tags:
+            raise RuntimeError("Kein SemVer-Release-Tag gefunden.")
+        tag = tags[0]
 
-        run(["git", "checkout", "--force", tag])
-        run(["git", "reset", "--hard", tag])
+        # Only checked-out release tags are accepted.
+        run_git(["checkout", "--force", tag])
+        run_git(["reset", "--hard", tag])
 
-        env = os.environ.copy()
-        env["APP_VERSION"] = tag.removeprefix("v")
-        env["GITHUB_OWNER"] = REPO.split("/", 1)[0]
-        env["GITHUB_REPOSITORY"] = REPO.split("/", 1)[1]
+        version = tag[1:]
+        if not version.replace(".", "").isdigit() or version.count(".") != 2:
+            raise RuntimeError("Ungueltiger Release-Tag.")
 
+        owner, repo = REPO.split("/", 1)
+        env = {
+            "PATH": "/usr/local/bin:/usr/bin:/bin",
+            "HOME": "/tmp",
+            "APP_VERSION": version,
+            "GITHUB_OWNER": owner,
+            "GITHUB_REPOSITORY": repo,
+        }
+
+        # Deliberately allow exactly one Docker operation:
+        # build/start only the application services; never arbitrary user input.
         subprocess.run(
             ["docker", "compose", "up", "-d", "--build", "--remove-orphans", "app", "worker"],
-            cwd=WORKSPACE,
-            env=env,
-            check=True
+            cwd=WORKSPACE, env=env, check=True, timeout=900
         )
         print("Update completed:", tag, flush=True)
     except Exception as exc:
-        print("Update failed:", repr(exc), flush=True)
+        print("Update failed:", type(exc).__name__, flush=True)
     finally:
         with lock:
             running = False
 
 class Handler(BaseHTTPRequestHandler):
+    server_version = "FFH-Updater/1.0"
+
     def log_message(self, fmt, *args):
-        print(fmt % args, flush=True)
+        print("HTTP:", fmt % args, flush=True)
+
+    def _send(self, code, body=b""):
+        self.send_response(code)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        if body:
+            self.wfile.write(body)
 
     def do_GET(self):
         if self.path == "/health":
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-            return
-        self.send_response(404)
-        self.end_headers()
+            self._send(200, b"OK")
+        else:
+            self._send(404)
 
     def do_POST(self):
-        if self.path != "/update":
-            self.send_response(404)
-            self.end_headers()
+        if urlparse(self.path).path != "/update":
+            self._send(404)
             return
-
-        if TOKEN and self.headers.get("X-Updater-Token") != TOKEN:
-            self.send_response(403)
-            self.end_headers()
+        if self.headers.get("X-Updater-Token") != TOKEN or not TOKEN:
+            self._send(403)
             return
 
         threading.Thread(target=update, daemon=True).start()
-        self.send_response(202)
-        self.end_headers()
-        self.wfile.write(b"Update started")
+        self._send(202, b"Update started")
 
-HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+    def do_PUT(self):
+        self._send(405)
+
+    def do_DELETE(self):
+        self._send(405)
+
+    def do_PATCH(self):
+        self._send(405)
+
+    def do_OPTIONS(self):
+        self._send(405)
+
+ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
