@@ -29,7 +29,7 @@ services:
       retries: 10
 
   app:
-    build: .
+    image: ${FFH_IMAGE:-ffh-verwaltung:local}
     container_name: ffh_verwaltung-app
     restart: unless-stopped
     environment:
@@ -56,7 +56,7 @@ services:
         condition: service_healthy
 
   worker:
-    build: .
+    image: ${FFH_IMAGE:-ffh-verwaltung:local}
     container_name: ffh_verwaltung-worker
     restart: unless-stopped
     environment:
