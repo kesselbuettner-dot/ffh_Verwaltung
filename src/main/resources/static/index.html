@@ -35,7 +35,7 @@
 </style>
 </head>
 <body>
-<div id="loginView" class="login"><div class="login-card"><img src="/icons/wache48-logo.svg" alt="FFH 48 Logo" style="width:82px;height:82px;border-radius:20px;display:block;margin:0 auto 14px;box-shadow:var(--shadow)"><div class="logo" style="text-align:center">FFH Verwaltung</div><p class="sub">Vereins- und Feuerwehrverwaltung</p><div class="field"><label>Benutzername / E-Mail</label><input id="loginUser" autocomplete="username"></div><div class="field"><label>Passwort</label><input id="loginPass" type="password" autocomplete="current-password"></div><button class="btn primary big" onclick="login()">Anmelden</button><div id="loginMsg"></div><div class="registration-link"><button class="btn secondary" onclick="openRegistration()">Noch kein Zugang? Jetzt registrieren</button></div></div></div>
+<div id="loginView" class="login"><div class="login-card"><img src="/icons/wache48-logo.svg" alt="FFH 48 Logo" style="width:82px;height:82px;border-radius:20px;display:block;margin:0 auto 14px;box-shadow:var(--shadow)"><div class="logo" style="text-align:center">FFH Verwaltung</div><p class="sub">Vereins- und Feuerwehrverwaltung</p><div class="field"><label>Benutzername / E-Mail</label><input id="loginUser" autocomplete="username"></div><div class="field"><label>Passwort</label><input id="loginPass" type="password" autocomplete="current-password"></div><button class="btn primary big" onclick="window.login()">Anmelden</button><div id="loginMsg"></div><div class="registration-link"><button class="btn secondary" onclick="openRegistration()">Noch kein Zugang? Jetzt registrieren</button></div></div></div>
 <div id="appView" class="layout hidden"><aside id="sidebar" class="sidebar"><div class="brand"><img src="/icons/wache48-logo.svg" alt="FFH 48 Logo"><div><strong>FFH<br>Verwaltung</strong><small>Feuerwehrportal</small></div></div><div class="nav-section">Übersicht</div><button class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">🏠 <span>Dashboard</span></button><div class="nav-section">Verein</div><button class="nav-item" data-page="members" onclick="navigate('members')">👥 <span>Mitglieder</span></button><div class="nav-section">Verkauf</div><button class="nav-item" data-page="theke" onclick="navigate('theke')">🍺 <span>Kasse / Theke</span></button>
 <div id="inventoryNav" class="hidden">
 <button class="nav-item nav-child" data-page="shopping" onclick="inventoryPage('shopping')">🛒 Einkaufsliste</button>
@@ -224,6 +224,52 @@ function useManualBarcode(targetId,value){const v=(value??manualBarcode?.value??
 const oldCloseModal=closeModal;
 closeModal=function(){if(barcodeTimer){clearTimeout(barcodeTimer);barcodeTimer=null}if(barcodeStream){barcodeStream.getTracks().forEach(t=>t.stop());barcodeStream=null}oldCloseModal()}
 </script>\n<script>
+window.login = async function () {
+  const userEl = document.getElementById('loginUser');
+  const passEl = document.getElementById('loginPass');
+  const msgEl = document.getElementById('loginMsg');
+  const button = document.querySelector('#loginView button.btn.primary');
+  const username = (userEl?.value || '').trim();
+  const password = passEl?.value || '';
+
+  msgEl.textContent = '';
+  if (!username || !password) {
+    msgEl.innerHTML = '<div class="message error">Bitte Benutzername und Passwort eingeben.</div>';
+    return;
+  }
+
+  if (button) { button.disabled = true; button.textContent = 'Anmelden …'; }
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password})
+    });
+
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+
+    if (!response.ok) {
+      throw new Error(data.message || data.detail || data.error || 'Ungültige Zugangsdaten');
+    }
+
+    localStorage.setItem('token', data.token || '');
+    localStorage.setItem('role', data.role || '');
+    localStorage.setItem('username', data.username || username);
+    localStorage.setItem('memberName', data.memberName || '');
+    if (data.memberId != null) localStorage.setItem('memberId', data.memberId);
+    else localStorage.removeItem('memberId');
+
+    window.location.reload();
+  } catch (e) {
+    msgEl.innerHTML = '<div class="message error"></div>';
+    msgEl.firstElementChild.textContent = e.message || 'Anmeldung fehlgeschlagen';
+    if (button) { button.disabled = false; button.textContent = 'Anmelden'; }
+  }
+};
+</script>
+<script>
 if ("serviceWorker" in navigator) {
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
