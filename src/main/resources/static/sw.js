@@ -1,5 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-v4";
-
+const CACHE_NAME = "ffh-verwaltung-v5";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -7,7 +6,9 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
+  );
   self.skipWaiting();
 });
 
@@ -15,7 +16,9 @@ self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
       )
     )
   );
@@ -27,29 +30,41 @@ self.addEventListener("fetch", event => {
 
   const url = new URL(event.request.url);
 
-  // HTML immer zuerst vom Server holen, damit PWA-Clients nicht
-  // auf einer veralteten index.html hängen bleiben.
+  // API responses contain live and potentially user-specific data.
+  // Never cache authenticated API requests.
+  if (url.pathname.startsWith("/api/")) return;
+
+  // Navigation stays network-first so deployments become visible quickly.
   if (event.request.mode === "navigate" || url.pathname === "/") {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put("/", copy));
+          }
           return response;
         })
-        .catch(() => caches.match(event.request).then(cached => cached || caches.match("/")))
+        .catch(() =>
+          caches.match(event.request).then(
+            cached => cached || caches.match("/")
+          )
+        )
     );
     return;
   }
 
+  // Static assets: cache-first with network fallback.
   event.respondWith(
     caches.match(event.request).then(cached =>
       cached ||
       fetch(event.request).then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        }
         return response;
-      }).catch(() => caches.match("/"))
+      })
     )
   );
 });
