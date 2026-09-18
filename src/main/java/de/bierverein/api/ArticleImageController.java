@@ -1,6 +1,6 @@
 package de.bierverein.api;
 import org.springframework.http.*; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.web.bind.annotation.*; import org.springframework.web.multipart.MultipartFile; import org.springframework.web.server.ResponseStatusException;
-import java.io.*; import java.nio.file.*; import java.util.*;
+import java.io.*; import java.nio.file.*; import java.util.*; import org.springframework.web.server.ResponseStatusException;
 @RestController @RequestMapping("/api/inventory/articles")
 public class ArticleImageController {
  private static final long MAX_IMAGE_SIZE=2L*1024*1024; private static final Set<String> TYPES=Set.of("image/jpeg","image/png","image/webp","image/gif");
