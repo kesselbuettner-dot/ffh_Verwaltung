@@ -41,6 +41,14 @@ public class ArticleController {
         return articles.save(a);
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','VORSTAND')")
+    public Article delete(@PathVariable Long id) {
+        Article a = articles.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artikel nicht gefunden"));
+        a.setActive(false);
+        return articles.save(a);
+    }
+
     @PatchMapping("/{id}/active")
     @PreAuthorize("hasAnyRole('ADMIN','VORSTAND')")
     public Article setActive(@PathVariable Long id, @RequestBody ArticleDtos.ActiveRequest req) {
