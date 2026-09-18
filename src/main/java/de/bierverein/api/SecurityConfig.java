@@ -44,6 +44,9 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/",
                     "/index.html",
+                    "/manifest.json",
+                    "/service-worker.js",
+                    "/icons/**",
                     "/api/auth/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
