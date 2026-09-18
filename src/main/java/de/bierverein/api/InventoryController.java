@@ -84,7 +84,7 @@ public class InventoryController {
         return drinks.findAll().stream()
                 .filter(Drink::isActive)
                 .map(d -> new InventoryItemDto(d.getId(), d.getName(), d.getCategory(), d.getStock(), d.getWarningThreshold(),
-                        sizeVolume(d), sizeUnit(d)))
+                        sizeVolume(d), sizeUnit(d), d.getImageUrl()))
                 .sorted(Comparator.comparing(InventoryItemDto::name, String.CASE_INSENSITIVE_ORDER))
                 .toList();
     }
@@ -232,7 +232,7 @@ public class InventoryController {
     public record ArticleRequest(String name,String category,BigDecimal price,String ean,int warningThreshold,boolean active,
                                   BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName,String imageUrl){}
     public record ArticleDto(Long id,String name,String category,BigDecimal price,String ean,int stock,int warningThreshold,boolean active,
-                              BigDecimal lastPurchasePrice,BigDecimal averagePurchasePrice,BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName){}
+                              BigDecimal lastPurchasePrice,BigDecimal averagePurchasePrice,BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName,String imageUrl){}
     public record PurchaseRequest(Long drinkId,int quantity,BigDecimal unitPrice,LocalDate purchaseDate,String supplier,String note){}
     public record PurchaseDto(Long id,Long drinkId,String drinkName,int quantity,BigDecimal unitPrice,LocalDate purchaseDate,String supplier,String note,String createdBy){}
     public record MarktguruOfferDto(String offerId,String retailer,String retailerKey,List<MarktguruService.Retailer> retailers,
