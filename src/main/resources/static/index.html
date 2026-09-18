@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FFH Verwaltung</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#b51f2b">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
 <style>
 :root{--bg:#f3f5f7;--panel:#fff;--ink:#18212b;--muted:#687582;--line:#dfe4e8;--accent:#b51f2b;--accent2:#8d1621;--nav:#18212b;--nav2:#24313e;--ok:#19713b;--warn:#a46600}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink)}button,input,select,textarea{font:inherit}button{cursor:pointer}
@@ -180,4 +184,4 @@ async function openBarcodeScanner(targetId){
 function useManualBarcode(targetId,value){const v=(value??manualBarcode?.value??'').replace(/\D/g,'');if(!v){scannerStatus.textContent='Bitte einen Barcode eingeben.';return}const el=document.getElementById(targetId);if(el){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}))}closeModal();if(targetId==='purchaseSearch')findPurchaseArticles()}
 const oldCloseModal=closeModal;
 closeModal=function(){if(barcodeTimer){clearTimeout(barcodeTimer);barcodeTimer=null}if(barcodeStream){barcodeStream.getTracks().forEach(t=>t.stop());barcodeStream=null}oldCloseModal()}
-</script></body></html>
+</script>\n<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }</script></body></html>
