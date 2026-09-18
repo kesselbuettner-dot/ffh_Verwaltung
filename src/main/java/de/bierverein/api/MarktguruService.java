@@ -101,7 +101,7 @@ public class MarktguruService {
                     decimal(n, "oldPrice"),
                     decimal(n, "referencePrice"),
                     decimal(n, "volume"),
-                    decimal(n, "quantity"),
+                    decimal(n, "quantity") == null ? null : decimal(n, "quantity").setScale(2),
                     bool(n, "isMultiProduct"),
                     text(unit, "name"),
                     text(unit, "shortName"),
@@ -162,7 +162,7 @@ public class MarktguruService {
             case "l", "liter", "litre", "ltr" -> "l";
             case "ml", "milliliter", "millilitre" -> "ml";
             case "cl", "centiliter", "centilitre" -> "cl";
-            case "dl", "deciliter", "decilitre" -> "dl";
+            case "dl", "deciliter", "decilitre", "deziliter", "dezilitre" -> "dl";
             case "kg", "kilogram", "kilograms" -> "kg";
             case "g", "gram", "grams" -> "g";
             default -> u;
