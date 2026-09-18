@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#242424"/><stop offset="1" stop-color="#050505"/></linearGradient>
+  <linearGradient id="red" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff3030"/><stop offset="1" stop-color="#b4000b"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="76" fill="url(#bg)"/>
+<path d="M92 382C34 300 63 153 171 88M340 64C426 101 471 189 456 281M455 300C431 386 349 449 252 456" fill="none" stroke="url(#red)" stroke-width="24" stroke-linecap="round"/>
+<path d="M158 229L151 183 174 126 209 99 256 82 303 99 338 126 361 183 354 229 329 216 315 159 256 136 197 159 183 216Z" fill="#151515" stroke="#f2f2f2" stroke-width="11" stroke-linejoin="round"/>
+<path d="M126 224Q256 171 386 224L372 276Q256 239 140 276Z" fill="#111" stroke="#eee" stroke-width="10"/>
+<!-- angular flame behind the number -->
+<path d="M364 341L404 276 398 326 438 286 419 350 451 333 407 394 356 382Z" fill="url(#red)"/>
+<!-- broad brush-style 4 -->
+<path d="M78 380L108 365 211 196 239 207 193 296 258 288 275 316 186 333 150 410 120 400 143 345Z" fill="#f4f4f4"/>
+<path d="M99 375L133 352 223 210" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="square" opacity=".9"/>
+<!-- broad brush-style 8 -->
+<path d="M286 210L316 191 379 197 405 220 406 253 391 276 412 300 413 339 392 372 353 389 304 380 282 354 284 318 306 293 286 268 279 239Z
+M329 226L313 239 314 257 329 269 359 265 371 251 370 234 355 224ZM331 304L314 319 316 342 333 354 365 349 378 335 376 316 360 304Z" fill="url(#red)" fill-rule="evenodd"/>
+<!-- rough brush accents -->
+<path d="M71 414l78-20-17 25-61 13ZM266 405l136-19-25 25-111 12ZM279 174l83 9-16 13-73-5Z" fill="#fff" opacity=".85"/>
+</svg>
