@@ -51,6 +51,13 @@ public class InventoryController {
         apply(d,req); return article(drinks.save(d));
     }
 
+    @DeleteMapping("/articles/{id}")
+    public ArticleDto deleteArticle(@PathVariable Long id) {
+        Drink d=drinks.findById(id).orElseThrow(()->notFound("Artikel nicht gefunden"));
+        d.setActive(false);
+        return article(drinks.save(d));
+    }
+
     @GetMapping("/articles/{id}")
     public ArticleDto article(@PathVariable Long id) {
         return article(drinks.findById(id).orElseThrow(()->notFound("Artikel nicht gefunden")));
