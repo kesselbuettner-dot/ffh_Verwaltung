@@ -20,6 +20,7 @@ public class Drink {
     @Column(length=20) private String packageUnitShortName;
     @Column(precision=10, scale=6) private BigDecimal sizeVolume;
     @Column(length=20) private String sizeUnitShortName;
+    @Column(length=300) private String imageUrl;
 
     public Drink() {}
     public Long getId(){return id;}
@@ -47,4 +48,6 @@ public class Drink {
     public void setSizeVolume(BigDecimal v){sizeVolume=v;}
     public String getSizeUnitShortName(){return sizeUnitShortName;}
     public void setSizeUnitShortName(String v){sizeUnitShortName=v;}
+    public String getImageUrl(){return imageUrl;}
+    public void setImageUrl(String v){imageUrl=v;}
 }
