@@ -93,7 +93,7 @@ function closeModal(){modal.classList.add('hidden')}
 window.addEventListener('load',()=>{if(token&&role)showApp()});
 
 async function inventoryPage(page){
-  if(role!=='ADMIN'){content.innerHTML='<div class="panel"><h2>Keine Berechtigung</h2></div>';return}
+  if(!['ADMIN','GETRAENKEWART'].includes(role)){content.innerHTML='<div class="panel"><h2>Keine Berechtigung</h2><p>Artikel, Einkauf und Inventur sind nur für Administratoren und Getränkewarte freigeschaltet.</p></div>';return}
   setActive(page);
   if(page==='shopping') return shoppingListPage();
   if(page==='purchase') return purchasePage();
