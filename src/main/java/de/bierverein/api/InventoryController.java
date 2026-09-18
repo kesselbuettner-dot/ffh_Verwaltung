@@ -12,7 +12,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/inventory")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','GETRAENKEWART')")
 public class InventoryController {
     private final DrinkRepository drinks;
     private final StockPurchaseRepository purchases;
@@ -157,7 +157,7 @@ public class InventoryController {
         for(StockPurchase p:ps){sum=sum.add(p.getUnitPrice().multiply(BigDecimal.valueOf(p.getQuantity())));qty+=p.getQuantity();}
         BigDecimal avg=qty==0?null:sum.divide(BigDecimal.valueOf(qty),2,java.math.RoundingMode.HALF_UP);
         return new ArticleDto(d.getId(),d.getName(),d.getCategory(),d.getPrice(),d.getEan(),d.getStock(),d.getWarningThreshold(),d.isActive(),last,avg,
-                d.getPackageQuantity(),d.getPackageVolume(),d.getPackageUnitShortName(),sizeVolume(d),sizeUnit(d));
+                d.getPackageQuantity(),d.getPackageVolume(),d.getPackageUnitShortName(),sizeVolume(d),sizeUnit(d),d.getImageUrl());
     }
     private ShoppingItemDto shopping(Drink d){
         ArticleDto a=article(d); String marktguruQuery=buildMarktguruQuery(d);
@@ -230,7 +230,7 @@ public class InventoryController {
     public record InventoryLineDto(Long id,String name,int previousStock,int countedStock,int difference){}
     public record InventoryResultDto(int changed,List<InventoryLineDto> lines){}
     public record ArticleRequest(String name,String category,BigDecimal price,String ean,int warningThreshold,boolean active,
-                                  BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName){}
+                                  BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName,String imageUrl){}
     public record ArticleDto(Long id,String name,String category,BigDecimal price,String ean,int stock,int warningThreshold,boolean active,
                               BigDecimal lastPurchasePrice,BigDecimal averagePurchasePrice,BigDecimal packageQuantity,BigDecimal packageVolume,String packageUnitShortName,BigDecimal sizeVolume,String sizeUnitShortName){}
     public record PurchaseRequest(Long drinkId,int quantity,BigDecimal unitPrice,LocalDate purchaseDate,String supplier,String note){}
