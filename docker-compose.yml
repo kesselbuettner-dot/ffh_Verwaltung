@@ -87,6 +87,9 @@ services:
       UPDATER_TOKEN: ${UPDATER_TOKEN:-}
       UPDATER_WORKSPACE: /workspace
       GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-kesselbuettner-dot/ffh_Verwaltung}
+    read_only: true
+    tmpfs:
+      - /tmp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${FFH_DEPLOY_PATH:-/opt/ffh_verwaltung}:/workspace
