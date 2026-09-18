@@ -215,4 +215,19 @@ async function openBarcodeScanner(targetId){
 function useManualBarcode(targetId,value){const v=(value??manualBarcode?.value??'').replace(/\D/g,'');if(!v){scannerStatus.textContent='Bitte einen Barcode eingeben.';return}const el=document.getElementById(targetId);if(el){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}))}closeModal();if(targetId==='purchaseSearch')findPurchaseArticles()}
 const oldCloseModal=closeModal;
 closeModal=function(){if(barcodeTimer){clearTimeout(barcodeTimer);barcodeTimer=null}if(barcodeStream){barcodeStream.getTracks().forEach(t=>t.stop());barcodeStream=null}oldCloseModal()}
-</script>\n<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }</script></body></html>
+</script>\n<script>
+if ("serviceWorker" in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+      await registration.update();
+    } catch (e) {}
+  });
+}
+</script></body></html>
