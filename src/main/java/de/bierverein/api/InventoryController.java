@@ -226,7 +226,7 @@ public class InventoryController {
 
     public record InventoryRequest(List<InventoryLineRequest> items){}
     public record InventoryLineRequest(Long drinkId, int countedStock){}
-    public record InventoryItemDto(Long id,String name,String category,int stock,int warningThreshold,BigDecimal sizeVolume,String sizeUnitShortName){}
+    public record InventoryItemDto(Long id,String name,String category,int stock,int warningThreshold,BigDecimal sizeVolume,String sizeUnitShortName,String imageUrl){}
     public record InventoryLineDto(Long id,String name,int previousStock,int countedStock,int difference){}
     public record InventoryResultDto(int changed,List<InventoryLineDto> lines){}
     public record ArticleRequest(String name,String category,BigDecimal price,String ean,int warningThreshold,boolean active,
