@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#18212b"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="FFH Verwaltung"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FFH Verwaltung</title>
 <style>
 :root{--bg:#f3f5f7;--panel:#fff;--ink:#18212b;--muted:#687582;--line:#dfe4e8;--accent:#b51f2b;--accent2:#8d1621;--nav:#18212b;--nav2:#24313e;--ok:#19713b;--warn:#a46600}
@@ -180,4 +180,16 @@ async function openBarcodeScanner(targetId){
 function useManualBarcode(targetId,value){const v=(value??manualBarcode?.value??'').replace(/\D/g,'');if(!v){scannerStatus.textContent='Bitte einen Barcode eingeben.';return}const el=document.getElementById(targetId);if(el){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}))}closeModal();if(targetId==='purchaseSearch')findPurchaseArticles()}
 const oldCloseModal=closeModal;
 closeModal=function(){if(barcodeTimer){clearTimeout(barcodeTimer);barcodeTimer=null}if(barcodeStream){barcodeStream.getTracks().forEach(t=>t.stop());barcodeStream=null}oldCloseModal()}
+</script><script>
+let ffhPwaRegistration=null;
+if("serviceWorker" in navigator){
+ navigator.serviceWorker.register("/service-worker.js").then(reg=>{
+  ffhPwaRegistration=reg;
+  reg.addEventListener("updatefound",()=>{const w=reg.installing;if(!w)return;w.addEventListener("statechange",()=>{if(w.state==="installed"&&navigator.serviceWorker.controller)showPwaUpdate();});});
+  setInterval(()=>reg.update(),300000);
+ }).catch(()=>{});
+}
+function showPwaUpdate(){if(document.getElementById("pwaUpdateNotice"))return;const d=document.createElement("div");d.id="pwaUpdateNotice";d.style="position:fixed;right:18px;bottom:18px;z-index:100;background:#18212b;color:#fff;padding:16px;border-radius:14px;box-shadow:0 8px 30px #0005;max-width:360px";d.innerHTML='<strong>🔄 Neue Version verfügbar</strong><br><span style="opacity:.85">Die FFH Verwaltung kann aktualisiert werden.</span><br><button class="btn primary" style="margin-top:10px" onclick="applyPwaUpdate()">Jetzt aktualisieren</button>';document.body.appendChild(d)}
+function applyPwaUpdate(){if(ffhPwaRegistration?.waiting){ffhPwaRegistration.waiting.postMessage("SKIP_WAITING");}location.reload();}
+async function checkForAppUpdate(silent=true){if(!token)return;try{const x=await api("/api/admin/update-check");if(x.updateAvailable){const el=document.getElementById("adminUpdateStatus");if(el)el.innerHTML='<div class="message success">🔄 Neue Version <strong>'+esc(x.latestVersion)+'</strong> verfügbar (installiert: '+esc(x.currentVersion)+').<br><small>'+esc(x.name||"GitHub Release")+'</small></div>';showPwaUpdate();}else if(!silent){const el=document.getElementById("adminUpdateStatus");if(el)el.innerHTML='<div class="message success">✓ Keine neue GitHub-Version gefunden.</div>';}}catch(e){}}
 </script></body></html>
