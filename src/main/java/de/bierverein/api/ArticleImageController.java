@@ -1,5 +1,5 @@
 package de.bierverein.api;
-import org.springframework.http.*; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.web.bind.annotation.*; import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.*; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.web.bind.annotation.*; import org.springframework.web.multipart.MultipartFile; import org.springframework.web.server.ResponseStatusException;
 import java.io.*; import java.nio.file.*; import java.util.*;
 @RestController @RequestMapping("/api/inventory/articles")
 public class ArticleImageController {
