@@ -1,5 +1,5 @@
 package de.bierverein.api;
-import org.springframework.core.io.*; import org.springframework.http.*; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.web.bind.annotation.*; import org.springframework.web.multipart.MultipartFile; import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.*; import org.springframework.http.*; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.web.bind.annotation.*; import org.springframework.web.multipart.MultipartFile; import org.springframework.web.server.ResponseStatusException; import org.springframework.transaction.annotation.Transactional;
 import java.io.*; import java.net.URLEncoder; import java.nio.charset.StandardCharsets; import java.nio.file.*; import java.time.Instant; import java.util.*;
 @RestController @RequestMapping("/api/training")
 public class TrainingDocumentController {
