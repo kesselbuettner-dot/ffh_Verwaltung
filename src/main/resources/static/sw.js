@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-v3";
+const CACHE_NAME = "ffh-verwaltung-v4";
 
 const APP_SHELL = [
   "/",
