@@ -5,9 +5,11 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#f3f5f7",
   "theme_color": "#b51f2b",
   "lang": "de",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icons/wache48-logo.svg",
@@ -20,6 +22,18 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Kasse / Theke",
+      "short_name": "Kasse",
+      "url": "/?page=theke"
+    },
+    {
+      "name": "Mitglieder",
+      "short_name": "Mitglieder",
+      "url": "/?page=members"
     }
   ]
 }
