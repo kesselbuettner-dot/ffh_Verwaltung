@@ -52,7 +52,6 @@ public class SecurityConfig {
                     "/css/**",
                     "/js/**",
                     "/images/**",
-                    "/uploads/**",
                     "/api/auth/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
@@ -90,12 +89,11 @@ public class SecurityConfig {
                 new JwtAuthenticationConverter();
 
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-
             String role = jwt.getClaimAsString("role");
-
-            return List.of(
-                new SimpleGrantedAuthority("ROLE_" + role)
-            );
+            if (role == null || role.isBlank()) {
+                return List.of();
+            }
+            return List.of(new SimpleGrantedAuthority("ROLE_" + role));
         });
 
         return converter;
