@@ -69,8 +69,11 @@ public class DeviceController {
         validateInspection(r);
 
         LocalDate next = r.nextInspectionDate();
-        if(next==null && r.inspectionIntervalMonths()!=null){
-            next = calculateNextInspection(r.inspectionDate(), r.inspectionIntervalMonths());
+        Integer intervalMonths = r.inspectionIntervalMonths()!=null
+            ? r.inspectionIntervalMonths()
+            : d.getInspectionIntervalMonths();
+        if(next==null && intervalMonths!=null){
+            next = calculateNextInspection(r.inspectionDate(), intervalMonths);
         }
 
         DeviceInspection i=new DeviceInspection();
