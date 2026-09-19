@@ -65,7 +65,7 @@ public class SecurityConfig {
                     .authenticated()
 
                 .requestMatchers("/api/theke/**")
-                    .hasAnyRole("ADMIN", "THEKE", "MEMBER")
+                    .hasAnyRole("ADMIN", "THEKE", "MEMBER", "GETRAENKEWART")
 
                 .requestMatchers("/api/member/**")
                     .hasAnyRole("ADMIN", "THEKE", "MEMBER")
