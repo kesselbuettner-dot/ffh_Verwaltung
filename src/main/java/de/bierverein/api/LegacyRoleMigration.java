@@ -33,7 +33,23 @@ public class LegacyRoleMigration {
         // One-time bootstrap only: never recreate assignments that an admin
         // deliberately removed after migration. Subsequent user creation and
         // role changes must be handled by the new role-management service.
-        if (roles.count() != 0L) return;
+        // A partially initialized database must never be treated as migrated.
+        // Fail closed instead of silently leaving users without assignments.
+        long existingRoles = roles.count();
+        if (existingRoles != 0L) {
+            for (Role legacy : Role.values()) {
+                if (roles.findByCode(legacy.name()).isEmpty()) {
+                    throw new IllegalStateException("Incomplete legacy role migration: " + legacy);
+                }
+            }
+            for (AppUser user : users.findAll()) {
+                if (assignments.findByUserId(user.getId()).isEmpty()) {
+                    throw new IllegalStateException("Missing managed roles for user " + user.getId()
+                        + "; manual reconciliation required before enabling managed authorization");
+                }
+            }
+            return;
+        }
         Map<Role, ManagedRole> legacyRoles = new EnumMap<>(Role.class);
         for (Role legacy : Role.values()) {
             ManagedRole role = roles.findByCode(legacy.name())
