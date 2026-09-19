@@ -59,6 +59,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/inventory/**")
                     .hasAnyRole("ADMIN", "GETRAENKEWART")
 
+                .requestMatchers("/api/devices/**")
+                    .hasAnyRole("ADMIN", "GERATEWART")
+
                 .requestMatchers("/api/theke/**")
                     .hasAnyRole("ADMIN", "THEKE", "MEMBER")
 
