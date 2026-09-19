@@ -55,6 +55,13 @@ public class ManagedUserRoleAdminController {
         if (wasAdmin && !willBeAdmin && assignments.countByRoleCodeAndUserEnabled("ADMIN", true) <= 1) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Letzter aktiver Administrator darf nicht entfernt werden");
         }
+        // Legacy JWT and @PreAuthorize still read AppUser.role. Do not allow
+        // removing a managed ADMIN assignment while the legacy ADMIN claim
+        // would continue granting administrator access.
+        if (wasAdmin && !willBeAdmin && user.getRole() == Role.ADMIN) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Administratorrolle kann erst nach Umstellung der alten Autorisierung entfernt werden");
+        }
         assignments.deleteAll(previous);
         assignments.flush();
         for (ManagedRole role : selected) {
