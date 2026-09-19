@@ -48,6 +48,14 @@ public class EffectivePermissionService {
                 granted.add(permission.getPermissionKey());
             }
         }
+        // A write or delete grant includes the ability to read that area.
+        // This is evaluated dynamically, so a role cannot accidentally have
+        // write access while its read-only UI is hidden.
+        if (permissionKey.endsWith(".read")) {
+            String area = permissionKey.substring(0, permissionKey.length() - 5);
+            return granted.contains(permissionKey) || granted.contains(area + ".write")
+                || granted.contains(area + ".delete");
+        }
         return granted.contains(permissionKey);
     }
 }
