@@ -42,12 +42,8 @@ public class LegacyRoleMigration {
                     throw new IllegalStateException("Incomplete legacy role migration: " + legacy);
                 }
             }
-            for (AppUser user : users.findAll()) {
-                if (assignments.findByUserId(user.getId()).isEmpty()) {
-                    throw new IllegalStateException("Missing managed roles for user " + user.getId()
-                        + "; manual reconciliation required before enabling managed authorization");
-                }
-            }
+            // Do not infer an incomplete migration from users created later or
+            // assignments intentionally removed by an administrator.
             return;
         }
         Map<Role, ManagedRole> legacyRoles = new EnumMap<>(Role.class);
