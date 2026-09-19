@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 
 @RestController
@@ -118,7 +117,8 @@ public class DeviceController {
         d.setInspectionIntervalMonths(r.inspectionIntervalMonths());
         d.setResponsibleUsername(clean(r.responsibleUsername()));
         d.setNotes(clean(r.notes()));
-        if(creating || r.active()!=null) d.setActive(creating ? r.active() : r.active());
+        if(creating) d.setActive(r.active()==null || r.active());
+        else if(r.active()!=null) d.setActive(r.active());
     }
 
     private void validateInspection(InspectionRequest r){
