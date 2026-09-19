@@ -10,13 +10,15 @@ class LegacyRoleMigrationTest {
     private ManagedRoleRepository roles;
     private ManagedUserRoleRepository assignments;
     private AppUserRepository users;
+    private ManagedRolePermissionRepository permissions;
     private LegacyRoleMigration migration;
 
     @BeforeEach void setup() {
         roles = mock(ManagedRoleRepository.class);
         assignments = mock(ManagedUserRoleRepository.class);
         users = mock(AppUserRepository.class);
-        migration = new LegacyRoleMigration(roles, assignments, users);
+        permissions = mock(ManagedRolePermissionRepository.class);
+        migration = new LegacyRoleMigration(roles, assignments, users, permissions);
     }
 
     @Test void subsequentStartupDoesNotRejectNewUsersWithoutAssignments() {
