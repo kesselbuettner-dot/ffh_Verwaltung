@@ -1,0 +1,31 @@
+package de.bierverein.api;
+import java.math.*;
+import java.time.Instant;
+import java.util.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+@RestController @RequestMapping("/api/credit-topups")
+public class CreditTopupController {
+ private final CreditTopupRepository topups; private final MemberRepository members; private final AppUserRepository users;
+ @Value("${PAYPAL_DONATION_URL:}") private String paypalUrl;
+ public CreditTopupController(CreditTopupRepository t,MemberRepository m,AppUserRepository u){topups=t;members=m;users=u;}
+ private ResponseStatusException bad(String m){return new ResponseStatusException(HttpStatus.BAD_REQUEST,m);}
+ private AppUser current(Authentication a){AppUser u=users.findByUsername(a.getName()).orElseThrow(()->new ResponseStatusException(HttpStatus.UNAUTHORIZED));if(!u.isEnabled()||!u.isRegistrationApproved())throw new ResponseStatusException(HttpStatus.FORBIDDEN);return u;}
+ private boolean reviewer(AppUser u){return u.getRole()==Role.ADMIN||u.getRole()==Role.GETRAENKEWART;}
+ private void requireReviewer(AppUser u){if(!reviewer(u))throw new ResponseStatusException(HttpStatus.FORBIDDEN);}
+ private BigDecimal amount(BigDecimal a){if(a==null||a.scale()>2||a.compareTo(new BigDecimal("0.01"))<0||a.compareTo(new BigDecimal("1000.00"))>0)throw bad("Betrag zwischen 0,01 und 1000,00 EUR erforderlich");return a.setScale(2);}
+ private View view(CreditTopup t){return new View(t.getId(),t.getMember().getId(),t.getMember().getName(),t.getAmount(),t.getReferenceCode(),t.getStatus(),t.getPaymentMethod(),t.getCreatedAt(),t.getReportedAt(),t.getReviewedAt(),t.getReviewedBy(),t.getNote());}
+ @GetMapping("/config") public Map<String,String> config(Authentication auth){current(auth);return Map.of("paypalDonationUrl",paypalUrl==null?"":paypalUrl);}
+ @GetMapping("/mine") @Transactional(readOnly=true) public List<View> mine(Authentication auth){AppUser u=current(auth);if(u.getMember()==null)throw bad("Kein Mitgliedskonto zugeordnet");return topups.findByMemberIdOrderByCreatedAtDesc(u.getMember().getId()).stream().map(this::view).toList();}
+ @PostMapping("/mine") @Transactional public View create(@RequestBody AmountRequest request,Authentication auth){AppUser u=current(auth);if(u.getMember()==null)throw bad("Kein Mitgliedskonto zugeordnet");if(paypalUrl==null||paypalUrl.isBlank())throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"PayPal-Spendenlink nicht konfiguriert");Member m=members.findById(u.getMember().getId()).orElseThrow();if(!m.isActive())throw bad("Mitglied inaktiv");CreditTopup t=new CreditTopup();t.setMember(m);t.setAmount(amount(request==null?null:request.amount()));t.setReferenceCode("FFH-"+UUID.randomUUID().toString().substring(0,12).toUpperCase(Locale.ROOT));t.setCreatedBy(u.getUsername());return view(topups.save(t));}
+ @PostMapping("/mine/{id}/report") @Transactional public View report(@PathVariable Long id,Authentication auth){AppUser u=current(auth);CreditTopup t=topups.findByIdForUpdate(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));if(u.getMember()==null||!t.getMember().getId().equals(u.getMember().getId()))throw new ResponseStatusException(HttpStatus.FORBIDDEN);if(!"PENDING".equals(t.getStatus()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Anfrage bereits bearbeitet");t.setStatus("REPORTED");t.setReportedAt(Instant.now());return view(t);}
+ @GetMapping("/review") @Transactional(readOnly=true) public List<View> review(Authentication auth){requireReviewer(current(auth));return topups.findByStatusOrderByCreatedAtAsc("REPORTED").stream().map(this::view).toList();}
+ @PostMapping("/{id}/review") @Transactional public View reviewOne(@PathVariable Long id,@RequestBody Decision decision,Authentication auth){AppUser u=current(auth);requireReviewer(u);CreditTopup t=topups.findByIdForUpdate(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));if(!"REPORTED".equals(t.getStatus()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Anfrage nicht mehr offen");if(decision==null||decision.approve()==null)throw bad("Entscheidung fehlt");if(Boolean.TRUE.equals(decision.approve())){Member m=members.findByIdForUpdate(t.getMember().getId()).orElseThrow();m.setBalance(m.getBalance().add(t.getAmount()));t.setStatus("APPROVED");}else t.setStatus("REJECTED");t.setReviewedBy(u.getUsername());t.setReviewedAt(Instant.now());t.setNote(decision.note()==null?null:decision.note().substring(0,Math.min(500,decision.note().length())));return view(t);}
+ @PostMapping("/manual") @Transactional public View manual(@RequestBody ManualRequest request,Authentication auth){AppUser u=current(auth);requireReviewer(u);if(request==null||request.memberId()==null)throw bad("Mitglied auswählen");if(request.paymentMethod()==null||!Set.of("CASH","TRANSFER","PAYPAL","OTHER").contains(request.paymentMethod()))throw bad("Zahlungsmittel auswählen");Member m=members.findByIdForUpdate(request.memberId()).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));if(!m.isActive())throw bad("Mitglied inaktiv");BigDecimal a=amount(request.amount());CreditTopup t=new CreditTopup();t.setMember(m);t.setAmount(a);t.setPaymentMethod(request.paymentMethod());t.setReferenceCode("FFH-M-"+UUID.randomUUID().toString().substring(0,12).toUpperCase(Locale.ROOT));t.setStatus("APPROVED");t.setCreatedBy(u.getUsername());t.setReviewedBy(u.getUsername());t.setReviewedAt(Instant.now());t.setNote(request.note()==null?null:request.note().substring(0,Math.min(500,request.note().length())));m.setBalance(m.getBalance().add(a));return view(topups.save(t));}
+ public record AmountRequest(BigDecimal amount){} public record Decision(Boolean approve,String note){} public record ManualRequest(Long memberId,BigDecimal amount,String paymentMethod,String note){}
+ public record View(Long id,Long memberId,String memberName,BigDecimal amount,String referenceCode,String status,String paymentMethod,Instant createdAt,Instant reportedAt,Instant reviewedAt,String reviewedBy,String note){}
+}
