@@ -44,7 +44,10 @@ services:
       MARKTGURU_CLIENT_KEY: ${MARKTGURU_CLIENT_KEY}
       MARKTGURU_ZIP: ${MARKTGURU_ZIP:-04109}
       MARKTGURU_LIMIT: ${MARKTGURU_LIMIT:-24}
-      APP_VERSION: ${APP_VERSION:-0.1.1}
+      APP_VERSION: ${APP_VERSION:-1.1.0}
+      GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-kesselbuettner-dot/ffh_Verwaltung}
+      UPDATER_TOKEN: ${UPDATER_TOKEN}
+      APP_UPDATER_TOKEN: ${UPDATER_TOKEN}
     volumes:
       - app_data:/app/data
     ports:
@@ -98,7 +101,7 @@ services:
       MARKTGURU_CLIENT_KEY: ${MARKTGURU_CLIENT_KEY}
       MARKTGURU_ZIP: ${MARKTGURU_ZIP:-04109}
       MARKTGURU_LIMIT: ${MARKTGURU_LIMIT:-24}
-      APP_VERSION: ${APP_VERSION:-0.1.1}
+      APP_VERSION: ${APP_VERSION:-1.1.0}
     volumes:
       - app_data:/app/data
     command: ["java", "-jar", "/app/app.jar", "--worker"]
