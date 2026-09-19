@@ -62,6 +62,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**")
                     .hasRole("ADMIN")
 
+                .requestMatchers("/api/devices/**")
+                    .hasAnyRole("ADMIN", "GERATEWART")
+
                 .requestMatchers("/api/theke/**")
                     .hasAnyRole("ADMIN", "THEKE", "MEMBER")
 
