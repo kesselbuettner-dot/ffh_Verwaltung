@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ManagedUserRoleRepository extends JpaRepository<ManagedUserRole, Long> {
     List<ManagedUserRole> findByUserId(Long userId);
+    boolean existsByRoleId(Long roleId);
 }
