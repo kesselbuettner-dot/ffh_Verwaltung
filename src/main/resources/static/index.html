@@ -356,7 +356,7 @@ if ("serviceWorker" in navigator) {
     } catch (e) {}
   });
 }
-</script>let deviceScannerStream=null,deviceScannerTimer=null,deviceScannerDetector=null;
+let deviceScannerStream=null,deviceScannerTimer=null,deviceScannerDetector=null;
 function deviceModule(name){content.innerHTML='<div class="title-row"><h1>'+esc(name)+'</h1></div><div class="panel"><h3>Modul vorbereitet</h3><p>Der Bereich ist für die Gerätewart-Funktionen vorbereitet und wird mit den jeweiligen Stammdaten verbunden.</p></div>';}
 async function devicePage(){
  setActive('devices'); sidebar.classList.remove('open');
@@ -391,4 +391,4 @@ async function openDeviceScan(target){
 async function findDeviceByScan(){const v=deviceScanValue.value.trim();if(!v)return;try{const d=await api('/api/devices/scan?value='+encodeURIComponent(v));stopDeviceScanner();closeModal();openDevice(d.id)}catch(e){deviceScanStatus.textContent=e.message}}
 function useDeviceScan(target){const v=deviceScanValue.value.trim();if(!v)return;if(target){document.getElementById(target).value=v;stopDeviceScanner();closeModal()}else findDeviceByScan()}
 function stopDeviceScanner(){if(deviceScannerTimer){clearTimeout(deviceScannerTimer);deviceScannerTimer=null}if(deviceScannerStream){deviceScannerStream.getTracks().forEach(t=>t.stop());deviceScannerStream=null}deviceScannerDetector=null}
-</body></html>
+</script></body></html>
