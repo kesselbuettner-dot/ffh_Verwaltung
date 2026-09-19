@@ -18,13 +18,16 @@ public class LegacyRoleMigration {
     private final ManagedRoleRepository roles;
     private final ManagedUserRoleRepository assignments;
     private final AppUserRepository users;
+    private final ManagedRolePermissionRepository permissions;
 
     public LegacyRoleMigration(ManagedRoleRepository roles,
                                ManagedUserRoleRepository assignments,
-                               AppUserRepository users) {
+                               AppUserRepository users,
+                               ManagedRolePermissionRepository permissions) {
         this.roles = roles;
         this.assignments = assignments;
         this.users = users;
+        this.permissions = permissions;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -42,6 +45,7 @@ public class LegacyRoleMigration {
                     throw new IllegalStateException("Incomplete legacy role migration: " + legacy);
                 }
             }
+            seedLegacyDevicePermissions();
             // Do not infer an incomplete migration from users created later or
             // assignments intentionally removed by an administrator.
             return;
@@ -54,6 +58,8 @@ public class LegacyRoleMigration {
             legacyRoles.put(legacy, role);
         }
 
+        seedLegacyDevicePermissions();
+
         for (AppUser user : users.findAll()) {
             if (user.getId() == null || user.getRole() == null) {
                 throw new IllegalStateException("Legacy user has no ID or role");
@@ -62,6 +68,27 @@ public class LegacyRoleMigration {
             // migration cannot remove additional manually assigned roles.
             if (assignments.findByUserId(user.getId()).isEmpty()) {
                 assignments.save(new ManagedUserRole(user, legacyRoles.get(user.getRole())));
+            }
+        }
+    }
+
+    /** Preserve legacy ADMIN/GERATEWART device access during the rollout.
+     * Only system roles are seeded; custom roles remain fully administrator-controlled. */
+    private void seedLegacyDevicePermissions() {
+        for (String code : java.util.List.of("ADMIN", "GERATEWART")) {
+            ManagedRole role = roles.findByCode(code).orElseThrow(() ->
+                new IllegalStateException("Missing legacy role: " + code));
+            if (!role.isSystemRole()) {
+                throw new IllegalStateException("Legacy role is not protected: " + code);
+            }
+            java.util.Set<String> existing = permissions.findByRoleId(role.getId()).stream()
+                .map(ManagedRolePermission::getPermissionKey)
+                .collect(java.util.stream.Collectors.toSet());
+            for (String action : java.util.List.of("read", "write", "delete")) {
+                String key = "fire.devices." + action;
+                if (!existing.contains(key)) {
+                    permissions.save(new ManagedRolePermission(role, key));
+                }
             }
         }
     }
