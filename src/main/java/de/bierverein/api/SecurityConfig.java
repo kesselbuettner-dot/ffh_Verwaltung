@@ -62,7 +62,7 @@ public class SecurityConfig {
                     .hasRole("ADMIN")
 
                 .requestMatchers("/api/devices/**")
-                    .hasAnyRole("ADMIN", "GERATEWART")
+                    .authenticated()
 
                 .requestMatchers("/api/theke/**")
                     .hasAnyRole("ADMIN", "THEKE", "MEMBER")
