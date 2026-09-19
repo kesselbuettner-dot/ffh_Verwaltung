@@ -162,7 +162,7 @@ public class MarktguruService {
             case "l", "liter", "litre", "ltr" -> "l";
             case "ml", "milliliter", "millilitre" -> "ml";
             case "cl", "centiliter", "centilitre" -> "cl";
-            case "dl", "deciliter", "decilitre" -> "dl";
+            case "dl", "deciliter", "decilitre", "deziliter", "dezilitre" -> "dl";
             case "kg", "kilogram", "kilograms" -> "kg";
             case "g", "gram", "grams" -> "g";
             default -> u;
