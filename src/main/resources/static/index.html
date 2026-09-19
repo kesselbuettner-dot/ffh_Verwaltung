@@ -231,35 +231,6 @@ function useManualBarcode(targetId,value){const v=(value??manualBarcode?.value??
 const oldCloseModal=closeModal;
 closeModal=function(){if(barcodeTimer){clearTimeout(barcodeTimer);barcodeTimer=null}if(barcodeStream){barcodeStream.getTracks().forEach(t=>t.stop());barcodeStream=null}oldCloseModal()}
 </script>\n<script>
-window.checkForUpdate = async function () {
-  const el = document.getElementById('updateStatus');
-  if (!el) return;
-  el.className = 'update-status';
-  el.innerHTML = '<span class="update-icon">⏳</span><div><strong>Update wird geprüft …</strong><small>GitHub wird geprüft.</small></div>';
-  try {
-    const localResponse = await fetch('/version.json', {cache:'no-store'});
-    if (!localResponse.ok) throw new Error('Lokale Version nicht gefunden');
-    const local = await localResponse.json();
-
-    const remoteResponse = await fetch('https://api.github.com/repos/kesselbuettner-dot/ffh_verwaltung/commits/main', {
-      cache:'no-store',
-      headers:{Accept:'application/vnd.github+json'}
-    });
-    if (!remoteResponse.ok) throw new Error('GitHub nicht erreichbar');
-    const remote = await remoteResponse.json();
-
-    const available = local.commit !== remote.sha;
-    el.className = 'update-status ' + (available ? 'available' : 'current');
-    el.innerHTML = available
-      ? '<span class="update-icon">⬆️</span><div><strong>Update verfügbar</strong><small>Auf GitHub ist ein neuer Stand vorhanden.</small></div><a class="btn small primary" href="https://github.com/kesselbuettner-dot/ffh_verwaltung" target="_blank" rel="noopener">GitHub öffnen</a>'
-      : '<span class="update-icon">✓</span><div><strong>System ist aktuell</strong><small>Die installierte Version entspricht dem aktuellen GitHub-Stand.</small></div><button class="btn small secondary" onclick="checkForUpdate()">Erneut prüfen</button>';
-  } catch (e) {
-    el.className = 'update-status error';
-    el.innerHTML = '<span class="update-icon">⚠️</span><div><strong>Updateprüfung nicht möglich</strong><small></small></div><button class="btn small secondary" onclick="checkForUpdate()">Erneut prüfen</button>';
-    el.querySelector('small').textContent = e.message || 'Unbekannter Fehler';
-  }
-};
-
 window.approveRegistration = async function (id) {
   try {
     await api('/api/admin/users/' + id + '/approve', {method:'POST'});
