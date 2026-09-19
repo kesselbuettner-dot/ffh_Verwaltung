@@ -1,7 +1,6 @@
 package de.bierverein.api;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.regex.Pattern;
@@ -53,7 +52,7 @@ public class ManagedRoleAdminController {
                 || input.name().length() > 120) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ungültige Rolle");
         }
-        String code = input.code().toUpperCase(Locale.ROOT);
+        String code = input.code();
         if (roles.existsByCode(code)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Rollenkennung existiert bereits");
         }
