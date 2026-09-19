@@ -359,8 +359,73 @@ window.uploadTraining=async function(){
 };
 window.openTrainingFile=async function(id){try{const r=await fetch('/api/training/'+id+'/file',{headers:{'Authorization':'Bearer '+token}});if(!r.ok)throw new Error('Datei konnte nicht geöffnet werden');const blob=await r.blob();const url=URL.createObjectURL(blob);window.open(url,'_blank');setTimeout(()=>URL.revokeObjectURL(url),60000)}catch(e){alert(e.message)}};
 window.deleteTraining=async function(id){if(!confirm('Unterlage wirklich löschen?'))return;try{await api('/api/training/'+id,{method:'DELETE'});trainingPage()}catch(e){alert(e.message)}};
-window.checkForUpdate=async function(autoInstall=false){const el=document.getElementById('updateStatus');if(!el)return;el.className='update-status';el.innerHTML='<span class="update-icon">⏳</span><div><strong>Update wird geprüft …</strong><small>GitHub-Release wird geprüft.</small></div>';try{const x=await api('/api/admin/update-check');if(x.updateAvailable){el.className='update-status available';el.innerHTML='<span class="update-icon">⬆️</span><div><strong>Update verfügbar</strong><small>Installiert: '+esc(x.currentVersion)+' · GitHub: '+esc(x.remoteVersion)+'</small></div>';if(autoInstall){await installServerUpdate(true)}else{el.insertAdjacentHTML('beforeend','<button class="btn small primary" onclick="installServerUpdate(false)">Update installieren</button>')}}else{el.className='update-status current';el.innerHTML='<span class="update-icon">✓</span><div><strong>System ist aktuell</strong><small>Version '+esc(x.currentVersion)+' · GitHub '+esc(x.remoteVersion)+'</small></div><button class="btn small secondary" onclick="checkForUpdate(false)">Erneut prüfen</button>')}}catch(e){el.className='update-status error';el.innerHTML='<span class="update-icon">⚠️</span><div><strong>Updateprüfung fehlgeschlagen</strong><small></small></div><button class="btn small secondary" onclick="checkForUpdate(false)">Erneut prüfen</button>';el.querySelector('small').textContent=e.message||'GitHub konnte nicht erreicht werden'}};
-window.installServerUpdate=async function(autoInstall=false){const el=document.getElementById('updateStatus');if(!el)return;if(!autoInstall&&!confirm('Neues Release jetzt auf dem Server installieren? Die Anwendung wird dabei kurz neu gestartet.'))return;el.className='update-status';el.innerHTML='<span class="update-icon">⏳</span><div><strong>Server-Update wird gestartet …</strong><small>Das neue GitHub-Release wird auf dem Server installiert.</small></div>';try{const r=await fetch('/api/admin/update-check/install',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}});let x={};try{x=await r.json()}catch(_){}if(!r.ok)throw new Error(x.message||x.detail||x.error||('HTTP '+r.status));el.className='update-status current';el.innerHTML='<span class="update-icon">✓</span><div><strong>Update gestartet</strong><small>'+esc(x.message||'Der Server wird aktualisiert.')+'</small></div>';setTimeout(()=>window.location.reload(),12000)}catch(e){el.className='update-status error';el.innerHTML='<span class="update-icon">⚠️</span><div><strong>Server-Update konnte nicht gestartet werden</strong><small></small></div><button class="btn small secondary" onclick="checkForUpdate(false)">Erneut prüfen</button>';el.querySelector('small').textContent=e.message||'Update fehlgeschlagen'}};
+window.checkForUpdate = async function(autoInstall = false) {
+  const el = document.getElementById('updateStatus');
+  if (!el) return;
+  el.className = 'update-status';
+  el.innerHTML = '<span class="update-icon">⏳</span><div><strong>Update wird geprüft …</strong><small>GitHub-Release wird geprüft.</small></div>';
+  try {
+    const x = await api('/api/admin/update-check');
+    if (x.updateAvailable) {
+      el.className = 'update-status available';
+      el.innerHTML = '<span class="update-icon">⬆️</span><div><strong>Update verfügbar</strong><small>Installiert: ' + esc(x.currentVersion) + ' · GitHub: ' + esc(x.remoteVersion) + '</small></div>';
+      if (autoInstall) {
+        await installServerUpdate(true);
+      } else {
+        const button = document.createElement('button');
+        button.className = 'btn small primary';
+        button.textContent = 'Update installieren';
+        button.onclick = () => installServerUpdate(false);
+        el.appendChild(button);
+      }
+    } else {
+      el.className = 'update-status current';
+      el.innerHTML = '<span class="update-icon">✓</span><div><strong>System ist aktuell</strong><small>Version ' + esc(x.currentVersion) + ' · GitHub ' + esc(x.remoteVersion) + '</small></div>';
+      const button = document.createElement('button');
+      button.className = 'btn small secondary';
+      button.textContent = 'Erneut prüfen';
+      button.onclick = () => checkForUpdate(false);
+      el.appendChild(button);
+    }
+  } catch (e) {
+    el.className = 'update-status error';
+    el.innerHTML = '<span class="update-icon">⚠️</span><div><strong>Updateprüfung fehlgeschlagen</strong><small></small></div>';
+    el.querySelector('small').textContent = e.message || 'GitHub konnte nicht erreicht werden';
+    const button = document.createElement('button');
+    button.className = 'btn small secondary';
+    button.textContent = 'Erneut prüfen';
+    button.onclick = () => checkForUpdate(false);
+    el.appendChild(button);
+  }
+};
+window.installServerUpdate = async function(autoInstall = false) {
+  const el = document.getElementById('updateStatus');
+  if (!el) return;
+  if (!autoInstall && !confirm('Neues Release jetzt auf dem Server installieren? Die Anwendung wird dabei kurz neu gestartet.')) return;
+  el.className = 'update-status';
+  el.innerHTML = '<span class="update-icon">⏳</span><div><strong>Server-Update wird gestartet …</strong><small>Das neue GitHub-Release wird auf dem Server installiert.</small></div>';
+  try {
+    const response = await fetch('/api/admin/update-check/install', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
+    });
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok) throw new Error(data.message || data.detail || data.error || ('HTTP ' + response.status));
+    el.className = 'update-status current';
+    el.innerHTML = '<span class="update-icon">✓</span><div><strong>Update gestartet</strong><small>' + esc(data.message || 'Der Server wird aktualisiert.') + '</small></div>';
+    setTimeout(() => window.location.reload(), 12000);
+  } catch (e) {
+    el.className = 'update-status error';
+    el.innerHTML = '<span class="update-icon">⚠️</span><div><strong>Server-Update konnte nicht gestartet werden</strong><small></small></div>';
+    el.querySelector('small').textContent = e.message || 'Update fehlgeschlagen';
+    const button = document.createElement('button');
+    button.className = 'btn small secondary';
+    button.textContent = 'Erneut prüfen';
+    button.onclick = () => checkForUpdate(false);
+    el.appendChild(button);
+  }
+};
 window.globalSearch=async function(){const q=gs?.value.trim();if(!q)return;try{const list=await api('/api/search?q='+encodeURIComponent(q));searchResults.classList.remove('hidden');searchResults.innerHTML=list.map(x=>'<div class="search-result" onclick="openSearchResult('+x.id+',\''+x.target+'\')"><div><strong>'+esc(x.type)+' · '+esc(x.title)+'</strong><small>'+esc(x.subtitle||'')+'</small></div></div>').join('')||'<div class="empty">Keine Treffer.</div>'}catch(e){searchResults.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}};
 window.openSearchResult=function(id,target){searchResults.classList.add('hidden');gs.value='';if(target==='members'){navigate('members');return}if(target==='articles'){inventoryPage('articles');return}if(target==='training'){trainingPage();return}};
 </script>
