@@ -10,7 +10,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/devices")
-@PreAuthorize("hasAnyRole('ADMIN','GERATEWART')")
 public class DeviceController {
     private final DeviceRepository devices;
     private final DeviceInspectionRepository inspections;
@@ -20,6 +19,7 @@ public class DeviceController {
     }
 
     @GetMapping
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'read')")
     public List<DeviceDto> list(@RequestParam(defaultValue="") String q){
         String x=q.trim().toLowerCase();
         return devices.findByActiveTrueOrderByNameAsc().stream()
@@ -31,6 +31,7 @@ public class DeviceController {
     }
 
     @GetMapping("/scan")
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'read')")
     public DeviceDto scan(@RequestParam String value){
         String v=value==null?"":value.trim();
         if(v.isBlank()) throw bad("Scanwert fehlt");
@@ -41,6 +42,7 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'read')")
     public DeviceDetailDto detail(@PathVariable Long id){
         Device d=find(id);
         List<InspectionDto> history=inspections.findByDeviceIdOrderByInspectionDateDesc(id).stream()
@@ -49,6 +51,7 @@ public class DeviceController {
     }
 
     @PostMapping
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'write')")
     public DeviceDto create(@RequestBody DeviceRequest r){
         Device d=new Device();
         apply(d,r,true);
@@ -56,6 +59,7 @@ public class DeviceController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'write')")
     public DeviceDto update(@PathVariable Long id,@RequestBody DeviceRequest r){
         Device d=find(id);
         apply(d,r,false);
@@ -64,6 +68,7 @@ public class DeviceController {
 
     @PostMapping("/{id}/inspections")
     @Transactional
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'write')")
     public InspectionDto inspect(@PathVariable Long id,@RequestBody InspectionRequest r){
         Device d=find(id);
         validateInspection(r);
@@ -94,6 +99,7 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}/inspections")
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'read')")
     public List<InspectionDto> inspections(@PathVariable Long id){
         find(id);
         return inspections.findByDeviceIdOrderByInspectionDateDesc(id).stream().map(this::inspection).toList();
