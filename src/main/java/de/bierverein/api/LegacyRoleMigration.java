@@ -30,6 +30,10 @@ public class LegacyRoleMigration {
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void migrate() {
+        // One-time bootstrap only: never recreate assignments that an admin
+        // deliberately removed after migration. Subsequent user creation and
+        // role changes must be handled by the new role-management service.
+        if (roles.count() != 0L) return;
         Map<Role, ManagedRole> legacyRoles = new EnumMap<>(Role.class);
         for (Role legacy : Role.values()) {
             ManagedRole role = roles.findByCode(legacy.name())
