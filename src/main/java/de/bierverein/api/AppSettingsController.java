@@ -16,7 +16,7 @@ import java.util.List;
 @RequestMapping("/api/settings")
 public class AppSettingsController {
     private static final String DEFAULT_ORDER =
-            "dashboard,members,theke,shopping,purchase,inventory,articles,devices,drivebook,devicebook,material,events,firewehr,training,finance,documents,calendar,donations,admin";
+            "dashboard,members,theke,shopping,purchase,inventory,articles,devices,drivebook,devicebook,material,events,firewehr,training,finance,documents,calendar,donations,admin,admin-members,admin-users,admin-settings";
 
     private final AppSettingsRepository settings;
 
