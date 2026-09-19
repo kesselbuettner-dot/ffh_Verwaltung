@@ -26,5 +26,8 @@ jobs:
       - name: Build and test
         run: mvn -B test package
 
-      - name: Build Docker image
+      - name: Build Docker image (app)
         run: docker build -t ffh-verwaltung:test .
+
+      - name: Build Docker image (worker)
+        run: docker build -t ffh-verwaltung:worker-test .
