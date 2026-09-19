@@ -63,7 +63,7 @@ class MarktguruServiceTest {
         assertEquals(new BigDecimal("1.19"), penny.price());
         assertEquals(new BigDecimal("0.95"), penny.referencePrice());
         assertEquals(new BigDecimal("1.25"), penny.volume());
-        assertEquals(new BigDecimal("1.00"), penny.quantity());
+        assertEquals(0, new BigDecimal("1.00").compareTo(penny.quantity()));
         assertEquals("Limonade", penny.productName());
         assertEquals("retailers/126765", penny.retailers().get(0).id());
     }
