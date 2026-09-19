@@ -92,7 +92,8 @@ function renderNavigation(){
  const items=menuDefinitions.filter(menuAllowed).filter(x=>!hidden.has(x.id)).sort((a,b)=>(rank.get(a.id)??999)-(rank.get(b.id)??999));
  const groups=[];const bySection=new Map();
  items.forEach(item=>{if(!bySection.has(item.section)){const g={name:item.section,items:[]};bySection.set(item.section,g);groups.push(g)}bySection.get(item.section).items.push(item)});
- host.innerHTML=groups.map(g=>'<div class="nav-section">'+esc(g.name)+'</div>'+g.items.map(i=>'<button class="nav-item '+(i.id.includes('-')?'nav-child':'')+'" data-page="'+esc(i.id)+'" onclick="menuDefinitions.find(x=>x.id===\''+i.id+'\').action()">'+i.icon+' <span>'+esc(i.label)+'</span></button>').join('')).join('');
+ host.innerHTML=groups.map(g=>'<div class="nav-section">'+esc(g.name)+'</div>'+g.items.map(i=>'<button class="nav-item '+(i.id.includes('-')?'nav-child':'')+'" data-page="'+esc(i.id)+'" data-nav-id="'+esc(i.id)+'">'+i.icon+' <span>'+esc(i.label)+'</span></button>').join('')).join('');
+ host.querySelectorAll('[data-nav-id]').forEach(button=>{button.addEventListener('click',()=>{const item=menuDefinitions.find(x=>x.id===button.dataset.navId);if(item)item.action()})});
  setActive(window.currentPage||'dashboard');
 }
 function applyAppSettings(){
