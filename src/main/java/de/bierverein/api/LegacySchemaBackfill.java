@@ -21,8 +21,8 @@ public class LegacySchemaBackfill implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         jdbc.update("update devices set operational_status = 'OK' where operational_status is null");
         jdbc.update("update devices set inspection_required = false where inspection_required is null");
-        jdbc.update("update devices set placement_x = 5 where placement_x is null");
-        jdbc.update("update devices set placement_y = 8 where placement_y is null");
+        jdbc.update("update devices set placementx = 5 where placementx is null");
+        jdbc.update("update devices set placementy = 8 where placementy is null");
         jdbc.update("update devices set placement_width = 38 where placement_width is null");
         jdbc.update("update devices set placement_height = 24 where placement_height is null");
         jdbc.update("update fire_vehicles set fire_relevant = true where fire_relevant is null");
