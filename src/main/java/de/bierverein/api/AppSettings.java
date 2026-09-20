@@ -30,7 +30,7 @@ public class AppSettings {
     private String accentColor = "#1479e9";
 
     @Column(nullable = false, length = 1000)
-    private String menuOrder = "dashboard,members,theke,shopping,purchase,inventory,articles,devices,drivebook,devicebook,material,events,firewehr,training,finance,documents,calendar,donations,admin,admin-members,admin-users,admin-settings";
+    private String menuOrder = "services,dashboard,members,theke,shopping,purchase,inventory,articles,devices,device-inspection-plans,vehicles,device-settings,training-documents,calendar,admin,admin-members,admin-users,admin-settings";
 
     @Column(nullable = false, length = 1000)
     private String hiddenMenuItems = "";
