@@ -2,6 +2,7 @@
   "name": "FFH Verwaltung",
   "short_name": "FFH Verwaltung",
   "description": "Vereins- und Feuerwehrverwaltung",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -31,9 +32,9 @@
       "url": "/?page=theke"
     },
     {
-      "name": "Mitglieder",
-      "short_name": "Mitglieder",
-      "url": "/?page=members"
+      "name": "Meldungen",
+      "short_name": "Meldungen",
+      "url": "/?messages=1"
     }
   ]
 }
