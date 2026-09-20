@@ -11,15 +11,15 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/dashboard/messages")
 public class DashboardMessageController {
-    private final DashboardMessageRepository messages; private final AppSettingsRepository settings; private final AppUserRepository users;
-    public DashboardMessageController(DashboardMessageRepository m, AppSettingsRepository s, AppUserRepository u){messages=m;settings=s;users=u;}
+    private final DashboardMessageRepository messages; private final AppSettingsRepository settings; private final AppUserRepository users; private final WebPushService push;
+    public DashboardMessageController(DashboardMessageRepository m, AppSettingsRepository s, AppUserRepository u,WebPushService p){messages=m;settings=s;users=u;push=p;}
     @GetMapping @Transactional(readOnly=true) public List<View> list(Authentication auth){
         boolean edit=canEdit(auth); Instant now=Instant.now();
         return messages.findAllByOrderByPriorityDescEventAtAscCreatedAtDesc().stream()
                 .filter(m->edit || (m.isActive() && (m.getPublishFrom()==null||!m.getPublishFrom().isAfter(now)) && (m.getPublishUntil()==null||!m.getPublishUntil().isBefore(now))))
                 .map(m->view(m,edit)).toList();
     }
-    @PostMapping @Transactional public View create(@RequestBody Request r,Authentication auth){requireEdit(auth);DashboardMessage m=new DashboardMessage();apply(m,r);m.setCreatedBy(auth.getName());return view(messages.save(m),true);}
+    @PostMapping @Transactional public View create(@RequestBody Request r,Authentication auth){requireEdit(auth);DashboardMessage m=new DashboardMessage();apply(m,r);m.setCreatedBy(auth.getName());m=messages.save(m);if("MESSAGE".equals(m.getType()))push.sendMessage(m);return view(m,true);}
     @PutMapping("/{id}") @Transactional public View update(@PathVariable Long id,@RequestBody Request r,Authentication auth){requireEdit(auth);DashboardMessage m=messages.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));apply(m,r);return view(messages.save(m),true);}
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable Long id,Authentication auth){requireEdit(auth);if(!messages.existsById(id))throw new ResponseStatusException(HttpStatus.NOT_FOUND);messages.deleteById(id);}
     private void apply(DashboardMessage m,Request r){if(r==null||r.title()==null||r.title().isBlank())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Titel ist erforderlich");String type=Optional.ofNullable(r.type()).orElse("MESSAGE").toUpperCase();if(!Set.of("MESSAGE","APPOINTMENT").contains(type))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Ungültiger Typ");m.setType(type);m.setTitle(trim(r.title(),140));m.setBody(trim(r.body(),2000));m.setEventAt("APPOINTMENT".equals(type)?r.eventAt():null);if("MESSAGE".equals(type)){int days=r.displayDays()==null?7:Math.max(1,Math.min(365,r.displayDays()));Instant start=m.getPublishFrom()==null?Instant.now():m.getPublishFrom();m.setPublishFrom(start);m.setPublishUntil(start.plusSeconds(days*86400L));}else{m.setPublishFrom(null);m.setPublishUntil(null);}m.setPriority(Math.max(0,Math.min(10,r.priority())));m.setActive(r.active());}

@@ -46,6 +46,9 @@ services:
       MARKTGURU_LIMIT: ${MARKTGURU_LIMIT:-24}
       APP_VERSION: ${APP_VERSION:-1.1.0}
       PAYPAL_DONATION_URL: ${PAYPAL_DONATION_URL:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.org}
       GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-kesselbuettner-dot/ffh_Verwaltung}
       UPDATER_TOKEN: ${UPDATER_TOKEN}
       APP_UPDATER_TOKEN: ${UPDATER_TOKEN}
@@ -103,6 +106,9 @@ services:
       MARKTGURU_ZIP: ${MARKTGURU_ZIP:-04109}
       MARKTGURU_LIMIT: ${MARKTGURU_LIMIT:-24}
       APP_VERSION: ${APP_VERSION:-1.1.0}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.org}
     volumes:
       - app_data:/app/data
     command: ["java", "-jar", "/app/app.jar", "--worker"]

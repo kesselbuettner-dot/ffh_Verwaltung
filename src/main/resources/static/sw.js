@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-v10";
+const CACHE_NAME = "ffh-verwaltung-v11";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -74,7 +74,20 @@ self.addEventListener("notificationclick", event => {
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(windows => {
       const existing = windows.find(client => "focus" in client);
-      return existing ? existing.focus() : clients.openWindow("/");
+      const target = event.notification.data?.url || "/?messages=1";
+      return existing ? existing.focus().then(client => client.navigate(target)) : clients.openWindow(target);
     })
   );
+});
+
+self.addEventListener("push", event => {
+  let data = { title: "FFH Verwaltung", body: "Eine neue Meldung ist verfügbar.", url: "/?messages=1" };
+  try { if (event.data) data = { ...data, ...event.data.json() }; } catch (_) {}
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: "/icons/wache48-logo.svg",
+    badge: "/icons/wache48-logo.svg",
+    tag: data.tag || "ffh-message",
+    data: { url: data.url || "/?messages=1" }
+  }));
 });

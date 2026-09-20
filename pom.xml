@@ -94,6 +94,13 @@
             <version>2.8.13</version>
         </dependency>
 
+        <!-- Standards-konforme Web-Push-Nachrichten mit VAPID -->
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>5.1.2</version>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
