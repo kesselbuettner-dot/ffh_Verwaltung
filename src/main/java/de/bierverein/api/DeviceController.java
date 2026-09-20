@@ -154,7 +154,8 @@ public class DeviceController {
     }
     private DeviceDto dto(Device d){
         return new DeviceDto(d.getId(),d.getName(),d.getInventoryNumber(),d.getBarcode(),d.getSerialNumber(),d.getManufacturer(),d.getModel(),
-            d.getCategory(),d.getLocation(),d.getPurchaseDate(),d.getLastInspectionDate(),d.getNextInspectionDate(),d.getInspectionIntervalMonths(),d.getResponsibleUsername(),d.isActive(),status(d));
+            d.getCategory(),d.getLocation(),d.getPurchaseDate(),d.getLastInspectionDate(),d.getNextInspectionDate(),d.getInspectionIntervalMonths(),d.getResponsibleUsername(),d.isActive(),status(d),
+            d.getOperationalStatus()==null?"OK":d.getOperationalStatus(),d.getOperationalStatusAt(),d.getOperationalStatusNote());
     }
     private InspectionDto inspection(DeviceInspection i){
         return new InspectionDto(i.getId(),i.getInspectionDate(),i.getNextInspectionDate(),i.getInspectionType(),i.getResult(),i.getInspector(),i.getDefects(),i.getMeasures(),i.getNotes());
@@ -178,7 +179,8 @@ public class DeviceController {
     public record DeviceRequest(String name,String inventoryNumber,String barcode,String serialNumber,String manufacturer,String model,String category,
         String location,LocalDate purchaseDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String responsibleUsername,String notes,Boolean active){}
     public record DeviceDto(Long id,String name,String inventoryNumber,String barcode,String serialNumber,String manufacturer,String model,String category,String location,
-        LocalDate purchaseDate,LocalDate lastInspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String responsibleUsername,boolean active,String status){}
+        LocalDate purchaseDate,LocalDate lastInspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String responsibleUsername,boolean active,String status,
+        String operationalStatus,java.time.Instant operationalStatusAt,String operationalStatusNote){}
     public record DeviceDetailDto(DeviceDto device,List<InspectionDto> inspections){}
     public record InspectionRequest(LocalDate inspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String inspectionType,String result,String inspector,String defects,String measures,String notes){}
     public record InspectionDto(Long id,LocalDate inspectionDate,LocalDate nextInspectionDate,String inspectionType,String result,String inspector,String defects,String measures,String notes){}

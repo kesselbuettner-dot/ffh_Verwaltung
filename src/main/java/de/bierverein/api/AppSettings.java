@@ -54,6 +54,15 @@ public class AppSettings {
     @Column(length = 100)
     private String logoContentType;
 
+    @Column(length = 160) private String organizationName;
+    @Column(length = 160) private String street;
+    @Column(length = 20) private String postalCode;
+    @Column(length = 120) private String city;
+    @Column(length = 2) private String federalState = "SN";
+    @Column(length = 160) private String contactEmail;
+    @Column(length = 60) private String contactPhone;
+    @Column(length = 160) private String legalRepresentative;
+
     public Long getId() { return id; }
     public String getAppName() { return appName; }
     public void setAppName(String appName) { this.appName = appName; }
@@ -79,4 +88,12 @@ public class AppSettings {
     public void setLogoData(byte[] logoData) { this.logoData = logoData; }
     public String getLogoContentType() { return logoContentType; }
     public void setLogoContentType(String logoContentType) { this.logoContentType = logoContentType; }
+    public String getOrganizationName(){return organizationName;} public void setOrganizationName(String v){organizationName=v;}
+    public String getStreet(){return street;} public void setStreet(String v){street=v;}
+    public String getPostalCode(){return postalCode;} public void setPostalCode(String v){postalCode=v;}
+    public String getCity(){return city;} public void setCity(String v){city=v;}
+    public String getFederalState(){return federalState;} public void setFederalState(String v){federalState=v;}
+    public String getContactEmail(){return contactEmail;} public void setContactEmail(String v){contactEmail=v;}
+    public String getContactPhone(){return contactPhone;} public void setContactPhone(String v){contactPhone=v;}
+    public String getLegalRepresentative(){return legalRepresentative;} public void setLegalRepresentative(String v){legalRepresentative=v;}
 }

@@ -55,6 +55,14 @@ public class AppSettingsController {
                 s.getDashboardWidgetOrder() == null ? DEFAULT_WIDGETS : s.getDashboardWidgetOrder()));
         s.setDashboardWidgetRoles(normalizeWidgetRoles(request.dashboardWidgetRoles(), s.getDashboardWidgetRoles()));
         s.setMessageEditorRoles(normalizeRoles(request.messageEditorRoles(), s.getMessageEditorRoles() == null ? DEFAULT_MESSAGE_ROLES : s.getMessageEditorRoles()));
+        if(request.organizationName()!=null)s.setOrganizationName(optional(request.organizationName(),160));
+        if(request.street()!=null)s.setStreet(optional(request.street(),160));
+        if(request.postalCode()!=null)s.setPostalCode(optional(request.postalCode(),20));
+        if(request.city()!=null)s.setCity(optional(request.city(),120));
+        if(request.federalState()!=null)s.setFederalState(normalizeState(request.federalState()));
+        if(request.contactEmail()!=null)s.setContactEmail(optional(request.contactEmail(),160));
+        if(request.contactPhone()!=null)s.setContactPhone(optional(request.contactPhone(),60));
+        if(request.legalRepresentative()!=null)s.setLegalRepresentative(optional(request.legalRepresentative(),160));
         return dto(settings.save(s));
     }
 
@@ -136,7 +144,10 @@ public class AppSettingsController {
                 split(s.getDashboardWidgetOrder() == null ? DEFAULT_WIDGETS : s.getDashboardWidgetOrder()),
                 parseWidgetRoles(s.getDashboardWidgetRoles()),
                 split(s.getMessageEditorRoles() == null ? DEFAULT_MESSAGE_ROLES : s.getMessageEditorRoles()),
-                s.getLogoData() != null && s.getLogoData().length > 0
+                s.getLogoData() != null && s.getLogoData().length > 0,
+                s.getOrganizationName(),s.getStreet(),s.getPostalCode(),s.getCity(),
+                s.getFederalState()==null?"SN":s.getFederalState(),s.getContactEmail(),s.getContactPhone(),s.getLegalRepresentative(),
+                "Eric Kessel-Büttner","© Eric Kessel-Büttner – Alle Rechte vorbehalten. Nutzung, Vervielfältigung, Veränderung oder Weitergabe nur mit ausdrücklicher schriftlicher Genehmigung des Urhebers."
         );
     }
 
@@ -238,6 +249,8 @@ public class AppSettingsController {
         String v = value == null ? "" : value.trim();
         return v.matches("^#[0-9a-fA-F]{6}$") ? v.toLowerCase() : fallback;
     }
+    private String optional(String value,int max){if(value==null||value.isBlank())return null;String v=value.trim();return v.substring(0,Math.min(max,v.length()));}
+    private String normalizeState(String value){String v=value.trim().toUpperCase();return Set.of("BW","BY","BE","BB","HB","HH","HE","MV","NI","NW","RP","SL","SN","ST","SH","TH").contains(v)?v:"SN";}
 
     public record SettingsDto(
             String appName,
@@ -250,7 +263,8 @@ public class AppSettingsController {
             List<String> dashboardWidgetOrder,
             Map<String, List<String>> dashboardWidgetRoles,
             List<String> messageEditorRoles,
-            boolean logoAvailable
+            boolean logoAvailable,String organizationName,String street,String postalCode,String city,String federalState,
+            String contactEmail,String contactPhone,String legalRepresentative,String softwareAuthor,String licenseNotice
     ) {}
 
     public record SettingsRequest(
@@ -263,6 +277,7 @@ public class AppSettingsController {
             List<String> dashboardWidgets,
             List<String> dashboardWidgetOrder,
             Map<String, List<String>> dashboardWidgetRoles,
-            List<String> messageEditorRoles
+            List<String> messageEditorRoles,String organizationName,String street,String postalCode,String city,String federalState,
+            String contactEmail,String contactPhone,String legalRepresentative
     ) {}
 }

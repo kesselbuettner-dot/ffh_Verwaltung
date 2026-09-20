@@ -2,6 +2,7 @@ package de.bierverein.api;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.Instant;
 
 @Entity
 @Table(name="devices", indexes={
@@ -25,6 +26,9 @@ public class Device {
     @Column(length=120) private String responsibleUsername;
     @Column(length=1000) private String notes;
     @Column(nullable=false) private boolean active=true;
+    @Column(nullable=false,length=24) private String operationalStatus="OK";
+    private Instant operationalStatusAt;
+    @Column(length=1000) private String operationalStatusNote;
 
     public Device(){}
     public Long getId(){return id;}
@@ -43,4 +47,7 @@ public class Device {
     public String getResponsibleUsername(){return responsibleUsername;} public void setResponsibleUsername(String v){responsibleUsername=v;}
     public String getNotes(){return notes;} public void setNotes(String v){notes=v;}
     public boolean isActive(){return active;} public void setActive(boolean v){active=v;}
+    public String getOperationalStatus(){return operationalStatus;} public void setOperationalStatus(String v){operationalStatus=v;}
+    public Instant getOperationalStatusAt(){return operationalStatusAt;} public void setOperationalStatusAt(Instant v){operationalStatusAt=v;}
+    public String getOperationalStatusNote(){return operationalStatusNote;} public void setOperationalStatusNote(String v){operationalStatusNote=v;}
 }

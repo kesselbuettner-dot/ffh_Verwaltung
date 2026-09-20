@@ -20,17 +20,22 @@ public class TrainingScheduleService {
     private final AppUserRepository users;
     private final MemberRepository members;
     private final EffectivePermissionService permissions;
+    private final DeviceRepository devices;
+    private final DeviceInspectionTaskRepository inspectionTasks;
+    private final HolidayService holidays;
 
     public TrainingScheduleService(TrainingScheduleEventRepository events,
                                    TrainingAttendanceRepository attendance,
                                    AppUserRepository users,
                                    MemberRepository members,
-                                   EffectivePermissionService permissions) {
+                                   EffectivePermissionService permissions,DeviceRepository devices,
+                                   DeviceInspectionTaskRepository inspectionTasks,HolidayService holidays) {
         this.events = events;
         this.attendance = attendance;
         this.users = users;
         this.members = members;
         this.permissions = permissions;
+        this.devices=devices;this.inspectionTasks=inspectionTasks;this.holidays=holidays;
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +57,9 @@ public class TrainingScheduleService {
                 .map(m -> new MemberOption(m.getId(), m.getName())).toList() : List.of();
         List<RoleOption> roleOptions = anyWrite ? Arrays.stream(Role.values())
                 .map(r -> new RoleOption(r.name(), roleLabel(r))).toList() : List.of();
-        return new ModuleView(definitions, occurrences, canCreate, memberOptions, roleOptions);
+        List<DeviceOption> deviceOptions=anyWrite?devices.findByActiveTrueOrderByNameAsc().stream()
+                .filter(d->d.getLocation()!=null&&d.getCategory()!=null).map(d->new DeviceOption(d.getLocation(),d.getCategory())).distinct().toList():List.of();
+        return new ModuleView(definitions, occurrences, canCreate, memberOptions, roleOptions,deviceOptions);
     }
 
     @Transactional(readOnly = true)
@@ -90,6 +97,7 @@ public class TrainingScheduleService {
         TrainingScheduleEvent event = find(id);
         require(user, event.getType(), "delete");
         attendance.deleteByEventId(id);
+        inspectionTasks.deleteByEventId(id);
         events.delete(event);
     }
 
@@ -152,6 +160,11 @@ public class TrainingScheduleService {
         event.setResponsibleMemberIds(responsibleIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
         event.setAudienceType(audienceType); event.setAudienceRole(audienceRole);
         event.setRegistrationRequired(Boolean.TRUE.equals(r.registrationRequired())); event.setActive(true);
+        event.setLastWeekdayOfMonth(recurring&&Boolean.TRUE.equals(r.lastWeekdayOfMonth()));
+        boolean deviceInspection="SERVICE".equals(type)&&Boolean.TRUE.equals(r.deviceInspection());
+        List<String> locations=cleanValues(r.deviceLocations()),categories=cleanValues(r.deviceCategories());
+        if(deviceInspection&&(locations.isEmpty()||categories.isEmpty()))throw bad("Für eine Geräteprüfung bitte mindestens einen Standort und eine Gerätekategorie auswählen.");
+        event.setDeviceInspection(deviceInspection);event.setDeviceLocations(String.join(",",locations));event.setDeviceCategories(String.join(",",categories));
     }
 
     private OccurrenceView occurrenceView(TrainingScheduleEvent event, LocalDate date, AppUser user, Map<Long, Member> memberMap) {
@@ -172,7 +185,8 @@ public class TrainingScheduleService {
                 event.isRegistrationRequired(), own,
                 (int) answers.stream().filter(a -> "YES".equals(a.getStatus())).count(),
                 (int) answers.stream().filter(a -> "NO".equals(a.getStatus())).count(),
-                yesNames, noNames, manager, event.isRegistrationRequired() && (audienceMatches(event, user) || responsible));
+                yesNames, noNames, manager, event.isRegistrationRequired() && (audienceMatches(event, user) || responsible),
+                holidays.name(date).orElse(null),event.isDeviceInspection());
     }
 
     private List<String> answerNames(List<TrainingAttendance> answers, String status, Map<Long, Member> memberMap) {
@@ -185,13 +199,14 @@ public class TrainingScheduleService {
     private EventView eventView(TrainingScheduleEvent e, AppUser user) {
         return new EventView(e.getId(), e.getType(), e.getTitle(), e.getNotes(), e.getStartDate(), e.getEndDate(), e.isRecurring(),
                 split(e.getWeekdays()), e.isAllDay(), e.getStartTime(), e.getEndTime(), ids(e.getResponsibleMemberIds()),
-                e.getAudienceType(), e.getAudienceRole(), e.isRegistrationRequired(), can(user, e.getType(), "write"), can(user, e.getType(), "delete"));
+                e.getAudienceType(), e.getAudienceRole(), e.isRegistrationRequired(), can(user, e.getType(), "write"), can(user, e.getType(), "delete"),
+                e.isLastWeekdayOfMonth(),e.isDeviceInspection(),split(e.getDeviceLocations()),split(e.getDeviceCategories()));
     }
 
     private boolean visibleTo(TrainingScheduleEvent event, AppUser user) { return can(user,event.getType(),"write") || audienceMatches(event,user) || isResponsible(event,user); }
     private boolean audienceMatches(TrainingScheduleEvent event, AppUser user) { return "ALL".equals(event.getAudienceType()) || user.getRole().name().equals(event.getAudienceRole()); }
     private boolean isResponsible(TrainingScheduleEvent event, AppUser user) { return user.getMember()!=null && ids(event.getResponsibleMemberIds()).contains(user.getMember().getId()); }
-    private boolean occursOn(TrainingScheduleEvent event, LocalDate date) { return !date.isBefore(event.getStartDate()) && !date.isAfter(event.getEndDate()) && (!event.isRecurring() ? date.equals(event.getStartDate()) : split(event.getWeekdays()).contains(date.getDayOfWeek().name())); }
+    public boolean occursOn(TrainingScheduleEvent event, LocalDate date) { return !date.isBefore(event.getStartDate()) && !date.isAfter(event.getEndDate()) && (!event.isRecurring() ? date.equals(event.getStartDate()) : split(event.getWeekdays()).contains(date.getDayOfWeek().name())&&(!event.isLastWeekdayOfMonth()||!date.plusWeeks(1).getMonth().equals(date.getMonth()))); }
     private List<LocalDate> occurrenceDates(TrainingScheduleEvent e, LocalDate from, LocalDate to) { List<LocalDate> result=new ArrayList<>();LocalDate date=e.getStartDate().isAfter(from)?e.getStartDate():from;LocalDate end=e.getEndDate().isBefore(to)?e.getEndDate():to;for(;!date.isAfter(end);date=date.plusDays(1))if(occursOn(e,date))result.add(date);return result; }
     private boolean can(AppUser user,String type,String action){return permissions.hasPermission(user.getId(),permissionArea(type)+"."+action);}
     private void require(AppUser user,String type,String action){if(!can(user,type,action))throw forbidden("Keine Berechtigung für diesen Terminbereich.");}
@@ -203,13 +218,15 @@ public class TrainingScheduleService {
     private List<Long> ids(String value){if(value==null||value.isBlank())return List.of();return Arrays.stream(value.split(",")).map(String::trim).filter(v->!v.isBlank()).map(Long::valueOf).distinct().toList();}
     private List<String> split(String value){if(value==null||value.isBlank())return List.of();return Arrays.stream(value.split(",")).map(String::trim).filter(v->!v.isBlank()).distinct().toList();}
     private String trim(String value,int max){if(value==null||value.isBlank())return null;String v=value.trim();return v.substring(0,Math.min(max,v.length()));}
+    private List<String> cleanValues(List<String> values){return Optional.ofNullable(values).orElse(List.of()).stream().filter(Objects::nonNull).map(String::trim).filter(v->!v.isBlank()).distinct().toList();}
     private ResponseStatusException bad(String message){return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);} private ResponseStatusException forbidden(String message){return new ResponseStatusException(HttpStatus.FORBIDDEN,message);}
     private String roleLabel(Role role){return switch(role){case ADMIN->"Administrator";case VORSTAND->"Vorstand";case KASSENWART->"Kassenwart";case FEUERWEHRWART->"Feuerwehrwart";case GERATEWART->"Gerätewart";case GETRAENKEWART->"Getränkewart";case THEKE->"Theke";case MEMBER->"Mitglied";};}
 
     private record DateRange(LocalDate from,LocalDate to){}
-    public record EventRequest(String type,String title,String notes,LocalDate startDate,LocalDate endDate,Boolean recurring,List<String> weekdays,Boolean allDay,LocalTime startTime,LocalTime endTime,List<Long> responsibleMemberIds,String audienceType,String audienceRole,Boolean registrationRequired){}
-    public record EventView(Long id,String type,String title,String notes,LocalDate startDate,LocalDate endDate,boolean recurring,List<String> weekdays,boolean allDay,LocalTime startTime,LocalTime endTime,List<Long> responsibleMemberIds,String audienceType,String audienceRole,boolean registrationRequired,boolean canEdit,boolean canDelete){}
-    public record OccurrenceView(Long eventId,LocalDate occurrenceDate,String type,String title,String notes,boolean allDay,LocalTime startTime,LocalTime endTime,Instant startAt,Instant endAt,boolean recurring,List<String> responsibleNames,String audienceLabel,boolean registrationRequired,String response,int yesCount,int noCount,List<String> yesNames,List<String> noNames,boolean canManage,boolean canRespond){}
+    public record EventRequest(String type,String title,String notes,LocalDate startDate,LocalDate endDate,Boolean recurring,List<String> weekdays,Boolean allDay,LocalTime startTime,LocalTime endTime,List<Long> responsibleMemberIds,String audienceType,String audienceRole,Boolean registrationRequired,Boolean lastWeekdayOfMonth,Boolean deviceInspection,List<String> deviceLocations,List<String> deviceCategories){}
+    public record EventView(Long id,String type,String title,String notes,LocalDate startDate,LocalDate endDate,boolean recurring,List<String> weekdays,boolean allDay,LocalTime startTime,LocalTime endTime,List<Long> responsibleMemberIds,String audienceType,String audienceRole,boolean registrationRequired,boolean canEdit,boolean canDelete,boolean lastWeekdayOfMonth,boolean deviceInspection,List<String> deviceLocations,List<String> deviceCategories){}
+    public record OccurrenceView(Long eventId,LocalDate occurrenceDate,String type,String title,String notes,boolean allDay,LocalTime startTime,LocalTime endTime,Instant startAt,Instant endAt,boolean recurring,List<String> responsibleNames,String audienceLabel,boolean registrationRequired,String response,int yesCount,int noCount,List<String> yesNames,List<String> noNames,boolean canManage,boolean canRespond,String holidayName,boolean deviceInspection){}
     public record MemberOption(Long id,String name){} public record RoleOption(String code,String name){}
-    public record ModuleView(List<EventView> definitions,List<OccurrenceView> occurrences,Map<String,Boolean> canCreate,List<MemberOption> members,List<RoleOption> roles){}
+    public record DeviceOption(String location,String category){}
+    public record ModuleView(List<EventView> definitions,List<OccurrenceView> occurrences,Map<String,Boolean> canCreate,List<MemberOption> members,List<RoleOption> roles,List<DeviceOption> deviceOptions){}
 }
