@@ -13,9 +13,10 @@ import java.util.*;
 public class DeviceController {
     private final DeviceRepository devices;
     private final DeviceInspectionRepository inspections;
+    private final VehicleCompartmentRepository compartments;
 
-    public DeviceController(DeviceRepository devices, DeviceInspectionRepository inspections){
-        this.devices=devices; this.inspections=inspections;
+    public DeviceController(DeviceRepository devices, DeviceInspectionRepository inspections,VehicleCompartmentRepository compartments){
+        this.devices=devices; this.inspections=inspections;this.compartments=compartments;
     }
 
     @GetMapping
@@ -126,6 +127,7 @@ public class DeviceController {
         d.setInspectionIntervalMonths(r.inspectionIntervalMonths());
         d.setResponsibleUsername(clean(r.responsibleUsername()));
         d.setNotes(clean(r.notes()));
+        if(r.compartmentId()!=null)d.setCompartment(compartments.findById(r.compartmentId()).orElseThrow(()->bad("Fahrzeugfach nicht gefunden")));
         if(creating) d.setActive(r.active()==null || r.active());
         else if(r.active()!=null) d.setActive(r.active());
     }
@@ -155,7 +157,9 @@ public class DeviceController {
     private DeviceDto dto(Device d){
         return new DeviceDto(d.getId(),d.getName(),d.getInventoryNumber(),d.getBarcode(),d.getSerialNumber(),d.getManufacturer(),d.getModel(),
             d.getCategory(),d.getLocation(),d.getPurchaseDate(),d.getLastInspectionDate(),d.getNextInspectionDate(),d.getInspectionIntervalMonths(),d.getResponsibleUsername(),d.isActive(),status(d),
-            d.getOperationalStatus()==null?"OK":d.getOperationalStatus(),d.getOperationalStatusAt(),d.getOperationalStatusNote());
+            d.getOperationalStatus()==null?"OK":d.getOperationalStatus(),d.getOperationalStatusAt(),d.getOperationalStatusNote(),
+            d.getCompartment()==null?null:d.getCompartment().getId(),d.getCompartment()==null?null:d.getCompartment().getVehicle().getId(),
+            d.getCompartment()==null?null:d.getCompartment().getVehicle().getName(),d.getCompartment()==null?null:d.getCompartment().getName());
     }
     private InspectionDto inspection(DeviceInspection i){
         return new InspectionDto(i.getId(),i.getInspectionDate(),i.getNextInspectionDate(),i.getInspectionType(),i.getResult(),i.getInspector(),i.getDefects(),i.getMeasures(),i.getNotes());
@@ -177,10 +181,10 @@ public class DeviceController {
     private ResponseStatusException bad(String s){return new ResponseStatusException(HttpStatus.BAD_REQUEST,s);}
 
     public record DeviceRequest(String name,String inventoryNumber,String barcode,String serialNumber,String manufacturer,String model,String category,
-        String location,LocalDate purchaseDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String responsibleUsername,String notes,Boolean active){}
+        String location,LocalDate purchaseDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String responsibleUsername,String notes,Boolean active,Long compartmentId){}
     public record DeviceDto(Long id,String name,String inventoryNumber,String barcode,String serialNumber,String manufacturer,String model,String category,String location,
         LocalDate purchaseDate,LocalDate lastInspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String responsibleUsername,boolean active,String status,
-        String operationalStatus,java.time.Instant operationalStatusAt,String operationalStatusNote){}
+        String operationalStatus,java.time.Instant operationalStatusAt,String operationalStatusNote,Long compartmentId,Long vehicleId,String vehicleName,String compartmentName){}
     public record DeviceDetailDto(DeviceDto device,List<InspectionDto> inspections){}
     public record InspectionRequest(LocalDate inspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String inspectionType,String result,String inspector,String defects,String measures,String notes){}
     public record InspectionDto(Long id,LocalDate inspectionDate,LocalDate nextInspectionDate,String inspectionType,String result,String inspector,String defects,String measures,String notes){}

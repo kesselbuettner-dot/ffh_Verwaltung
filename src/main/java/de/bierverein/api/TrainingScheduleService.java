@@ -58,7 +58,7 @@ public class TrainingScheduleService {
         List<RoleOption> roleOptions = anyWrite ? Arrays.stream(Role.values())
                 .map(r -> new RoleOption(r.name(), roleLabel(r))).toList() : List.of();
         List<DeviceOption> deviceOptions=anyWrite?devices.findByActiveTrueOrderByNameAsc().stream()
-                .filter(d->d.getLocation()!=null&&d.getCategory()!=null).map(d->new DeviceOption(d.getLocation(),d.getCategory())).distinct().toList():List.of();
+                .filter(d->deviceLocation(d)!=null&&d.getCategory()!=null).map(d->new DeviceOption(deviceLocation(d),d.getCategory())).distinct().toList():List.of();
         return new ModuleView(definitions, occurrences, canCreate, memberOptions, roleOptions,deviceOptions);
     }
 
@@ -203,7 +203,7 @@ public class TrainingScheduleService {
                 e.isLastWeekdayOfMonth(),e.isDeviceInspection(),split(e.getDeviceLocations()),split(e.getDeviceCategories()));
     }
 
-    private boolean visibleTo(TrainingScheduleEvent event, AppUser user) { return can(user,event.getType(),"write") || audienceMatches(event,user) || isResponsible(event,user); }
+    private boolean visibleTo(TrainingScheduleEvent event, AppUser user) { return can(user,event.getType(),"read") && (can(user,event.getType(),"write") || audienceMatches(event,user) || isResponsible(event,user)); }
     private boolean audienceMatches(TrainingScheduleEvent event, AppUser user) { return "ALL".equals(event.getAudienceType()) || user.getRole().name().equals(event.getAudienceRole()); }
     private boolean isResponsible(TrainingScheduleEvent event, AppUser user) { return user.getMember()!=null && ids(event.getResponsibleMemberIds()).contains(user.getMember().getId()); }
     public boolean occursOn(TrainingScheduleEvent event, LocalDate date) { return !date.isBefore(event.getStartDate()) && !date.isAfter(event.getEndDate()) && (!event.isRecurring() ? date.equals(event.getStartDate()) : split(event.getWeekdays()).contains(date.getDayOfWeek().name())&&(!event.isLastWeekdayOfMonth()||!date.plusWeeks(1).getMonth().equals(date.getMonth()))); }
@@ -219,6 +219,7 @@ public class TrainingScheduleService {
     private List<String> split(String value){if(value==null||value.isBlank())return List.of();return Arrays.stream(value.split(",")).map(String::trim).filter(v->!v.isBlank()).distinct().toList();}
     private String trim(String value,int max){if(value==null||value.isBlank())return null;String v=value.trim();return v.substring(0,Math.min(max,v.length()));}
     private List<String> cleanValues(List<String> values){return Optional.ofNullable(values).orElse(List.of()).stream().filter(Objects::nonNull).map(String::trim).filter(v->!v.isBlank()).distinct().toList();}
+    private String deviceLocation(Device d){return d.getCompartment()!=null?d.getCompartment().getVehicle().getName():d.getLocation();}
     private ResponseStatusException bad(String message){return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);} private ResponseStatusException forbidden(String message){return new ResponseStatusException(HttpStatus.FORBIDDEN,message);}
     private String roleLabel(Role role){return switch(role){case ADMIN->"Administrator";case VORSTAND->"Vorstand";case KASSENWART->"Kassenwart";case FEUERWEHRWART->"Feuerwehrwart";case GERATEWART->"Gerätewart";case GETRAENKEWART->"Getränkewart";case THEKE->"Theke";case MEMBER->"Mitglied";};}
 

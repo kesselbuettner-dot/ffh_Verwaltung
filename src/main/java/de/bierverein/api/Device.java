@@ -31,6 +31,7 @@ public class Device {
     @Column(length=24) private String operationalStatus="OK";
     private Instant operationalStatusAt;
     @Column(length=1000) private String operationalStatusNote;
+    @ManyToOne(fetch=FetchType.EAGER) @JoinColumn(name="vehicle_compartment_id") private VehicleCompartment compartment;
 
     public Device(){}
     public Long getId(){return id;}
@@ -52,4 +53,5 @@ public class Device {
     public String getOperationalStatus(){return operationalStatus;} public void setOperationalStatus(String v){operationalStatus=v;}
     public Instant getOperationalStatusAt(){return operationalStatusAt;} public void setOperationalStatusAt(Instant v){operationalStatusAt=v;}
     public String getOperationalStatusNote(){return operationalStatusNote;} public void setOperationalStatusNote(String v){operationalStatusNote=v;}
+    public VehicleCompartment getCompartment(){return compartment;} public void setCompartment(VehicleCompartment v){compartment=v;}
 }

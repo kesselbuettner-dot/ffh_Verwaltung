@@ -46,6 +46,7 @@ public class LegacyRoleMigration {
                 }
             }
             seedLegacyDevicePermissions();
+            seedLegacyTrainingReadPermissions();
             // Do not infer an incomplete migration from users created later or
             // assignments intentionally removed by an administrator.
             return;
@@ -59,6 +60,7 @@ public class LegacyRoleMigration {
         }
 
         seedLegacyDevicePermissions();
+        seedLegacyTrainingReadPermissions();
 
         for (AppUser user : users.findAll()) {
             if (user.getId() == null || user.getRole() == null) {
@@ -84,11 +86,24 @@ public class LegacyRoleMigration {
             java.util.Set<String> existing = permissions.findByRoleId(role.getId()).stream()
                 .map(ManagedRolePermission::getPermissionKey)
                 .collect(java.util.stream.Collectors.toSet());
-            for (String action : java.util.List.of("read", "write", "delete")) {
-                String key = "fire.devices." + action;
-                if (!existing.contains(key)) {
-                    permissions.save(new ManagedRolePermission(role, key));
+            for (String area : java.util.List.of("fire.devices", "fire.vehicles")) {
+                for (String action : java.util.List.of("read", "write", "delete")) {
+                    String key = area + "." + action;
+                    if (!existing.contains(key)) permissions.save(new ManagedRolePermission(role, key));
                 }
+            }
+        }
+    }
+
+    /** Keeps the former authenticated read access while write/delete remain configurable. */
+    private void seedLegacyTrainingReadPermissions() {
+        for (Role legacy : Role.values()) {
+            ManagedRole role = roles.findByCode(legacy.name()).orElseThrow();
+            java.util.Set<String> existing = permissions.findByRoleId(role.getId()).stream()
+                .map(ManagedRolePermission::getPermissionKey).collect(java.util.stream.Collectors.toSet());
+            for (String area : java.util.List.of("training.services", "training.courses", "training.documents")) {
+                String key = area + ".read";
+                if (!existing.contains(key)) permissions.save(new ManagedRolePermission(role, key));
             }
         }
     }
