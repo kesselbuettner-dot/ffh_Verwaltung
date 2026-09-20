@@ -100,6 +100,18 @@
             <artifactId>web-push</artifactId>
             <version>5.1.2</version>
         </dependency>
+        <!-- web-push exposes both libraries in its public API, but does not make
+             them available transitively for this Spring Boot build. -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.81</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
