@@ -100,7 +100,7 @@
             <artifactId>web-push</artifactId>
             <version>5.1.2</version>
         </dependency>
-        <!-- web-push exposes both libraries in its public API, but does not make
+        <!-- web-push exposes these libraries in its public API, but does not make
              them available transitively for this Spring Boot build. -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -111,6 +111,11 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.5.14</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>0.7.9</version>
         </dependency>
 
         <!-- Tests -->
