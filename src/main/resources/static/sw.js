@@ -1,8 +1,11 @@
-const CACHE_NAME = "ffh-verwaltung-v13";
+const CACHE_NAME = "ffh-verwaltung-v14";
 const APP_SHELL = [
   "/",
   "/manifest.json",
-  "/icons/wache48-logo.svg"
+  "/icons/wache48-logo.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/icon-512-maskable.png"
 ];
 
 self.addEventListener("install", event => {
