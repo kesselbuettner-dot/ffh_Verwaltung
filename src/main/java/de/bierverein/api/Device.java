@@ -26,7 +26,9 @@ public class Device {
     @Column(length=120) private String responsibleUsername;
     @Column(length=1000) private String notes;
     @Column(nullable=false) private boolean active=true;
-    @Column(nullable=false,length=24) private String operationalStatus="OK";
+    // Nullable for schema migration: existing installations already contain devices.
+    // Legacy null values are interpreted and backfilled as OK.
+    @Column(length=24) private String operationalStatus="OK";
     private Instant operationalStatusAt;
     @Column(length=1000) private String operationalStatusNote;
 
