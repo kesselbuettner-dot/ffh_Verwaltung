@@ -58,7 +58,7 @@ public class TrainingScheduleService {
         List<RoleOption> roleOptions = anyWrite ? Arrays.stream(Role.values())
                 .map(r -> new RoleOption(r.name(), roleLabel(r))).toList() : List.of();
         List<DeviceOption> deviceOptions=anyWrite?devices.findByActiveTrueOrderByNameAsc().stream()
-                .filter(d->deviceLocation(d)!=null&&d.getCategory()!=null).map(d->new DeviceOption(deviceLocation(d),d.getCategory())).distinct().toList():List.of();
+                .filter(Device::isInspectionRequired).filter(d->deviceLocation(d)!=null&&d.getCategory()!=null).map(d->new DeviceOption(deviceLocation(d),d.getCategory())).distinct().toList():List.of();
         return new ModuleView(definitions, occurrences, canCreate, memberOptions, roleOptions,deviceOptions);
     }
 

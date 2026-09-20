@@ -32,6 +32,8 @@ public class Device {
     private Instant operationalStatusAt;
     @Column(length=1000) private String operationalStatusNote;
     @ManyToOne(fetch=FetchType.EAGER) @JoinColumn(name="vehicle_compartment_id") private VehicleCompartment compartment;
+    private Boolean inspectionRequired=false;
+    private Integer placementX=5,placementY=8,placementWidth=38,placementHeight=24;
 
     public Device(){}
     public Long getId(){return id;}
@@ -54,4 +56,9 @@ public class Device {
     public Instant getOperationalStatusAt(){return operationalStatusAt;} public void setOperationalStatusAt(Instant v){operationalStatusAt=v;}
     public String getOperationalStatusNote(){return operationalStatusNote;} public void setOperationalStatusNote(String v){operationalStatusNote=v;}
     public VehicleCompartment getCompartment(){return compartment;} public void setCompartment(VehicleCompartment v){compartment=v;}
+    public boolean isInspectionRequired(){return Boolean.TRUE.equals(inspectionRequired);} public void setInspectionRequired(boolean v){inspectionRequired=v;}
+    public int getPlacementX(){return placementX==null?5:placementX;} public void setPlacementX(int v){placementX=v;}
+    public int getPlacementY(){return placementY==null?8:placementY;} public void setPlacementY(int v){placementY=v;}
+    public int getPlacementWidth(){return placementWidth==null?38:placementWidth;} public void setPlacementWidth(int v){placementWidth=v;}
+    public int getPlacementHeight(){return placementHeight==null?24:placementHeight;} public void setPlacementHeight(int v){placementHeight=v;}
 }
