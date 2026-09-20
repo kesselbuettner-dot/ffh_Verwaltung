@@ -17,6 +17,8 @@ import java.util.List;
 public class AppSettingsController {
     private static final String DEFAULT_ORDER =
             "dashboard,members,theke,shopping,purchase,inventory,articles,devices,drivebook,devicebook,material,events,firewehr,training,finance,documents,calendar,donations,admin,admin-members,admin-users,admin-settings";
+    private static final String DEFAULT_WIDGETS = "messages,dates,stats,stock,finance,quick,offers,status,system";
+    private static final String DEFAULT_MESSAGE_ROLES = "ADMIN,VORSTAND";
 
     private final AppSettingsRepository settings;
 
@@ -42,6 +44,8 @@ public class AppSettingsController {
         s.setAccentColor(normalizeColor(request.accentColor(), "#1479e9"));
         s.setMenuOrder(normalizeList(request.menuOrder(), DEFAULT_ORDER));
         s.setHiddenMenuItems(normalizeList(request.hiddenMenuItems(), ""));
+        s.setDashboardWidgets(normalizeList(request.dashboardWidgets(), s.getDashboardWidgets() == null ? DEFAULT_WIDGETS : s.getDashboardWidgets()));
+        s.setMessageEditorRoles(normalizeRoles(request.messageEditorRoles(), s.getMessageEditorRoles() == null ? DEFAULT_MESSAGE_ROLES : s.getMessageEditorRoles()));
         return dto(settings.save(s));
     }
 
@@ -119,6 +123,8 @@ public class AppSettingsController {
                 s.getAccentColor(),
                 split(s.getMenuOrder()),
                 split(s.getHiddenMenuItems()),
+                split(s.getDashboardWidgets() == null ? DEFAULT_WIDGETS : s.getDashboardWidgets()),
+                split(s.getMessageEditorRoles() == null ? DEFAULT_MESSAGE_ROLES : s.getMessageEditorRoles()),
                 s.getLogoData() != null && s.getLogoData().length > 0
         );
     }
@@ -139,6 +145,15 @@ public class AppSettingsController {
                 .reduce((a, b) -> a + "," + b).orElse(fallback);
     }
 
+    private String normalizeRoles(List<String> values, String fallback) {
+        if (values == null) return fallback;
+        String result = values.stream().filter(v -> v != null && !v.isBlank())
+                .map(String::trim).map(String::toUpperCase)
+                .filter(v -> { try { Role.valueOf(v); return true; } catch (Exception e) { return false; } })
+                .distinct().reduce((a, b) -> a + "," + b).orElse("");
+        return result.contains("ADMIN") ? result : (result.isBlank() ? "ADMIN" : "ADMIN," + result);
+    }
+
     private String clean(String value, String fallback, int max) {
         if (value == null || value.isBlank()) return fallback;
         return value.trim().substring(0, Math.min(value.trim().length(), max));
@@ -156,6 +171,8 @@ public class AppSettingsController {
             String accentColor,
             List<String> menuOrder,
             List<String> hiddenMenuItems,
+            List<String> dashboardWidgets,
+            List<String> messageEditorRoles,
             boolean logoAvailable
     ) {}
 
@@ -165,6 +182,8 @@ public class AppSettingsController {
             String navColor,
             String accentColor,
             List<String> menuOrder,
-            List<String> hiddenMenuItems
+            List<String> hiddenMenuItems,
+            List<String> dashboardWidgets,
+            List<String> messageEditorRoles
     ) {}
 }

@@ -35,6 +35,12 @@ public class AppSettings {
     @Column(nullable = false, length = 1000)
     private String hiddenMenuItems = "";
 
+    @Column(length = 500)
+    private String dashboardWidgets = "messages,dates,stats,stock,finance,quick,offers,status,system";
+
+    @Column(length = 500)
+    private String messageEditorRoles = "ADMIN,VORSTAND";
+
     @Lob
     @Basic(fetch = FetchType.LAZY)
     private byte[] logoData;
@@ -55,6 +61,10 @@ public class AppSettings {
     public void setMenuOrder(String menuOrder) { this.menuOrder = menuOrder; }
     public String getHiddenMenuItems() { return hiddenMenuItems; }
     public void setHiddenMenuItems(String hiddenMenuItems) { this.hiddenMenuItems = hiddenMenuItems; }
+    public String getDashboardWidgets() { return dashboardWidgets; }
+    public void setDashboardWidgets(String dashboardWidgets) { this.dashboardWidgets = dashboardWidgets; }
+    public String getMessageEditorRoles() { return messageEditorRoles; }
+    public void setMessageEditorRoles(String messageEditorRoles) { this.messageEditorRoles = messageEditorRoles; }
     public byte[] getLogoData() { return logoData; }
     public void setLogoData(byte[] logoData) { this.logoData = logoData; }
     public String getLogoContentType() { return logoContentType; }
