@@ -66,16 +66,13 @@ public class ManagedRoleAdminController {
     @Transactional
     public RoleView update(@PathVariable Long id, @RequestBody RoleInput input) {
         ManagedRole role = find(id);
-        if (role.isSystemRole()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Systemrollen sind geschützt");
-        }
         if (input == null || input.name() == null || input.name().isBlank()
                 || input.name().length() > 120 || input.code() == null
                 || !role.getCode().equals(input.code())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ungültige Rollenänderung");
         }
         Set<String> keys = validate(input.permissions());
-        role.rename(input.name());
+        if (!role.isSystemRole()) role.rename(input.name());
         role.setDescription(input.description());
         permissions.deleteAll(permissions.findByRoleId(id));
         permissions.flush();
@@ -91,9 +88,8 @@ public class ManagedRoleAdminController {
         if (role.isSystemRole()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Systemrollen sind geschützt");
         }
-        if (assignments.existsByRoleId(id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Rolle ist Benutzern zugewiesen");
-        }
+        assignments.deleteByRoleId(id);
+        assignments.flush();
         permissions.deleteAll(permissions.findByRoleId(id));
         permissions.flush();
         roles.delete(role);

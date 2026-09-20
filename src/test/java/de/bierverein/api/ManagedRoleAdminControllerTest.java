@@ -35,21 +35,22 @@ class ManagedRoleAdminControllerTest {
         verify(roles, never()).save(any());
     }
 
-    @Test void systemRoleCannotBeChangedOrDeleted() {
+    @Test void systemRolePermissionsCanBeChangedButRoleCannotBeDeleted() {
         ManagedRole admin = new ManagedRole("ADMIN", "Administrator", null, true);
         when(roles.findById(1L)).thenReturn(Optional.of(admin));
-        assertThrows(ResponseStatusException.class, () ->
-            controller.update(1L, new ManagedRoleAdminController.RoleInput(
-                "ADMIN", "Changed", null, List.of())));
+        when(permissions.findByRoleId(1L)).thenReturn(List.of());
+        assertDoesNotThrow(() -> controller.update(1L,
+            new ManagedRoleAdminController.RoleInput("ADMIN", "Administrator", null, List.of())));
         assertThrows(ResponseStatusException.class, () -> controller.delete(1L));
         verify(roles, never()).delete(any());
     }
 
-    @Test void assignedCustomRoleCannotBeDeleted() {
+    @Test void assignedCustomRoleIsDeletedWithAssignments() {
         ManagedRole role = new ManagedRole("CUSTOM", "Custom", null, false);
         when(roles.findById(1L)).thenReturn(Optional.of(role));
-        when(assignments.existsByRoleId(1L)).thenReturn(true);
-        assertThrows(ResponseStatusException.class, () -> controller.delete(1L));
-        verify(roles, never()).delete(any());
+        when(permissions.findByRoleId(1L)).thenReturn(List.of());
+        assertDoesNotThrow(() -> controller.delete(1L));
+        verify(assignments).deleteByRoleId(1L);
+        verify(roles).delete(role);
     }
 }
