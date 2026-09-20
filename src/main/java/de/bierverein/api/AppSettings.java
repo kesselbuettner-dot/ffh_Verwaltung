@@ -39,6 +39,12 @@ public class AppSettings {
     private String dashboardWidgets = "messages,dates,stats,stock,finance,quick,offers,status,system";
 
     @Column(length = 500)
+    private String dashboardWidgetOrder = "messages,dates,stats,stock,finance,quick,offers,status,system";
+
+    @Column(columnDefinition = "TEXT")
+    private String dashboardWidgetRoles;
+
+    @Column(length = 500)
     private String messageEditorRoles = "ADMIN,VORSTAND";
 
     @Lob
@@ -63,6 +69,10 @@ public class AppSettings {
     public void setHiddenMenuItems(String hiddenMenuItems) { this.hiddenMenuItems = hiddenMenuItems; }
     public String getDashboardWidgets() { return dashboardWidgets; }
     public void setDashboardWidgets(String dashboardWidgets) { this.dashboardWidgets = dashboardWidgets; }
+    public String getDashboardWidgetOrder() { return dashboardWidgetOrder; }
+    public void setDashboardWidgetOrder(String dashboardWidgetOrder) { this.dashboardWidgetOrder = dashboardWidgetOrder; }
+    public String getDashboardWidgetRoles() { return dashboardWidgetRoles; }
+    public void setDashboardWidgetRoles(String dashboardWidgetRoles) { this.dashboardWidgetRoles = dashboardWidgetRoles; }
     public String getMessageEditorRoles() { return messageEditorRoles; }
     public void setMessageEditorRoles(String messageEditorRoles) { this.messageEditorRoles = messageEditorRoles; }
     public byte[] getLogoData() { return logoData; }

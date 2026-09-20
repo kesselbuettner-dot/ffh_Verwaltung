@@ -10,7 +10,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/settings")
@@ -19,6 +23,8 @@ public class AppSettingsController {
             "dashboard,members,theke,shopping,purchase,inventory,articles,devices,drivebook,devicebook,material,events,firewehr,training,finance,documents,calendar,donations,admin,admin-members,admin-users,admin-settings";
     private static final String DEFAULT_WIDGETS = "messages,dates,stats,stock,finance,quick,offers,status,system";
     private static final String DEFAULT_MESSAGE_ROLES = "ADMIN,VORSTAND";
+    private static final Set<String> DASHBOARD_WIDGET_KEYS = Set.of(
+            "messages", "dates", "stats", "stock", "finance", "quick", "offers", "status", "system");
 
     private final AppSettingsRepository settings;
 
@@ -44,7 +50,10 @@ public class AppSettingsController {
         s.setAccentColor(normalizeColor(request.accentColor(), "#1479e9"));
         s.setMenuOrder(normalizeList(request.menuOrder(), DEFAULT_ORDER));
         s.setHiddenMenuItems(normalizeList(request.hiddenMenuItems(), ""));
-        s.setDashboardWidgets(normalizeList(request.dashboardWidgets(), s.getDashboardWidgets() == null ? DEFAULT_WIDGETS : s.getDashboardWidgets()));
+        s.setDashboardWidgets(normalizeWidgets(request.dashboardWidgets(), s.getDashboardWidgets() == null ? DEFAULT_WIDGETS : s.getDashboardWidgets()));
+        s.setDashboardWidgetOrder(normalizeWidgetOrder(request.dashboardWidgetOrder(),
+                s.getDashboardWidgetOrder() == null ? DEFAULT_WIDGETS : s.getDashboardWidgetOrder()));
+        s.setDashboardWidgetRoles(normalizeWidgetRoles(request.dashboardWidgetRoles(), s.getDashboardWidgetRoles()));
         s.setMessageEditorRoles(normalizeRoles(request.messageEditorRoles(), s.getMessageEditorRoles() == null ? DEFAULT_MESSAGE_ROLES : s.getMessageEditorRoles()));
         return dto(settings.save(s));
     }
@@ -124,6 +133,8 @@ public class AppSettingsController {
                 split(s.getMenuOrder()),
                 split(s.getHiddenMenuItems()),
                 split(s.getDashboardWidgets() == null ? DEFAULT_WIDGETS : s.getDashboardWidgets()),
+                split(s.getDashboardWidgetOrder() == null ? DEFAULT_WIDGETS : s.getDashboardWidgetOrder()),
+                parseWidgetRoles(s.getDashboardWidgetRoles()),
                 split(s.getMessageEditorRoles() == null ? DEFAULT_MESSAGE_ROLES : s.getMessageEditorRoles()),
                 s.getLogoData() != null && s.getLogoData().length > 0
         );
@@ -154,6 +165,70 @@ public class AppSettingsController {
         return result.contains("ADMIN") ? result : (result.isBlank() ? "ADMIN" : "ADMIN," + result);
     }
 
+    private String normalizeWidgetOrder(List<String> values, String fallback) {
+        if (values == null) return fallback;
+        List<String> clean = values.stream().filter(DASHBOARD_WIDGET_KEYS::contains).distinct().toList();
+        String missing = split(DEFAULT_WIDGETS).stream().filter(key -> !clean.contains(key))
+                .collect(Collectors.joining(","));
+        String result = String.join(",", clean);
+        if (!missing.isBlank()) result = result.isBlank() ? missing : result + "," + missing;
+        return result;
+    }
+
+    private String normalizeWidgets(List<String> values, String fallback) {
+        if (values == null) return fallback;
+        return values.stream().filter(DASHBOARD_WIDGET_KEYS::contains).distinct()
+                .collect(Collectors.joining(","));
+    }
+
+    private String normalizeWidgetRoles(Map<String, List<String>> values, String fallback) {
+        if (values == null) return fallback;
+        Map<String, List<String>> clean = new LinkedHashMap<>();
+        for (String key : split(DEFAULT_WIDGETS)) {
+            if (!values.containsKey(key)) continue;
+            List<String> roleValues = values.get(key) == null ? List.of() : values.get(key).stream()
+                    .filter(v -> v != null && !v.isBlank()).map(String::trim).map(String::toUpperCase)
+                    .filter(v -> { try { Role.valueOf(v); return true; } catch (Exception e) { return false; } })
+                    .distinct().toList();
+            if (!roleValues.contains("ADMIN")) {
+                roleValues = new java.util.ArrayList<>(roleValues);
+                roleValues.add(0, "ADMIN");
+            }
+            clean.put(key, roleValues);
+        }
+        return clean.entrySet().stream()
+                .map(e -> e.getKey() + "=" + String.join("|", e.getValue()))
+                .collect(Collectors.joining(";"));
+    }
+
+    private Map<String, List<String>> parseWidgetRoles(String value) {
+        Map<String, List<String>> result = defaultWidgetRoles();
+        if (value == null || value.isBlank()) return result;
+        for (String entry : value.split(";")) {
+            String[] pair = entry.split("=", 2);
+            if (pair.length != 2 || !DASHBOARD_WIDGET_KEYS.contains(pair[0])) continue;
+            List<String> configured = Arrays.stream(pair[1].split("\\|"))
+                    .map(String::trim).filter(v -> !v.isBlank()).distinct().toList();
+            result.put(pair[0], configured);
+        }
+        return result;
+    }
+
+    private Map<String, List<String>> defaultWidgetRoles() {
+        List<String> everyone = Arrays.stream(Role.values()).map(Enum::name).toList();
+        Map<String, List<String>> defaults = new LinkedHashMap<>();
+        defaults.put("messages", everyone);
+        defaults.put("dates", everyone);
+        defaults.put("stats", everyone);
+        defaults.put("stock", everyone);
+        defaults.put("finance", List.of("ADMIN", "VORSTAND", "KASSENWART"));
+        defaults.put("quick", everyone);
+        defaults.put("offers", List.of("ADMIN", "GETRAENKEWART"));
+        defaults.put("status", everyone);
+        defaults.put("system", everyone);
+        return defaults;
+    }
+
     private String clean(String value, String fallback, int max) {
         if (value == null || value.isBlank()) return fallback;
         return value.trim().substring(0, Math.min(value.trim().length(), max));
@@ -172,6 +247,8 @@ public class AppSettingsController {
             List<String> menuOrder,
             List<String> hiddenMenuItems,
             List<String> dashboardWidgets,
+            List<String> dashboardWidgetOrder,
+            Map<String, List<String>> dashboardWidgetRoles,
             List<String> messageEditorRoles,
             boolean logoAvailable
     ) {}
@@ -184,6 +261,8 @@ public class AppSettingsController {
             List<String> menuOrder,
             List<String> hiddenMenuItems,
             List<String> dashboardWidgets,
+            List<String> dashboardWidgetOrder,
+            Map<String, List<String>> dashboardWidgetRoles,
             List<String> messageEditorRoles
     ) {}
 }
