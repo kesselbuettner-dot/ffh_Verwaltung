@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/settings")
 public class AppSettingsController {
     private static final String DEFAULT_ORDER =
-            "dashboard,members,theke,shopping,purchase,inventory,articles,devices,drivebook,devicebook,material,events,firewehr,training,finance,documents,calendar,donations,admin,admin-members,admin-users,admin-settings";
+            "services,dashboard,members,theke,shopping,purchase,inventory,articles,devices,device-inspection-plans,vehicles,device-settings,training-documents,calendar,admin,admin-members,admin-users,admin-settings";
     private static final String DEFAULT_WIDGETS = "messages,dates,stats,stock,finance,quick,offers,status,system";
     private static final String DEFAULT_MESSAGE_ROLES = "ADMIN,VORSTAND";
     private static final Set<String> DASHBOARD_WIDGET_KEYS = Set.of(
