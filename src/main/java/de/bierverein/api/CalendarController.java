@@ -18,16 +18,19 @@ public class CalendarController {
             DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC);
     private final DashboardMessageRepository messages;
     private final CalendarSubscriptionRepository subscriptions;
+    private final TrainingScheduleService training;
 
-    public CalendarController(DashboardMessageRepository messages, CalendarSubscriptionRepository subscriptions) {
+    public CalendarController(DashboardMessageRepository messages, CalendarSubscriptionRepository subscriptions,
+                              TrainingScheduleService training) {
         this.messages = messages;
         this.subscriptions = subscriptions;
+        this.training = training;
     }
 
     @GetMapping(value = "/appointments.ics", produces = "text/calendar;charset=UTF-8")
     public ResponseEntity<byte[]> download(Authentication authentication) {
         if (authentication == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        return calendarResponse(true);
+        return calendarResponse(authentication.getName(), true);
     }
 
     @PostMapping("/subscription")
@@ -59,14 +62,15 @@ public class CalendarController {
 
     @GetMapping(value = "/feed/{token}.ics", produces = "text/calendar;charset=UTF-8")
     public ResponseEntity<byte[]> feed(@PathVariable String token) {
-        if (token == null || token.length() < 24 || subscriptions.findByToken(token).isEmpty()) {
+        CalendarSubscription subscription = token == null ? null : subscriptions.findByToken(token).orElse(null);
+        if (token == null || token.length() < 24 || subscription == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return calendarResponse(false);
+        return calendarResponse(subscription.getUsername(), false);
     }
 
-    private ResponseEntity<byte[]> calendarResponse(boolean attachment) {
-        byte[] body = buildCalendar().getBytes(StandardCharsets.UTF_8);
+    private ResponseEntity<byte[]> calendarResponse(String username, boolean attachment) {
+        byte[] body = buildCalendar(username).getBytes(StandardCharsets.UTF_8);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("text/calendar;charset=UTF-8"));
         headers.setCacheControl(CacheControl.noCache());
@@ -74,7 +78,7 @@ public class CalendarController {
         return new ResponseEntity<>(body, headers, HttpStatus.OK);
     }
 
-    private String buildCalendar() {
+    private String buildCalendar(String username) {
         StringBuilder out = new StringBuilder();
         line(out, "BEGIN:VCALENDAR");
         line(out, "VERSION:2.0");
@@ -97,6 +101,26 @@ public class CalendarController {
                     line(out, "STATUS:CONFIRMED");
                     line(out, "END:VEVENT");
                 });
+        LocalDate today = LocalDate.now(ZoneId.of("Europe/Berlin"));
+        training.calendarEntries(username, today.minusDays(30), today.plusYears(2)).forEach(event -> {
+            line(out, "BEGIN:VEVENT");
+            line(out, "UID:ffh-training-" + event.eventId() + "-" + event.occurrenceDate() + "@ffh-verwaltung");
+            line(out, "DTSTAMP:" + ICAL_TIME.format(Instant.now()));
+            if (event.allDay()) {
+                line(out, "DTSTART;VALUE=DATE:" + event.occurrenceDate().format(DateTimeFormatter.BASIC_ISO_DATE));
+                line(out, "DTEND;VALUE=DATE:" + event.occurrenceDate().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE));
+            } else {
+                line(out, "DTSTART:" + ICAL_TIME.format(event.startAt()));
+                line(out, "DTEND:" + ICAL_TIME.format(event.endAt()));
+            }
+            line(out, "SUMMARY:" + escape(event.title()));
+            String description = Optional.ofNullable(event.notes()).orElse("");
+            if (!event.responsibleNames().isEmpty()) description += (description.isBlank() ? "" : "\n") + "Verantwortlich: " + String.join(", ", event.responsibleNames());
+            if (!description.isBlank()) line(out, "DESCRIPTION:" + escape(description));
+            line(out, "CATEGORIES:" + escape(event.type()));
+            line(out, "STATUS:CONFIRMED");
+            line(out, "END:VEVENT");
+        });
         line(out, "END:VCALENDAR");
         return out.toString();
     }
