@@ -154,3 +154,18 @@ Marktguru-Angebotspreise werden für den Vergleich auf **Preis pro Stück** norm
 ### Kasse, Einzelgröße und Einkaufsgebinde
 
 Die Kasse verkauft ausschließlich einzelne Stücke. In `Kasse / Theke` wird die **Einzelgröße** (`sizeVolume + sizeUnitShortName`) angezeigt, aber niemals das Einkaufsgebinde. Der Bestand wird bei einem Verkauf um die tatsächlich verkaufte Stückzahl reduziert. Einkaufsgebinde bleiben auf Einkauf/Wareneingang und Marktguru beschränkt.
+
+## Interaktive Fahrzeugbeladung V2
+
+Die vorhandene Fahrzeugverwaltung verwendet weiterhin `fire_vehicles`, `vehicle_compartments` und `devices`. Ergänzt wurde ausschließlich die untergeordnete Tabelle `vehicle_compartment_elements` für Regalboden, Schublade, Auszug, Halterung, Trennwand, Gerätekasten und freie Ablage.
+
+- Die Ansichten Fahrerseite, Heck, Beifahrerseite, Front, Mannschaftsraum und Dach basieren auf skalierbarem SVG.
+- Geräteräume liegen innerhalb der Fahrzeugzeichnung und öffnen ihren Rollladen durch Antippen.
+- Die Detailansicht besitzt einen getrennten Bearbeitungsmodus. Dadurch können Geräte im normalen Ansichtsmodus nicht versehentlich verschoben werden.
+- Position, Größe, Drehwinkel, Ebene, Gruppe und Ablageelement werden pro Gerät serverseitig gespeichert.
+- Geräteraumelemente werden ebenfalls mit relativer Position, Größe, Drehwinkel und Ebene gespeichert.
+- Gruppierte Geräte bleiben einzelne Gerätedatensätze. Die Gruppe wird lediglich über eine gemeinsame Gruppierungs-ID dargestellt.
+- Prüfpflicht und Defektstatus verwenden weiterhin die vorhandene Geräte- und Prüfverwaltung. Es gibt keine zweite Defektdatenbank.
+- Schreibende Funktionen benötigen weiterhin `fire.vehicles.write` und bei Geräteänderungen zusätzlich `fire.devices.write`.
+
+Bestehende Gerätezuordnungen bleiben erhalten. Neue Felder sind nullable und werden nach dem Hibernate-Schema-Update durch `LegacySchemaBackfill` mit sicheren Standardwerten ergänzt.

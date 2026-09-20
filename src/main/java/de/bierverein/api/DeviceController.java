@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.*;
 
 @RestController
@@ -73,6 +74,14 @@ public class DeviceController {
         Device d=find(id);
         d.setInspectionRequired(r!=null&&Boolean.TRUE.equals(r.required()));
         return dto(devices.save(d));
+    }
+
+    @PatchMapping("/{id}/condition")
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'write')")
+    public DeviceDto condition(@PathVariable Long id,@RequestBody ConditionRequest r){
+        Device d=find(id);String status=r==null||r.status()==null?"":r.status().trim().toUpperCase(Locale.ROOT);
+        if(!Set.of("OK","DEFECTIVE","IN_REPAIR","NOT_INSPECTABLE").contains(status))throw bad("Ungültiger Gerätestatus");
+        d.setOperationalStatus(status);d.setOperationalStatusAt(Instant.now());d.setOperationalStatusNote(clean(r.note()));return dto(devices.save(d));
     }
 
     @PostMapping("/{id}/inspections")
@@ -169,7 +178,7 @@ public class DeviceController {
             d.getOperationalStatus()==null?"OK":d.getOperationalStatus(),d.getOperationalStatusAt(),d.getOperationalStatusNote(),
             d.getCompartment()==null?null:d.getCompartment().getId(),d.getCompartment()==null?null:d.getCompartment().getVehicle().getId(),
             d.getCompartment()==null?null:d.getCompartment().getVehicle().getName(),d.getCompartment()==null?null:d.getCompartment().getName(),
-            d.isInspectionRequired(),d.getPlacementX(),d.getPlacementY(),d.getPlacementWidth(),d.getPlacementHeight());
+            d.isInspectionRequired(),d.getPlacementX(),d.getPlacementY(),d.getPlacementWidth(),d.getPlacementHeight(),d.getPlacementRotation(),d.getPlacementLayer(),d.getPlacementGroupId(),d.getCompartmentElementId());
     }
     private InspectionDto inspection(DeviceInspection i){
         return new InspectionDto(i.getId(),i.getInspectionDate(),i.getNextInspectionDate(),i.getInspectionType(),i.getResult(),i.getInspector(),i.getDefects(),i.getMeasures(),i.getNotes());
@@ -195,9 +204,10 @@ public class DeviceController {
     public record DeviceDto(Long id,String name,String inventoryNumber,String barcode,String serialNumber,String manufacturer,String model,String category,String location,
         LocalDate purchaseDate,LocalDate lastInspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String responsibleUsername,boolean active,String status,
         String operationalStatus,java.time.Instant operationalStatusAt,String operationalStatusNote,Long compartmentId,Long vehicleId,String vehicleName,String compartmentName,
-        boolean inspectionRequired,int placementX,int placementY,int placementWidth,int placementHeight){}
+        boolean inspectionRequired,int placementX,int placementY,int placementWidth,int placementHeight,int placementRotation,int placementLayer,String placementGroupId,Long compartmentElementId){}
     public record DeviceDetailDto(DeviceDto device,List<InspectionDto> inspections){}
     public record InspectionRequiredRequest(Boolean required){}
+    public record ConditionRequest(String status,String note){}
     public record InspectionRequest(LocalDate inspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String inspectionType,String result,String inspector,String defects,String measures,String notes){}
     public record InspectionDto(Long id,LocalDate inspectionDate,LocalDate nextInspectionDate,String inspectionType,String result,String inspector,String defects,String measures,String notes){}
 }
