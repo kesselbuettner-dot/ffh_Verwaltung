@@ -14,9 +14,10 @@ public class FireQualificationController {
  private final MemberRepository members;
  private final FireQualificationPermissions permission;
  private final DrivingCheckService driving;
+ private final ManagedUserRoleRepository managedRoles;
  public FireQualificationController(FireQualificationTypeRepository types,FireMemberQualificationRepository records,
-     MemberRepository members,FireQualificationPermissions permission,DrivingCheckService driving){
-  this.types=types;this.records=records;this.members=members;this.permission=permission;this.driving=driving;
+     MemberRepository members,FireQualificationPermissions permission,DrivingCheckService driving,ManagedUserRoleRepository managedRoles){
+  this.types=types;this.records=records;this.members=members;this.permission=permission;this.driving=driving;this.managedRoles=managedRoles;
  }
  public record TypeView(Long id,String code,String title,String icon,boolean tracked,boolean sensitive,int warningDays,int intervalMonths){}
  public record TypeInput(String code,String title,String icon,Boolean tracked,Boolean sensitive,Integer warningDays,Integer intervalMonths){}
@@ -42,6 +43,31 @@ public class FireQualificationController {
   if(q.type.tracked&&q.lastCheckedOn!=null&&q.type.intervalMonths>0)
    return q.lastCheckedOn.plusMonths(q.type.intervalMonths);
   return q.nextDueOn!=null?q.nextDueOn:q.expiresOn;
+ }
+ public record Person(Long id,String name) {}
+ @GetMapping("/people")
+ @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.qualifications.read')")
+ @Transactional(readOnly=true)
+ public List<Person> people(){
+  return members.findAll().stream().filter(Member::isActive).map(m->new Person(m.getId(),m.getName()))
+   .sorted(Comparator.comparing(Person::name)).toList();
+ }
+ public record DueSummary(long due,long overdue){}
+ @GetMapping("/dashboard")
+ @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.qualifications.read')")
+ @Transactional(readOnly=true)
+ public ResponseEntity<DueSummary> dashboard(Authentication auth){
+  Long uid=permission.userId(auth);
+  // Display warnings ONLY for explicit WEHRLEITER role holders, not every admin.
+  if(uid==null||managedRoles.findByUserId(uid).stream().noneMatch(a->"WEHRLEITER".equals(a.getRole().getCode())))
+   return ResponseEntity.noContent().build();
+  LocalDate now=LocalDate.now();long due=0,overdue=0;
+  for(FireMemberQualification q:records.findAll()){
+   if(!q.active||!q.type.tracked)continue;
+   LocalDate date=due(q);if(date==null)continue;
+   if(date.isBefore(now))overdue++;else if(!date.isAfter(now.plusDays(q.type.warningDays)))due++;
+  }
+  return ResponseEntity.ok(new DueSummary(due,overdue));
  }
  @GetMapping("/types")
  @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.qualifications.read')")
