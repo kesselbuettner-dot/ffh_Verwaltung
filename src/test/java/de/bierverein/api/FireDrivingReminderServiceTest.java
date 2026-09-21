@@ -15,6 +15,7 @@ class FireDrivingReminderServiceTest {
   var q=new FireMemberQualification(42L,t);
   org.springframework.test.util.ReflectionTestUtils.setField(q,"id",7L);
   q.nextDueOn=LocalDate.now(ZoneId.of("Europe/Berlin")).plusDays(10);
+  q.licenseNumberMac="reference-present";
   Member m=new Member();m.setName("Muster");m.setActive(true);
   AppUser u=new AppUser();u.setUsername("member@example.org");u.setEnabled(true);u.setRegistrationApproved(true);
   u.setMember(m);m.setUser(u);
