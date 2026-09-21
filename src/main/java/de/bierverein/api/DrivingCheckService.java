@@ -73,6 +73,11 @@ public class DrivingCheckService {
    throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Nur eigene Führerscheinkontrolle erlaubt");
   if(q.licenseNumberMac==null)
    throw new ResponseStatusException(HttpStatus.CONFLICT,"Führerscheinnummer muss zuvor durch die Wehrleitung als Referenz hinterlegt werden.");
+  LocalDate today=LocalDate.now(ZoneId.of("Europe/Berlin"));
+  LocalDate due=q.lastCheckedOn!=null&&q.type.intervalMonths>0
+    ?q.lastCheckedOn.plusMonths(q.type.intervalMonths):q.nextDueOn;
+  if(!q.type.tracked||due==null||today.isBefore(due.minusDays(q.type.warningDays)))
+    throw new ResponseStatusException(HttpStatus.CONFLICT,"Prüfauftrag ist noch nicht fällig oder hat keinen Termin.");
   if(input==null||input.imageData()==null)throw bad("Ein Foto zur aktuellen Kontrolle ist erforderlich");
   // Read photo once, transiently, via local OCR stdin. No image is written to file, DB, cache or audit.
   String raw=ocr.read(input.imageData());
@@ -84,7 +89,13 @@ public class DrivingCheckService {
   boolean matchesNumber=false;
   // Compare only exact OCR candidates to the pre-approved HMAC reference; never disclose the reference.
   for(String line:raw.split("[\\r\\n]+")){
-   for(String candidate:line.toUpperCase(Locale.ROOT).split("[^A-Z0-9]+")){
+   // An OCR engine may insert spaces in a document number. Try bounded adjacent fragments.
+   String[] words=line.toUpperCase(Locale.ROOT).split("[^A-Z0-9]+");
+   List<String> candidates=new ArrayList<>(Arrays.asList(words));
+   for(int i=0;i<words.length;i++){
+    for(int j=i+1;j<Math.min(words.length,i+3);j++)candidates.add(String.join("",Arrays.copyOfRange(words,i,j+1)));
+   }
+   for(String candidate:candidates){
     if(candidate.length()<5||candidate.length()>30)continue;
     String digest=fingerprint(candidate);
     if(MessageDigest.isEqual(q.licenseNumberMac.getBytes(StandardCharsets.US_ASCII),
