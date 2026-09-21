@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - feature/menu-designer-on-577e741
+  pull_request:
+    branches:
+      - codex/mobile-paypal-article-images
   workflow_dispatch:
 jobs:
   validate:
