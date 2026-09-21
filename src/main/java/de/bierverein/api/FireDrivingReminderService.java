@@ -3,6 +3,7 @@ import java.time.*;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class FireDrivingReminderService {
@@ -10,6 +11,7 @@ public class FireDrivingReminderService {
  private final FireQualificationReminderRepository sent;
  private final MemberRepository members;
  private final WebPushService push;
+ @Value("${spring.profiles.active:}") private String activeProfiles;
  public FireDrivingReminderService(FireMemberQualificationRepository qualifications,
    FireQualificationReminderRepository sent,MemberRepository members,WebPushService push){
   this.qualifications=qualifications;this.sent=sent;this.members=members;this.push=push;
@@ -17,18 +19,21 @@ public class FireDrivingReminderService {
  @Scheduled(cron="0 0 8 * * *",zone="Europe/Berlin")
  @Transactional
  public void dailyReminders(){
+  // Both app and worker start Spring; only the worker may send scheduled notifications.
+  if(!java.util.Arrays.asList(activeProfiles.split(",")).contains("worker"))return;
   for(FireMemberQualification qualification:qualifications.findAllByTypeCode("DRIVERS_LICENSE")){
    notifyIfDue(qualification);
   }
  }
  @Transactional
  public boolean notifyOne(Long qualificationId){
-  return qualifications.findById(qualificationId)
+  return qualifications.findByIdForUpdate(qualificationId)
     .filter(q->"DRIVERS_LICENSE".equals(q.type.code))
     .map(this::notifyIfDue).orElse(false);
  }
- private boolean notifyIfDue(FireMemberQualification q){
-  if(!q.active||!q.type.tracked)return false;
+ private boolean notifyIfDue(FireMemberQualification supplied){
+  FireMemberQualification q=qualifications.findByIdForUpdate(supplied.id).orElse(null);
+  if(q==null||!q.active||!q.type.tracked||q.licenseNumberMac==null)return false;
   LocalDate now=LocalDate.now(ZoneId.of("Europe/Berlin"));
   LocalDate due=q.lastCheckedOn!=null&&q.type.intervalMonths>0
    ?q.lastCheckedOn.plusMonths(q.type.intervalMonths):q.nextDueOn;
