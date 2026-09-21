@@ -1,7 +1,9 @@
-const CACHE_NAME = "ffh-verwaltung-v10";
+const CACHE_NAME = "ffh-verwaltung-menu-designer-v2";
 const APP_SHELL = [
   "/",
   "/manifest.json",
+  "/menu-designer.js",
+  "/menu-designer.css",
   "/icons/fw-cockpit-logo.svg",
   "/icons/fw-cockpit-192.png",
   "/icons/fw-cockpit-512.png"
