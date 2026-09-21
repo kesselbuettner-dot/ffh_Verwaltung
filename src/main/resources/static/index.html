@@ -97,7 +97,31 @@ const menuDefinitions=[
  {id:'admin-settings',section:'Administration',label:'Einstellungen',icon:'🎨',action:()=>navigate('admin-settings'),roles:['ADMIN']}
 ];
 function menuAllowed(item){return item.roles.includes('*')||item.roles.includes(role)}
-function renderNavigation(){return window.MenuDesigner?window.MenuDesigner.renderNavigation():undefined;}
+function renderNavigation(){
+ const host=document.getElementById('navContainer');
+ try {
+  if(window.MenuDesigner) {
+   window.MenuDesigner.renderNavigation();
+   if(host?.querySelector('.nav-item'))return;
+   console.error('Menü-Designer hat keine Navigation ausgegeben. Standardmenü wird angezeigt.');
+  } else console.warn('Menü-Designer wurde nicht geladen. Standardmenü wird angezeigt.');
+ } catch(error){console.error('Menü-Designer fehlgeschlagen. Standardmenü wird angezeigt.',error);}
+ renderLegacyNavigation();
+}
+function renderLegacyNavigation(){
+ const host=document.getElementById('navContainer');if(!host)return;
+ const hidden=new Set((appSettings?.hiddenMenuItems||[]));
+ let order=appSettings?.menuOrder?.length?appSettings.menuOrder:[...menuDefinitions.map(x=>x.id)];
+ const rank=new Map(order.map((id,i)=>[id,i]));
+ const items=menuDefinitions.filter(menuAllowed).filter(x=>!hidden.has(x.id)).sort((a,b)=>(rank.get(a.id)??999)-(rank.get(b.id)??999));
+ const groups=[];const bySection=new Map();
+ items.forEach(item=>{if(!bySection.has(item.section)){const g={name:item.section,items:[]};bySection.set(item.section,g);groups.push(g)}bySection.get(item.section).items.push(item)});
+ host.innerHTML=groups.map((g,n)=>'<div class="nav-group" data-section="'+esc(g.name)+'"><button class="nav-group-toggle" aria-expanded="false" type="button" data-group="'+n+'">'+esc(g.name)+' <span class="chevron">›</span></button><div class="nav-group-items"><div class="nav-group-inner">'+g.items.map(i=>'<button class="nav-item '+(i.id.includes('-')?'nav-child':'')+'" data-page="'+esc(i.id)+'" data-nav-id="'+esc(i.id)+'">'+i.icon+' <span>'+esc(i.label)+'</span></button>').join('')+'</div></div></div>').join('');
+ host.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{const group=b.closest('.nav-group'),open=!group.classList.contains('expanded');host.querySelectorAll('.nav-group').forEach(g=>{g.classList.remove('expanded');g.querySelector('.nav-group-toggle').setAttribute('aria-expanded','false')});group.classList.toggle('expanded',open);b.setAttribute('aria-expanded',String(open))});
+ host.querySelectorAll('[data-nav-id]').forEach(button=>{button.addEventListener('click',()=>{const item=menuDefinitions.find(x=>x.id===button.dataset.navId);if(item)item.action()})});
+ setActive(window.currentPage||'dashboard');
+}
+
 function applyAppSettings(){
  const root=document.documentElement.style;
  if(appSettings){root.setProperty('--accent',appSettings.primaryColor||'#c51f2d');root.setProperty('--nav',appSettings.navColor||'#071827');root.setProperty('--blue',appSettings.accentColor||'#1479e9');}
