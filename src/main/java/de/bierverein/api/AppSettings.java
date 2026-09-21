@@ -35,6 +35,9 @@ public class AppSettings {
     @Column(nullable = false, length = 1000)
     private String hiddenMenuItems = "";
 
+    @Column(columnDefinition = "text")
+    private String menuLayout = "";
+
     @Lob
     @Basic(fetch = FetchType.LAZY)
     private byte[] logoData;
@@ -42,6 +45,8 @@ public class AppSettings {
     @Column(length = 100)
     private String logoContentType;
 
+    public String getMenuLayout() { return menuLayout; }
+    public void setMenuLayout(String menuLayout) { this.menuLayout = menuLayout; }
     public Long getId() { return id; }
     public String getAppName() { return appName; }
     public void setAppName(String appName) { this.appName = appName; }
