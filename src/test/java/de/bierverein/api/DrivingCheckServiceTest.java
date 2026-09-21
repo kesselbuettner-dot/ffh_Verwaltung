@@ -34,7 +34,7 @@ class DrivingCheckServiceTest {
   var q=data(7L,42L);
   when(permission.userId(auth)).thenReturn(9L);
   when(users.findById(9L)).thenReturn(Optional.of(user(9L,member)));
-  when(qualified.findById(7L)).thenReturn(Optional.of(q));
+  when(qualified.findByIdForUpdate(7L)).thenReturn(Optional.of(q));
   when(checks.save(any(FireQualificationCheck.class))).thenAnswer(i->i.getArgument(0));
   var result=service.autoScan(7L,new DrivingCheckService.ScanInput("Max Muster","L123456789"),auth);
   assertEquals("POSITIVE",result.result());
@@ -49,7 +49,7 @@ class DrivingCheckServiceTest {
   var q=data(7L,42L);
   when(permission.userId(auth)).thenReturn(9L);
   when(users.findById(9L)).thenReturn(Optional.of(user(9L,member)));
-  when(qualified.findById(7L)).thenReturn(Optional.of(q));
+  when(qualified.findByIdForUpdate(7L)).thenReturn(Optional.of(q));
   assertThrows(ResponseStatusException.class,()->service.autoScan(7L,
     new DrivingCheckService.ScanInput("Max Muster","L999999999"),auth));
   verifyNoInteractions(checks);verify(qualified,never()).save(any());
@@ -58,14 +58,14 @@ class DrivingCheckServiceTest {
   var member=new Member();ReflectionTestUtils.setField(member,"id",24L);member.setName("Fremd");
   when(permission.userId(auth)).thenReturn(9L);
   when(users.findById(9L)).thenReturn(Optional.of(user(9L,member)));
-  when(qualified.findById(7L)).thenReturn(Optional.of(data(7L,42L)));
+  when(qualified.findByIdForUpdate(7L)).thenReturn(Optional.of(data(7L,42L)));
   assertThrows(ResponseStatusException.class,()->service.autoScan(7L,
     new DrivingCheckService.ScanInput("Fremd","L123456789"),auth));
   verifyNoInteractions(checks);
  }
  @Test void manualBookingIsPositiveAndRequiresExplicitConfirmation(){
   var q=data(7L,42L);
-  when(qualified.findById(7L)).thenReturn(Optional.of(q));
+  when(qualified.findByIdForUpdate(7L)).thenReturn(Optional.of(q));
   when(permission.userId(auth)).thenReturn(11L);
   assertThrows(ResponseStatusException.class,()->service.manual(7L,new DrivingCheckService.ManualInput(false),auth));
   when(checks.save(any(FireQualificationCheck.class))).thenAnswer(i->i.getArgument(0));
