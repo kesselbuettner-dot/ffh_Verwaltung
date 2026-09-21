@@ -62,3 +62,35 @@
 #navContainer .nav-item .menu-icon-image,#navContainer .nav-item .menu-icon-glyph{flex:none}
 #navContainer .nav-item.nav-child{padding-left:18px}
 @media(max-width:700px){#navContainer .nav-item{min-height:48px} .sidebar{width:min(var(--menu-width,250px),88vw)}}
+
+/* The protected FW-Cockpit product mark is never replaced by the optional organization logo. */
+.sidebar .brand-link{width:100%;border:0;background:transparent;color:#fff;text-align:left;cursor:pointer;font:inherit}
+.sidebar .brand-link:focus-visible,.sidebar .sidebar-imprint:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.sidebar .brand-link strong{font-size:clamp(13px,1.2vw,17px);line-height:1.15;overflow-wrap:anywhere}
+.sidebar .brand-link img{object-fit:contain;background:#010000}
+.sidebar{display:flex;flex-direction:column;overflow:hidden}
+.sidebar #navContainer{min-height:0;flex:1 1 auto;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+.sidebar .brand,.sidebar .sidebar-user,.sidebar .sidebar-footer{flex:0 0 auto}
+.sidebar .sidebar-footer{margin-top:auto}
+.public-imprint{max-width:600px;margin:auto;line-height:1.6;overflow-wrap:anywhere}
+.public-imprint .imprint-logo{display:block;width:100px;height:100px;object-fit:contain;border-radius:15px;background:#000;margin:0 auto 14px}
+.public-imprint h3{text-align:center}
+.designer-quick-settings{display:grid;gap:10px;margin-bottom:14px}
+.designer-quick-settings label{display:grid;gap:5px;font-weight:600;font-size:13px}
+.designer-quick-settings select{width:100%;min-height:42px}
+/* 3 configurable role-aware shortcuts + permanently visible drawer action = max 4 */
+.mobile-nav{grid-template-columns:repeat(var(--mobile-quick-count,4),minmax(0,1fr))}
+.mobile-quick-links{display:contents}
+.mobile-nav .menu-icon-image,.mobile-nav .menu-icon-glyph{height:25px;width:25px;display:grid;place-items:center;line-height:1;font-size:23px}
+.mobile-nav .menu-icon-image[src^="/icons/menu/"]{filter:brightness(0) invert(1)}
+.mobile-nav .mobile-quick-label{font-size:10px;line-height:1.15;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mobile-nav .message-badge{position:absolute}
+.mobile-nav button{position:relative;min-width:0}
+@media(max-width:700px){.mobile-nav .mobile-quick-label{display:none}.mobile-nav{height:58px}}
+@media(min-width:701px) and (max-width:1024px){
+ body{padding-bottom:80px}
+ .sidebar{position:fixed;left:0;top:0;transform:translateX(-105%);width:min(var(--menu-width,285px),88vw);transition:transform .2s;height:100dvh;z-index:50}
+ .sidebar.open{transform:translateX(0)}
+ .mobile-nav{display:grid;bottom:calc(8px + env(safe-area-inset-bottom))}
+ .content{padding-bottom:22px}
+}
