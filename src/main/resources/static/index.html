@@ -318,7 +318,7 @@ function adminMembersPage(){return adminSettingsPage('members')}
 function adminUsersPage(){return adminSettingsPage('accounts')}
 async function adminMembersSettingsPage(){
  if(role!=='ADMIN')return;
- settingsContent.innerHTML='<div class="panel"><div class="title-row"><div><h2>👥 Mitgliederstammdaten</h2><p class="sub">Hier werden Mitglieder angelegt und Stammdaten gepflegt. Login-Konten und Rollen sind getrennte Bereiche.</p></div><button class="btn primary" onclick="openMemberForm()">＋ Mitglied anlegen</button></div><div class="toolbar"><input id="memberSearch" placeholder="Mitglied suchen" oninput="renderAdminMembers()"></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Kontakt</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="memberRows"></tbody></table></div><div class="quick"><button class="btn secondary" onclick="addMemberCustomField()">＋ Eigenes Stammdatenfeld</button></div><p class="sub">Geburtsdatum, Eintritt und eigene Stammdatenfelder sind hier für Administratoren geschützt. CSV- und Google-Kontakte-Import folgen in einer späteren Version.</p></div>';
+ settingsContent.innerHTML='<div class="panel"><div class="title-row"><div><h2>👥 Mitgliederstammdaten</h2><p class="sub">Hier werden Mitglieder angelegt und Stammdaten gepflegt. Login-Konten und Rollen sind getrennte Bereiche.</p></div><button class="btn primary" onclick="openMemberForm()">＋ Mitglied anlegen</button></div><div class="toolbar"><input id="memberSearch" placeholder="Mitglied suchen" oninput="renderAdminMembers()"></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Kontakt</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="memberRows"></tbody></table></div><div class="quick"><button class="btn secondary" onclick="addMemberCustomField()">＋ Eigenes Stammdatenfeld</button><button class="btn secondary" onclick="openMemberCsvImport()">⬆ CSV / Google-Kontakte-CSV importieren</button></div><p class="sub">Geburtsdatum, Eintritt und eigene Stammdatenfelder sind ausschließlich für Administratoren sichtbar. Direkter Google-OAuth-Kontaktimport folgt separat.</p></div>';
  try{members=await api('/api/members');renderAdminMembers()}catch(e){document.getElementById('memberRows').innerHTML='<tr><td colspan="4">'+esc(e.message)+'</td></tr>'}
 }
 function renderAdminMembers(){
@@ -354,6 +354,46 @@ async function loadMemberExtraFields(id){
    fields.map(field=>'<div class="field"><label>'+esc(field.title)+'</label><input data-member-extra="'+esc(field.code)+'" type="'+(field.type==='DATE'?'date':field.type==='NUMBER'?'number':'text')+'" maxlength="500" value="'+esc(profile.custom?.[field.code]||'')+'"></div>').join('')+'</div>';
   root.dataset.ready='yes';
  }catch(error){root.innerHTML='<div class="message error">Zusätzliche Stammdaten konnten nicht geladen werden: '+esc(error.message)+'. Bitte noch nicht speichern.</div>';}
+}
+let memberImportCsv=null,memberImportPreview=null;
+function openMemberCsvImport(){
+ if(role!=='ADMIN')return;
+ memberImportCsv=null;memberImportPreview=null;
+ modalTitle.textContent='Mitglieder aus CSV importieren';
+ modalBody.innerHTML='<p class="sub">CSV (UTF-8, Semikolon/Komma) oder Google-Kontakte-CSV auswählen. Spalten: Name oder Vorname/Nachname, E-Mail, Telefon, Adresse, Geburtsdatum und Eintritt. Vor dem Import werden Duplikate und fehlerhafte Zeilen angezeigt; kein Benutzerkonto wird angelegt.</p>'+
+ '<div class="field"><label for="memberCsvFile">CSV-Datei (maximal 1 MB)</label><input id="memberCsvFile" type="file" accept=".csv,text/csv,text/plain"></div>'+
+ '<div class="quick"><button class="btn secondary" id="memberCsvPreviewButton">Vorschau prüfen</button><button class="btn primary" id="memberCsvCommitButton" disabled>Neue Mitglieder übernehmen</button></div>'+
+ '<div id="memberCsvResult" aria-live="polite"></div>';
+ document.getElementById('memberCsvFile').onchange=()=>{memberImportCsv=null;memberImportPreview=null;document.getElementById('memberCsvCommitButton').disabled=true;document.getElementById('memberCsvResult').textContent='';};
+ document.getElementById('memberCsvPreviewButton').onclick=previewMemberCsv;
+ document.getElementById('memberCsvCommitButton').onclick=commitMemberCsv;
+ modal.classList.remove('hidden');
+}
+async function previewMemberCsv(){
+ const file=document.getElementById('memberCsvFile')?.files?.[0];
+ const output=document.getElementById('memberCsvResult');
+ if(!file){output.textContent='Bitte CSV-Datei auswählen.';return;}
+ if(file.size>1_000_000){output.textContent='Datei ist größer als 1 MB.';return;}
+ try{
+  const csv=await file.text();
+  const preview=await api('/api/admin/member-import/preview',{method:'POST',body:JSON.stringify({csv})});
+  memberImportCsv=csv;memberImportPreview=preview;
+  output.innerHTML='<p><strong>'+preview.newCount+' neue Mitglieder · '+preview.duplicates+' Duplikate · '+preview.errors+' Fehler</strong></p>'+
+   '<div class="table-wrap" style="max-height:45vh;overflow:auto"><table class="table"><thead><tr><th>Zeile</th><th>Name</th><th>E-Mail</th><th>Ergebnis</th></tr></thead><tbody>'+
+   preview.rows.map(r=>'<tr><td>'+r.line+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.email||'–')+'</td><td>'+esc(r.status+' · '+r.note)+'</td></tr>').join('')+'</tbody></table></div>';
+  document.getElementById('memberCsvCommitButton').disabled=preview.errors>0||preview.newCount<1;
+ }catch(error){memberImportCsv=null;memberImportPreview=null;output.textContent=error.message;document.getElementById('memberCsvCommitButton').disabled=true;}
+}
+async function commitMemberCsv(){
+ const file=document.getElementById('memberCsvFile')?.files?.[0],button=document.getElementById('memberCsvCommitButton');
+ if(!file||!memberImportPreview||memberImportPreview.errors||!memberImportCsv||!button||button.disabled)return;
+ button.disabled=true;
+ if(!confirm('Wirklich '+memberImportPreview.newCount+' neue Mitglieder importieren? Bestehende Mitglieder werden übersprungen.')){button.disabled=false;return;}
+ try{
+  const result=await api('/api/admin/member-import/commit',{method:'POST',body:JSON.stringify({csv:memberImportCsv})});
+  memberImportCsv=null;memberImportPreview=null;closeModal();await adminSettingsPage('members');
+  alert(result.imported+' Mitglieder importiert, '+result.duplicates+' Duplikate übersprungen.');
+ }catch(error){document.getElementById('memberCsvResult').insertAdjacentHTML('afterbegin','<div class="message error">'+esc(error.message)+'</div>');button.disabled=false;}
 }
 function addMemberCustomField(){
  if(role!=='ADMIN')return;
