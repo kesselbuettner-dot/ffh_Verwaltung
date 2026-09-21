@@ -33,4 +33,24 @@ jobs:
           docker run --rm --entrypoint tesseract fw-cockpit-ocr-test --list-langs | tee /tmp/ocr-langs.txt
           grep -qx 'deu' /tmp/ocr-langs.txt
           grep -qx 'eng' /tmp/ocr-langs.txt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: OCR a synthetic license-like image over stdin without writing a photo file
+        run: |
+          python -m pip install --quiet Pillow==11.3.0
+          python - <<'PY' | docker run --rm -i --entrypoint tesseract fw-cockpit-ocr-test stdin stdout -l deu+eng --psm 11 > /tmp/ocr-sample-result.txt
+          from PIL import Image,ImageDraw,ImageFont
+          import sys
+          image=Image.new('RGB',(1500,420),'white')
+          draw=ImageDraw.Draw(image)
+          font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',74)
+          draw.text((80,55),'MAX MUSTER',fill='black',font=font)
+          draw.text((80,215),'L123456789',fill='black',font=font)
+          image.save(sys.stdout.buffer,format='PNG')
+          PY
+          grep -qi 'MUSTER' /tmp/ocr-sample-result.txt
+          grep -q '123456789' /tmp/ocr-sample-result.txt
+          rm -f /tmp/ocr-sample-result.txt
+
 
