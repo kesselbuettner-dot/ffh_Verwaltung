@@ -1,0 +1,56 @@
+name: Render FW-Cockpit App Icons
+on:
+  push:
+    branches: [feature/menu-designer-on-577e741]
+    paths:
+      - .github/workflows/render-fw-cockpit-icons.yml
+      - src/main/resources/static/icons/fw-cockpit-brand.svg
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deterministic rendering dependencies
+        run: python -m pip install --disable-pip-version-check "CairoSVG==2.7.1" "Pillow==10.4.0"
+      - name: Render PNGs from uploaded SVG
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import cairosvg
+          from PIL import Image
+          from io import BytesIO
+          folder=Path('src/main/resources/static/icons')
+          svg=folder/'fw-cockpit-brand.svg'
+          assert svg.exists(), "Uploaded logo not present"
+          for size in (192,512):
+              cairosvg.svg2png(url=str(svg),write_to=str(folder/f'fw-cockpit-icon-{size}.png'),
+                               output_width=size,output_height=size)
+          small=Image.open(BytesIO(cairosvg.svg2png(url=str(svg),output_width=390,output_height=390))).convert('RGBA')
+          canvas=Image.new('RGBA',(512,512),(0,0,0,255))
+          canvas.alpha_composite(small,(61,61))
+          canvas.convert('RGB').save(folder/'fw-cockpit-icon-maskable-512.png',optimize=True)
+          cairosvg.svg2png(url=str(svg),write_to=str(folder/'fw-cockpit-icon-180.png'),
+                           output_width=180,output_height=180)
+          for name in ['fw-cockpit-icon-192.png','fw-cockpit-icon-512.png',
+                       'fw-cockpit-icon-maskable-512.png','fw-cockpit-icon-180.png']:
+              image=Image.open(folder/name)
+              image.verify()
+              print('Validated',name)
+          PY
+      - name: Commit generated icons to the development branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main/resources/static/icons/fw-cockpit-icon-*.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Render PWA PNG icons from user-provided FW Cockpit SVG"
+            git push origin HEAD:feature/menu-designer-on-577e741
+          fi
