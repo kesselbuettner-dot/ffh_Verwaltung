@@ -68,6 +68,15 @@ public class DeviceController {
         return dto(devices.save(d));
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'delete')")
+    public ResponseEntity<Void> delete(@PathVariable Long id){
+        Device d=find(id);
+        d.setActive(false); // Retain inspection and defect history.
+        devices.save(d);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id}/inspection-required")
     @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'write')")
     public DeviceDto inspectionRequired(@PathVariable Long id,@RequestBody InspectionRequiredRequest r){
@@ -128,7 +137,7 @@ public class DeviceController {
             throw bad("Gerätebezeichnung ist erforderlich");
         if(r.inspectionIntervalMonths()!=null && r.inspectionIntervalMonths()<1)
             throw bad("Prüfintervall muss mindestens 1 Monat betragen");
-        if(r.nextInspectionDate()!=null && r.nextInspectionDate().isBefore(LocalDate.now()))
+        if(r.nextInspectionDate()!=null && r.nextInspectionDate().isBefore(LocalDate.now()) && (creating || !r.nextInspectionDate().equals(d.getNextInspectionDate())))
             throw bad("Nächster Prüftermin darf nicht in der Vergangenheit liegen");
 
         d.setName(r.name().trim());
@@ -145,6 +154,7 @@ public class DeviceController {
         d.setResponsibleUsername(clean(r.responsibleUsername()));
         d.setNotes(clean(r.notes()));
         if(r.compartmentId()!=null)d.setCompartment(compartments.findById(r.compartmentId()).orElseThrow(()->bad("Fahrzeugfach nicht gefunden")));
+        else if(!creating)d.setCompartment(null);
         d.setInspectionRequired(Boolean.TRUE.equals(r.inspectionRequired()));
         if(creating) d.setActive(r.active()==null || r.active());
         else if(r.active()!=null) d.setActive(r.active());

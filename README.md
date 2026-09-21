@@ -169,3 +169,13 @@ Die vorhandene Fahrzeugverwaltung verwendet weiterhin `fire_vehicles`, `vehicle_
 - Schreibende Funktionen benötigen weiterhin `fire.vehicles.write` und bei Geräteänderungen zusätzlich `fire.devices.write`.
 
 Bestehende Gerätezuordnungen bleiben erhalten. Neue Felder sind nullable und werden nach dem Hibernate-Schema-Update durch `LegacySchemaBackfill` mit sicheren Standardwerten ergänzt.
+
+### Version 2.0.5: Stammdaten bearbeiten und entfernen
+
+- Geräte: Daten bearbeiten, Zuordnung lösen und Geräte archivieren. Archivierte Geräte bleiben mit ihren Prüfungen und Defektangaben gespeichert.
+- Fahrzeuge: Name, Funkrufname, Feuerwehrrelevanz und Bemerkung ändern; Fahrzeuge ohne aktive Geräte archivieren.
+- Geräteräume: Bezeichnung, Ansicht, Position und Größe ändern; leere Geräteräume löschen. Ein Fach mit zugeordneten Geräten kann zum Schutz der Zuordnung nicht gelöscht werden.
+- Standorte: gespeicherte Standorte bearbeiten oder entfernen, wenn keine aktiven Geräte darauf verweisen. Automatisch aus Geräten übernommene Standortnamen besitzen keinen eigenen Datensatz.
+- Unterlagen: Titel und Beschreibung bearbeiten; Löschen war bereits vorhanden.
+
+Die Aktionen werden nur bei passender Rollenberechtigung eingeblendet und auch serverseitig geprüft. Buchungen und andere Bestandsbewegungen bleiben als Buchungshistorie erhalten.

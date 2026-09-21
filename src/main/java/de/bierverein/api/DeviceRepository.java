@@ -8,5 +8,7 @@ public interface DeviceRepository extends JpaRepository<Device,Long>{
     Optional<Device> findFirstByBarcodeAndActiveTrue(String barcode);
     Optional<Device> findFirstBySerialNumberAndActiveTrue(String serialNumber);
     List<Device> findByActiveTrueOrderByNameAsc();
+    boolean existsByCompartmentId(Long compartmentId);
+    boolean existsByCompartmentIdAndActiveTrue(Long compartmentId);
     List<Device> findByCompartmentIdAndActiveTrueOrderByNameAsc(Long compartmentId);
 }

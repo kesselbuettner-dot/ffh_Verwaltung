@@ -22,10 +22,16 @@ public class FireVehicleController {
  @PutMapping("/{id}") @PreAuthorize("@vehiclePermissionGuard.allowed(authentication,'write')")
  public VehicleDto update(@PathVariable Long id,@RequestBody VehicleRequest r){FireVehicle v=find(id);if(r==null||r.name()==null||r.name().isBlank())throw bad("Fahrzeugname ist erforderlich.");v.setName(trim(r.name(),120));v.setCallSign(trim(r.callSign(),40));v.setNotes(trim(r.notes(),1000));if(r.fireRelevant()!=null)v.setFireRelevant(r.fireRelevant());return dto(vehicles.save(v));}
 
+ @DeleteMapping("/{id}") @PreAuthorize("@vehiclePermissionGuard.allowed(authentication,'delete')")
+ public ResponseEntity<Void> deleteVehicle(@PathVariable Long id){FireVehicle v=find(id);boolean occupied=v.getId()!=null&&compartments.findByVehicleIdOrderByGridYAscGridXAsc(id).stream().anyMatch(c->devices.existsByCompartmentIdAndActiveTrue(c.getId()));if(occupied)throw new ResponseStatusException(HttpStatus.CONFLICT,"Fahrzeug enthält Geräte. Bitte zuerst die Geräte anderen Fächern zuordnen oder archivieren und ihre Zuordnung entfernen.");v.setActive(false);vehicles.save(v);return ResponseEntity.noContent().build();}
+
  @PostMapping("/{id}/compartments") @PreAuthorize("@vehiclePermissionGuard.allowed(authentication,'write')")
  public CompartmentDto compartment(@PathVariable Long id,@RequestBody CompartmentRequest r){VehicleCompartment c=new VehicleCompartment();c.setVehicle(find(id));apply(c,r);return compartmentDto(compartments.save(c));}
  @PutMapping("/compartments/{id}") @PreAuthorize("@vehiclePermissionGuard.allowed(authentication,'write')")
  public CompartmentDto updateCompartment(@PathVariable Long id,@RequestBody CompartmentRequest r){VehicleCompartment c=compartment(id);apply(c,r);return compartmentDto(compartments.save(c));}
+
+ @DeleteMapping("/compartments/{id}") @PreAuthorize("@vehiclePermissionGuard.allowed(authentication,'delete')") @Transactional
+ public ResponseEntity<Void> deleteCompartment(@PathVariable Long id){VehicleCompartment c=compartment(id);if(devices.existsByCompartmentId(id))throw new ResponseStatusException(HttpStatus.CONFLICT,"Fach enthält Geräte. Bitte zuerst die Geräte umordnen.");elements.deleteAll(elements.findByCompartmentIdOrderByLayerAscIdAsc(id));compartments.delete(c);return ResponseEntity.noContent().build();}
 
  @PostMapping("/compartments/{id}/elements") @PreAuthorize("@vehiclePermissionGuard.allowed(authentication,'write')")
  public ElementDto createElement(@PathVariable Long id,@RequestBody ElementRequest r){VehicleCompartmentElement e=new VehicleCompartmentElement();e.setCompartment(compartment(id));apply(e,r);return elementDto(elements.save(e));}

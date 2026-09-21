@@ -17,6 +17,8 @@ public class TrainingDocumentController {
   TrainingDocument d=new TrainingDocument(); d.setTitle(title.trim()); d.setDescription(description==null?null:description.trim()); d.setOriginalFileName(original); d.setStoredFileName(stored); d.setContentType(type); d.setFileSize(file.getSize()); d.setUploadedAt(Instant.now()); d.setUploadedBy(auth.getName());
   return dto(documents.save(d));
  }
+ @PutMapping("/{id}") @PreAuthorize("@trainingPermissionGuard.allowed(authentication,'training.documents','write')")
+ public DocumentDto update(@PathVariable Long id,@RequestBody DocumentUpdateRequest r){if(r==null||r.title()==null||r.title().isBlank())throw bad("Titel ist erforderlich");TrainingDocument d=documents.findById(id).orElseThrow(()->notFound("Dokument nicht gefunden"));d.setTitle(r.title().trim());d.setDescription(r.description()==null?null:r.description().trim());return dto(documents.save(d));}
  @GetMapping("/{id}/file") @PreAuthorize("@trainingPermissionGuard.allowed(authentication,'training.documents','read')") public ResponseEntity<Resource> download(@PathVariable Long id)throws IOException{
   TrainingDocument d=documents.findById(id).orElseThrow(()->notFound("Dokument nicht gefunden")); Path p=storage.resolve(d.getStoredFileName()).normalize(); if(!p.startsWith(storage.normalize())||!Files.exists(p))throw notFound("Datei nicht gefunden");
   Resource resource=new InputStreamResource(Files.newInputStream(p)); String encoded=URLEncoder.encode(d.getOriginalFileName(),StandardCharsets.UTF_8).replace("+","%20");
@@ -27,5 +29,6 @@ public class TrainingDocumentController {
  }
  private DocumentDto dto(TrainingDocument d){return new DocumentDto(d.getId(),d.getTitle(),d.getDescription(),d.getOriginalFileName(),d.getContentType(),d.getFileSize(),d.getUploadedAt(),d.getUploadedBy());}
  private ResponseStatusException bad(String s){return new ResponseStatusException(HttpStatus.BAD_REQUEST,s);} private ResponseStatusException notFound(String s){return new ResponseStatusException(HttpStatus.NOT_FOUND,s);}
+ public record DocumentUpdateRequest(String title,String description){}
  public record DocumentDto(Long id,String title,String description,String fileName,String contentType,long fileSize,Instant uploadedAt,String uploadedBy){}
 }
