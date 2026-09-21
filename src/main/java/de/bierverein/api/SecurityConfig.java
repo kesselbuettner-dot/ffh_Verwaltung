@@ -50,6 +50,8 @@ public class SecurityConfig {
                     "/index.html",
                     "/manifest.json",
                     "/sw.js",
+                    "/menu-designer.js",
+                    "/menu-designer.css",
                     "/favicon.ico",
                     "/icons/**",
                     "/css/**",
