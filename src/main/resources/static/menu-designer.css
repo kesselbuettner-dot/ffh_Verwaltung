@@ -44,3 +44,6 @@
 .designer-children{padding-left:5px}
 }
 @media(prefers-reduced-motion:reduce){.sidebar .nav-group-items{transition:none}}
+
+/* Built-in SVG icons adapt to dark navigation; uploaded icons keep original colors. */
+.sidebar .menu-icon-image[src^="/icons/menu/"]{filter:brightness(0) invert(1)}
