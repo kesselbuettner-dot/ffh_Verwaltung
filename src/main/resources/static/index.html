@@ -318,7 +318,7 @@ function adminMembersPage(){return adminSettingsPage('members')}
 function adminUsersPage(){return adminSettingsPage('accounts')}
 async function adminMembersSettingsPage(){
  if(role!=='ADMIN')return;
- settingsContent.innerHTML='<div class="panel"><div class="title-row"><div><h2>👥 Mitgliederstammdaten</h2><p class="sub">Hier werden Mitglieder angelegt und Stammdaten gepflegt. Login-Konten und Rollen sind getrennte Bereiche.</p></div><button class="btn primary" onclick="openMemberForm()">＋ Mitglied anlegen</button></div><div class="toolbar"><input id="memberSearch" placeholder="Mitglied suchen" oninput="renderAdminMembers()"></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Kontakt</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="memberRows"></tbody></table></div><div class="sub">Geburtsdatum, Eintritt, frei definierbare Felder und Kontaktimport werden in der nächsten Ausbaustufe ergänzt.</div></div>';
+ settingsContent.innerHTML='<div class="panel"><div class="title-row"><div><h2>👥 Mitgliederstammdaten</h2><p class="sub">Hier werden Mitglieder angelegt und Stammdaten gepflegt. Login-Konten und Rollen sind getrennte Bereiche.</p></div><button class="btn primary" onclick="openMemberForm()">＋ Mitglied anlegen</button></div><div class="toolbar"><input id="memberSearch" placeholder="Mitglied suchen" oninput="renderAdminMembers()"></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Kontakt</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="memberRows"></tbody></table></div><div class="quick"><button class="btn secondary" onclick="addMemberCustomField()">＋ Eigenes Stammdatenfeld</button></div><p class="sub">Geburtsdatum, Eintritt und eigene Stammdatenfelder sind hier für Administratoren geschützt. CSV- und Google-Kontakte-Import folgen in einer späteren Version.</p></div>';
  try{members=await api('/api/members');renderAdminMembers()}catch(e){document.getElementById('memberRows').innerHTML='<tr><td colspan="4">'+esc(e.message)+'</td></tr>'}
 }
 function renderAdminMembers(){
@@ -337,8 +337,35 @@ function openMemberForm(id){
  '<div class="field"><label for="memberFormPhone">Telefon</label><input id="memberFormPhone" maxlength="80" value="'+esc(m?.phone||'')+'"></div>'+
  '<div class="field"><label for="memberFormAddress">Anschrift</label><textarea id="memberFormAddress" maxlength="500">'+esc(m?.address||'')+'</textarea></div>'+
  '<div class="field"><label><input id="memberFormActive" type="checkbox" '+(m?.active!==false?'checked':'')+'> Aktives Mitglied</label></div>'+
+ '<section id="memberExtraFields"><p class="sub">Weitere Stammdaten werden geladen …</p></section>'+ 
  '<p class="sub">Benutzerkonto, Passwort und Berechtigungen bitte ausschließlich unter „Konten“ und „Rollen & Rechte“ bearbeiten. Das Deaktivieren eines Mitglieds ist keine automatische Kontosperrung.</p>'+
  '<div class="quick"><button class="btn secondary" onclick="closeModal()">Abbrechen</button><button class="btn primary" onclick="saveMemberMaster('+(m?Number(m.id):'null')+')">Stammdaten speichern</button></div>';
+ modal.classList.remove('hidden');loadMemberExtraFields(id);
+}
+async function loadMemberExtraFields(id){
+ const root=document.getElementById('memberExtraFields');if(!root)return;
+ try{
+  const [fields,profile]=await Promise.all([api('/api/admin/member-profiles/fields'),
+   id==null?Promise.resolve({birthDate:null,joinedOn:null,custom:{}}):api('/api/admin/member-profiles/'+Number(id))]);
+  if(document.getElementById('memberExtraFields')!==root)return;
+  root.innerHTML='<h3>Weitere Stammdaten</h3><div class="form-grid">'+
+   '<div class="field"><label>Geburtsdatum (optional)</label><input id="memberBirthDate" type="date" value="'+esc(profile.birthDate||'')+'"></div>'+
+   '<div class="field"><label>Eintrittsdatum (optional)</label><input id="memberJoinedOn" type="date" value="'+esc(profile.joinedOn||'')+'"></div>'+
+   fields.map(field=>'<div class="field"><label>'+esc(field.title)+'</label><input data-member-extra="'+esc(field.code)+'" type="'+(field.type==='DATE'?'date':field.type==='NUMBER'?'number':'text')+'" maxlength="500" value="'+esc(profile.custom?.[field.code]||'')+'"></div>').join('')+'</div>';
+  root.dataset.ready='yes';
+ }catch(error){root.innerHTML='<div class="message error">Zusätzliche Stammdaten konnten nicht geladen werden: '+esc(error.message)+'. Bitte noch nicht speichern.</div>';}
+}
+function addMemberCustomField(){
+ if(role!=='ADMIN')return;
+ modalTitle.textContent='Eigenes Stammdatenfeld anlegen';
+ modalBody.innerHTML='<div id="memberFieldMsg"></div><div class="field"><label>Kennung (A–Z, Zahlen, Unterstrich)</label><input id="memberFieldCode" maxlength="48"></div>'+
+ '<div class="field"><label>Beschriftung</label><input id="memberFieldTitle" maxlength="100"></div>'+
+ '<div class="field"><label>Feldtyp</label><select id="memberFieldType"><option value="TEXT">Text</option><option value="DATE">Datum</option><option value="NUMBER">Zahl</option></select></div>'+
+ '<div class="quick"><button class="btn secondary" onclick="closeModal()">Abbrechen</button><button class="btn primary" id="memberFieldSave">Feld anlegen</button></div>';
+ document.getElementById('memberFieldSave').onclick=async()=>{
+  try{await api('/api/admin/member-profiles/fields',{method:'POST',body:JSON.stringify({code:memberFieldCode.value.trim().toUpperCase(),title:memberFieldTitle.value.trim(),type:memberFieldType.value})});closeModal();await adminSettingsPage('members');}
+  catch(error){memberFieldMsg.textContent=error.message;}
+ };
  modal.classList.remove('hidden');
 }
 async function saveMemberMaster(id){
@@ -347,8 +374,17 @@ async function saveMemberMaster(id){
  phone:document.getElementById('memberFormPhone').value.trim()||null,address:document.getElementById('memberFormAddress').value.trim()||null,
  active:document.getElementById('memberFormActive').checked,loginEnabled:null};
  if(!data.name){document.getElementById('memberFormMsg').textContent='Der Name ist erforderlich.';return;}
- try{await api('/api/members'+(id==null?'':'/'+Number(id)),{method:id==null?'POST':'PUT',body:JSON.stringify(data)});
- closeModal();await adminSettingsPage('members');
+ try{
+  const saved=await api('/api/members'+(id==null?'':'/'+Number(id)),{method:id==null?'POST':'PUT',body:JSON.stringify(data)});
+  const extraEl=document.getElementById('memberExtraFields');
+  if(extraEl?.dataset.ready==='yes'){
+   const custom={};extraEl.querySelectorAll('[data-member-extra]').forEach(field=>custom[field.dataset.memberExtra]=field.value.trim());
+   const additional={birthDate:document.getElementById('memberBirthDate').value||null,
+      joinedOn:document.getElementById('memberJoinedOn').value||null,custom};
+   try{await api('/api/admin/member-profiles/'+saved.id,{method:'PUT',body:JSON.stringify(additional)});}
+   catch(error){document.getElementById('memberFormMsg').textContent='Mitglied gespeichert, zusätzliche Stammdaten konnten nicht gespeichert werden: '+error.message+'. Bitte dieses Mitglied erneut öffnen.';return;}
+  }
+  closeModal();await adminSettingsPage('members');
  }catch(e){document.getElementById('memberFormMsg').textContent=e.message||'Speichern fehlgeschlagen.';}
 }
 async function adminUsersSettingsPage(){
@@ -363,6 +399,13 @@ function adminRolesSettingsPage(){
  if(role!=='ADMIN')return;
  settingsContent.innerHTML='<div class="panel" id="managedRolesPanel"><h2>🛡️ Rollen</h2><p class="sub">Rollen anlegen, ändern und die Berechtigungsdefinition pro Rolle pflegen. Individuelle Zuweisungen liegen unter „Rechte & Zuweisungen“.</p><div id="managedRolesMessage"></div><div id="managedRolesContent">Rollen werden geladen …</div></div>';
  loadManagedRolesPanel('roles');
+ const setup=document.createElement('button');setup.type='button';setup.className='btn secondary';setup.textContent='🚒 Wehrleiterrolle einrichten';setup.onclick=setupWehrleiterRole;
+ document.getElementById('managedRolesPanel')?.insertBefore(setup,document.getElementById('managedRolesMessage'));
+}
+async function setupWehrleiterRole(){
+ if(role!=='ADMIN')return;
+ try{const result=await api('/api/admin/wehrleiter/create-role',{method:'POST'});alert(result.message);await adminSettingsPage('roles');}
+ catch(error){alert(error.message);}
 }
 function adminPermissionsSettingsPage(){
  if(role!=='ADMIN')return;
