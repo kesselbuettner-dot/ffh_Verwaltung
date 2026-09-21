@@ -18,7 +18,7 @@ class FireDrivingReminderServiceTest {
   Member m=new Member();m.setName("Muster");m.setActive(true);
   AppUser u=new AppUser();u.setUsername("member@example.org");u.setEnabled(true);u.setRegistrationApproved(true);
   u.setMember(m);m.setUser(u);
-  when(qualifications.findById(7L)).thenReturn(Optional.of(q));
+  when(qualifications.findByIdForUpdate(7L)).thenReturn(Optional.of(q));
   when(members.findById(42L)).thenReturn(Optional.of(m));
   when(push.sendToUser(eq("member@example.org"),anyString(),anyString(),anyString(),anyString())).thenReturn(true);
   assertTrue(reminders.notifyOne(7L));
