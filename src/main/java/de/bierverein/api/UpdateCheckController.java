@@ -53,11 +53,26 @@ public class UpdateCheckController {
                 throw new IllegalStateException("GitHub hat keinen gültigen Commit geliefert.");
             }
             boolean currentKnown = currentCommit.matches("[0-9a-fA-F]{40}");
-            boolean available = currentKnown && !currentCommit.equalsIgnoreCase(latest);
-            String message = !currentKnown
-                    ? "Installierter Commit unbekannt. Bei lokaler Installation APP_GIT_COMMIT beim Docker-Build setzen."
-                    : available ? "Auf GitHub main liegt eine andere Version vor."
-                                : "Installierter Commit entspricht GitHub main.";
+            boolean available = false;
+            String message = "Installierter Commit unbekannt. Bei lokaler Installation APP_GIT_COMMIT beim Docker-Build setzen.";
+            if (currentKnown && currentCommit.equalsIgnoreCase(latest)) {
+                message = "Installierter Commit entspricht GitHub main.";
+            } else if (currentKnown) {
+                JsonNode comparison = RestClient.builder()
+                        .baseUrl("https://api.github.com")
+                        .defaultHeader(HttpHeaders.ACCEPT, "application/vnd.github+json")
+                        .build()
+                        .get()
+                        .uri("/repos/{owner}/{repo}/compare/{base}...{head}",
+                                parts[0], parts[1], currentCommit, latest)
+                        .retrieve()
+                        .body(JsonNode.class);
+                String status = comparison == null ? "" : comparison.path("status").asText("");
+                available = "ahead".equals(status) && comparison.path("ahead_by").asInt(0) > 0;
+                message = available
+                        ? "GitHub main enthält neuere Commits als die installierte Version."
+                        : "Installierter Commit weicht von main ab oder liegt vor main. Kein automatisches Update.";
+            }
             boolean installAvailable = available && updaterToken != null && !updaterToken.isBlank();
             return new UpdateDto(currentKnown ? currentCommit.substring(0,7) : "unbekannt",
                     latest.substring(0,7), latest, available, message,
