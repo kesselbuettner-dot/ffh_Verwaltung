@@ -1,0 +1,43 @@
+name: Design System and Member Administration CI
+on:
+  push:
+    branches:
+      - feature/design-system-member-admin
+  pull_request:
+    branches:
+      - feature/menu-designer-on-577e741
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check existing menu
+        run: |
+          node --check src/main/resources/static/menu-designer.js
+          node src/test/js/menu-designer-smoke.cjs
+      - name: Check design system and member admin UI
+        run: node src/test/js/admin-layout-smoke.cjs
+      - name: Check theme assets and server guards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          security=Path('src/main/java/de/bierverein/api/SecurityConfig.java').read_text()
+          members=Path('src/main/java/de/bierverein/api/MemberController.java').read_text()
+          service=Path('src/main/java/de/bierverein/api/MemberService.java').read_text()
+          assert '"/ui-theme.css"' in security
+          for method in ('create','update','delete'):
+              assert "@PreAuthorize(\"hasRole('ADMIN')\")" in members
+          assert 'if(r.loginEnabled()==null)return;' in service
+          print('PASS public theme CSS, server-side admin member writes and login preservation')
+          PY
+      - name: Compile Java and execute tests
+        run: mvn -B -ntp test
