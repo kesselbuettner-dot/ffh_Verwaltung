@@ -39,7 +39,7 @@ public class PrimaryRoleSyncService {
                 }
             }
         }
-        if (current.stream().noneMatch(a -> a.getRole().getId().equals(primary.getId()))) {
+        if (current.stream().noneMatch(a -> java.util.Objects.equals(a.getRole().getId(), primary.getId()))) {
             assignments.save(new ManagedUserRole(user, primary));
         }
     }
