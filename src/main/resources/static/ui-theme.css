@@ -1,0 +1,41 @@
+/* FW-Cockpit Design Tokens — docs/DESIGN_SYSTEM.md
+   Existing app CSS remains authoritative for layout; these semantic tokens
+   standardize new actions without silently restyling every legacy module. */
+:root{
+ --ui-page:var(--bg,#eef2f6);--ui-surface:var(--panel,#fff);
+ --ui-text:var(--ink,#102033);--ui-subtle:var(--muted,#64748b);
+ --ui-border:var(--line,#dce4ec);
+ --ui-primary:var(--accent,#c51f2d);--ui-primary-text:#fff;
+ --ui-secondary:#eef1f4;--ui-secondary-text:#102033;
+ --ui-warning:#9a6000;--ui-warning-text:#fff;
+ --ui-danger:#a51f2b;--ui-danger-text:#fff;
+ --ui-success:#117645;--ui-success-text:#fff;
+ --ui-focus:#1479e9;
+}
+body.dark{
+ --ui-page:var(--bg);--ui-surface:var(--panel);
+ --ui-text:var(--ink);--ui-subtle:var(--muted);--ui-border:var(--line);
+ --ui-secondary:#263747;--ui-secondary-text:#f5f8fb;
+ --ui-warning:#f1b95d;--ui-warning-text:#171b22;
+ --ui-danger:#bd3144;--ui-danger-text:#fff;
+ --ui-success:#2c965e;--ui-success-text:#fff;
+ --ui-focus:#94c7ff;
+}
+.btn.primary{background:var(--ui-primary);color:var(--ui-primary-text)}
+.btn.secondary{background:var(--ui-secondary);color:var(--ui-secondary-text)}
+.btn.danger{background:var(--ui-danger);color:var(--ui-danger-text)}
+.btn.warning{background:var(--ui-warning);color:var(--ui-warning-text)}
+.btn.success{background:var(--ui-success);color:var(--ui-success-text)}
+.btn:focus-visible,.settings-tab:focus-visible,.table button:focus-visible{
+ outline:3px solid var(--ui-focus);outline-offset:2px;
+}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.danger:hover:not(:disabled){filter:brightness(1.1)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.09)}
+.btn.secondary:hover:not(:disabled){filter:brightness(.96)}
+.ui-theme-presets{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.ui-theme-preset{border:1px solid var(--ui-border);background:var(--ui-surface);
+ color:var(--ui-text);border-radius:10px;padding:10px;min-height:44px;display:flex;align-items:center;gap:7px}
+.ui-theme-preset .swatch{width:18px;height:18px;border-radius:50%;background:var(--swatch);border:1px solid #8884}
+.ui-theme-preset:focus-visible{outline:3px solid var(--ui-focus);outline-offset:2px}
+.ui-theme-preset[aria-pressed=true]{border:2px solid var(--ui-focus)}
