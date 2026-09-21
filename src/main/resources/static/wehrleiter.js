@@ -181,35 +181,28 @@ async function myDrivingPage(){
 }
 async function scanPhoto(id,fileInput){
  const info=el('scanResult-'+id),file=fileInput.files?.[0];if(!info||!file)return;
- // No upload endpoint, no base64 encoding, no persistent storage, no object URL.
- if(!('TextDetector' in window)||!('createImageBitmap' in window)){
-  fileInput.value='';notice(info,'Automatische Texterkennung wird von diesem Browser nicht unterstützt. Bitte die Wehrleitung zur manuellen Prüfung kontaktieren.');return;
+ if(file.size>15*1024*1024){fileInput.value='';notice(info,'Foto ist zu groß (max. 15 MB).');return;}
+ if(!('createImageBitmap' in window)){
+  fileInput.value='';notice(info,'Dein Browser kann das Foto nicht verarbeiten. Bitte einen aktuellen Browser verwenden oder die Wehrleitung zur manuellen Kontrolle kontaktieren.');return;
  }
- if(file.size>15*1024*1024){fileInput.value='';notice(info,'Bilddatei ist zu groß.');return;}
- notice(info,'Führerschein wird nur auf diesem Gerät ausgelesen …','success');
- let bitmap;
+ notice(info,'Das Foto wird nur vorübergehend im Arbeitsspeicher verarbeitet. Die automatische Erkennung erfolgt auf dem FW-Cockpit-Server; es wird kein Bild gespeichert.','success');
+ let bitmap=null,canvas=null,encoded=null;
  try{
   bitmap=await createImageBitmap(file);
-  const results=await new TextDetector().detect(bitmap);
-  const lines=results.map(r=>String(r.rawValue||'').trim()).filter(Boolean).slice(0,100);
-  if(!lines.length)throw Error('Keine lesbaren Textzeilen erkannt. Bitte Wehrleitung zur manuellen Prüfung kontaktieren.');
-  info.innerHTML='<p class="sub">Bitte die tatsächlich erkannten Textzeilen für vollständigen Namen und Führerscheinnummer auswählen. Bei unsicherer Erkennung nicht abschließen.</p>'+
-   '<div class="field"><label>Name laut OCR</label><select id="scanName-'+id+'"><option value="">Bitte wählen</option>'+
-   lines.map((line,i)=>'<option value="'+i+'">'+safe(line)+'</option>').join('')+'</select></div>'+
-   '<div class="field"><label>Führerscheinnummer laut OCR</label><select id="scanNumber-'+id+'"><option value="">Bitte wählen</option>'+
-   lines.map((line,i)=>'<option value="'+i+'">'+safe(line)+'</option>').join('')+'</select></div>'+
-   '<button class="btn primary" id="scanConfirm-'+id+'">Automatischen Datenabgleich abschließen</button><div id="scanMsg-'+id+'"></div>';
-  el('scanConfirm-'+id).onclick=async()=>{
-   const ni=el('scanName-'+id).value,li=el('scanNumber-'+id).value;
-   if(ni===''||li===''){notice(el('scanMsg-'+id),'Beide erkannten Werte auswählen.');return;}
-   try{
-    await api(BASE+'/driving/my/'+id+'/scan',{method:'POST',
-     body:JSON.stringify({recognizedName:lines[Number(ni)],recognizedNumber:lines[Number(li)]})});
-    lines.length=0;info.innerHTML='<div class="message success">✓ Automatischer Namens- und Nummernabgleich positiv dokumentiert. Es wurde kein Foto gespeichert.</div>';
-   }catch(error){notice(el('scanMsg-'+id),error.message);}
-  };
- }catch(error){notice(info,error.message||'Erkennung fehlgeschlagen. Bitte Wehrleitung kontaktieren.');}
- finally{bitmap?.close?.();fileInput.value='';}
+  if(bitmap.width<400||bitmap.height<240)throw Error('Foto ist zu klein. Bitte neu aufnehmen.');
+  const scale=Math.min(1,1800/Math.max(bitmap.width,bitmap.height));
+  canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+  const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw Error('Fotoverarbeitung nicht verfügbar.');
+  ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+  encoded=canvas.toDataURL('image/jpeg',.88);
+  if(encoded.length>7_500_000)throw Error('Das komprimierte Foto ist zu groß. Bitte erneut aufnehmen.');
+  bitmap.close();bitmap=null;canvas.width=0;canvas.height=0;canvas=null;
+  fileInput.value='';
+  const answer=await api(BASE+'/driving/my/'+id+'/scan',{method:'POST',body:JSON.stringify({imageData:encoded})});
+  info.innerHTML='<div class="message success">✓ Der automatische Abgleich von Name und Führerscheinnummer wurde positiv dokumentiert. Kein Dokumentfoto wurde gespeichert.</div>';
+  return answer;
+ }catch(error){notice(info,error.message||'Foto konnte nicht geprüft werden. Bitte erneut versuchen oder Wehrleitung kontaktieren.');}
+ finally{bitmap?.close?.();if(canvas){canvas.width=0;canvas.height=0;}fileInput.value='';encoded=null;}
 }
 async function dashboard(){
  if(!rights('fire.qualifications.read'))return;
