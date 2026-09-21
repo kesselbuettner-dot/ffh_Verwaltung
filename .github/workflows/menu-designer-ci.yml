@@ -1,0 +1,35 @@
+name: Menu Designer CI
+on:
+  push:
+    branches:
+      - feature/menu-designer-v2
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check browser JavaScript
+        run: |
+          node --check src/main/resources/static/menu-designer.js
+          node --check src/main/resources/static/sw.js
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const vm = require('node:vm');
+          const html = fs.readFileSync('src/main/resources/static/index.html', 'utf8');
+          const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+          for (const [index, script] of scripts.entries()) {
+            new vm.Script(script[1], { filename: 'index-inline-' + index + '.js' });
+          }
+          console.log('Checked ' + scripts.length + ' inline script blocks');
+          NODE
+      - name: Compile Spring Boot and run tests
+        run: mvn -B -ntp test
