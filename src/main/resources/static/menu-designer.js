@@ -13,14 +13,14 @@ const DEFAULT_STYLE = {background:'#071827',active:'#1479e9',text:'#dce7ee',font
 let draft=null, icons=[], iconReady=false, iconLoading=false, dragPath=null, message='';
 const safe = value => esc(value);
 const adminRequired = new Set(['admin','admin-members','admin-users','admin-settings']);
-const known = () => new Map(menuDefinitions.map(item => [item.id,item]));
+const known = () => new Map(menuDefinitions.filter(item => item.implemented !== false).map(item => [item.id,item]));
 function group(id,title,children,icon){return {id,title,icon:icon||'☰',children:children||[]};}
 function originalLayout(){
  const groups=[];
  const byName=new Map();
  const order=appSettings?.menuOrder?.length?appSettings.menuOrder:menuDefinitions.map(x=>x.id);
  const rank=new Map(order.map((x,i)=>[x,i]));
- [...menuDefinitions].sort((a,b)=>(rank.get(a.id)??999)-(rank.get(b.id)??999)).forEach(item=>{
+ [...menuDefinitions.filter(x=>x.implemented!==false)].sort((a,b)=>(rank.get(a.id)??999)-(rank.get(b.id)??999)).forEach(item=>{
    if(!byName.has(item.section)){const node=group('section-'+groups.length,item.section,[],item.section==='Gerätewart'?'🚒':'☰');groups.push(node);byName.set(item.section,node);}
    byName.get(item.section).children.push(item.id);
  });
@@ -49,7 +49,7 @@ function normalized(){
   });
  }
  value.groups=tidy(value.groups,0);
- const missing=menuDefinitions.filter(x=>!seen.has(x.id));
+ const missing=menuDefinitions.filter(x=>x.implemented!==false&&!seen.has(x.id));
  missing.forEach(item=>{
    let target=value.groups.find(g=>g.title===item.section);
    if(!target){target=group('new-'+item.id,item.section,[]);value.groups.push(target);}
@@ -96,7 +96,7 @@ function styleValue(raw,key){
  return /^#[a-f\d]{6}$/i.test(String(raw))?raw:DEFAULT_STYLE[key];
 }
 function applyStyle(){
- const s=active().style||DEFAULT_STYLE;
+ const s=(draft||normalized()).style||DEFAULT_STYLE;
  const sidebar=document.getElementById('sidebar');if(!sidebar)return;
  const css=document.documentElement.style;
  ['background','active','text','font','size','weight','width','gap','depth','effect'].forEach(k=>{s[k]=styleValue(s[k],k);});
@@ -120,12 +120,12 @@ function renderNavigation(){
   return nodes.map(node=>{
    if(typeof node==='string'){
     const item=allowed.get(node),custom=layout.entries[node]||{};
-    if(!item||!menuAllowed(item)||(custom.hidden&&!adminRequired.has(node)))return '';
+    if(!item||item.implemented===false||!menuAllowed(item)||(custom.hidden&&!adminRequired.has(node)&&node!=='dashboard'))return '';
     const icon=custom.icon||item.icon,label=custom.label||item.label;
     const inspection=node==='my-inspections',pending=Number(window.ffhPendingInspectionCount||0);
     return '<button type="button" class="nav-item nav-child'+(inspection&&pending?' pending-inspection':'')+'"'+(inspection&&!pending?' style="display:none"':'')+' data-page="'+safe(node)+'" data-nav-id="'+safe(node)+'">'+iconHtml(icon)+' <span>'+safe(inspection&&pending?'Offene Geräteprüfung ('+pending+')':label)+'</span></button>';
    }
-   if(depth>2)return '';
+   if(depth>1)return '';
    const body=nodesHtml(node.children||[],depth+1);
    if(!body.trim())return '';
    return '<div class="nav-group" data-section="'+safe(node.title)+'"><button class="nav-group-toggle" type="button" aria-expanded="false">'+iconHtml(node.icon||'☰')+' <span class="menu-group-label">'+safe(node.title)+'</span><span class="chevron">›</span></button><div class="nav-group-items"><div class="nav-group-inner">'+body+'</div></div></div>';
@@ -139,10 +139,10 @@ function renderNavigation(){
    if(!wasOpen){target.classList.add('expanded');button.setAttribute('aria-expanded','true');}
   };
  });
- host.querySelectorAll('[data-nav-id]').forEach(button=>button.onclick=()=>allowed.get(button.dataset.navId)?.action());
+ host.querySelectorAll('[data-nav-id]').forEach(button=>button.onclick=()=>{closeMenu();const item=allowed.get(button.dataset.navId);if(item&&menuAllowed(item))item.action();});
  applyStyle();
- setActive(window.currentPage||'dashboard');
- if(!iconReady)loadIcons();
+ if(typeof setActive==='function')setActive(window.currentPage||'dashboard');
+ if(!iconReady&&!iconLoading)loadIcons();
 }
 function ensureDraft(){if(!draft)draft=normalized();}
 function start(){ensureDraft();renderEditor();loadIcons();}
@@ -280,11 +280,8 @@ async function upload(){
 async function save(){
  const button=document.getElementById('designerSave');if(button)button.disabled=true;
  try {
-  const payload={appName:appSettings?.appName||'FFH Verwaltung',primaryColor:appSettings?.primaryColor||'#c51f2d',
-   navColor:appSettings?.navColor||'#071827',accentColor:appSettings?.accentColor||'#1479e9',
-   menuOrder:appSettings?.menuOrder||[],hiddenMenuItems:[],
-   menuLayout:JSON.stringify(draft)};
-  appSettings=await api('/api/settings',{method:'PUT',body:JSON.stringify(payload)});
+  const payload=JSON.parse(JSON.stringify(draft));
+  appSettings=await api('/api/settings/menu-layout',{method:'PUT',body:JSON.stringify(payload)});
   draft=null;
   renderNavigation();
   if(typeof refreshInspectionNotice==='function')refreshInspectionNotice();
@@ -294,5 +291,5 @@ async function save(){
   if(msg)msg.innerHTML='<p class="message success">✓ Menükonfiguration dauerhaft gespeichert.</p>';
  }catch(e){message=e.message;renderEditor();}
 }
-window.MenuDesigner={renderNavigation,applyStyle,start,loadIcons};
+window.MenuDesigner={renderNavigation,applyStyle,start,loadIcons,activatePage(page){const target=document.querySelector('#navContainer [data-page="'+String(page).replace(/[^a-z0-9-]/gi,'')+'"]');if(!target)return;document.querySelectorAll('#navContainer .nav-item').forEach(n=>n.classList.toggle('active',n===target));document.querySelectorAll('#navContainer .nav-group').forEach(g=>{const open=g.contains(target);g.classList.toggle('expanded',open);g.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded',String(open));});}};
 })();
