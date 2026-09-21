@@ -35,5 +35,7 @@ jobs:
           if(!html.includes('function renderOriginalNavigation()')||!html.includes('function renderNavigation()')||!html.includes('menu-designer.js'))throw Error('Fallback missing');
           console.log('PASS inline JS and navigation fallback:',scripts.length,'script blocks');
           NODE
+      - name: Run menu and permission smoke tests
+        run: node src/test/js/menu-designer-smoke.cjs
       - name: Compile and run permission tests
         run: mvn -B -ntp test
