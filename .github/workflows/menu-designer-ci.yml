@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - feature/menu-designer-v2
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 jobs:
   validate:
@@ -31,5 +34,7 @@ jobs:
           }
           console.log('Checked ' + scripts.length + ' inline script blocks');
           NODE
+      - name: Check updater Python syntax
+        run: python -m py_compile updater/server.py
       - name: Compile Spring Boot and run tests
         run: mvn -B -ntp test
