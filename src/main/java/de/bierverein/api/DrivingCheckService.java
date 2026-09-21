@@ -20,10 +20,11 @@ public class DrivingCheckService {
  private final AppUserRepository users;
  private final FireQualificationPermissions permission;
  private final String pepper;
+ private final TransientLicenseOcrService ocr;
  public DrivingCheckService(FireMemberQualificationRepository qualifications,FireQualificationCheckRepository checks,
     AppUserRepository users,FireQualificationPermissions permission,
-    @Value("${app.jwt.secret}") String pepper) {
-  this.qualifications=qualifications;this.checks=checks;this.users=users;this.permission=permission;this.pepper=pepper;
+    @Value("${app.jwt.secret}") String pepper,TransientLicenseOcrService ocr) {
+  this.qualifications=qualifications;this.checks=checks;this.users=users;this.permission=permission;this.pepper=pepper;this.ocr=ocr;
  }
  private ResponseStatusException bad(String message){return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);}
  private String norm(String value){
@@ -46,7 +47,8 @@ public class DrivingCheckService {
   return qualifications.findByMemberId(user.getMember().getId()).stream()
    .filter(q->q.active&&"DRIVERS_LICENSE".equals(q.type.code)).toList();
  }
- public record ScanInput(String recognizedName,String recognizedNumber){}
+ /** Only camera bytes. Browser-provided OCR strings are never accepted as a positive attestation. */
+ public record ScanInput(String imageData){}
  public record ManualInput(Boolean confirmed){}
  public record CheckView(Long id,Long memberId,Long qualificationId,Instant checkedAt,
                          Long checkedByUserId,String method,String result){}
@@ -71,13 +73,27 @@ public class DrivingCheckService {
    throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Nur eigene Führerscheinkontrolle erlaubt");
   if(q.licenseNumberMac==null)
    throw new ResponseStatusException(HttpStatus.CONFLICT,"Führerscheinnummer muss zuvor durch die Wehrleitung als Referenz hinterlegt werden.");
-  if(input==null||input.recognizedName()==null||input.recognizedNumber()==null)
-   throw bad("Erkennung von Name und Führerscheinnummer ist erforderlich");
-  String name=norm(input.recognizedName()),expected=norm(user.getMember().getName());
-  if(expected.length()<4||!expected.equals(name)||
-   !MessageDigest.isEqual(q.licenseNumberMac.getBytes(StandardCharsets.US_ASCII),
-                         fingerprint(input.recognizedNumber()).getBytes(StandardCharsets.US_ASCII)))
-   throw new ResponseStatusException(HttpStatus.CONFLICT,"Abgleich fehlgeschlagen: Wehrleitung zur manuellen Kontrolle kontaktieren");
+  if(input==null||input.imageData()==null)throw bad("Ein Foto zur aktuellen Kontrolle ist erforderlich");
+  // Read photo once, transiently, via local OCR stdin. No image is written to file, DB, cache or audit.
+  String raw=ocr.read(input.imageData());
+  String content=norm(raw);
+  String expected=norm(user.getMember().getName());
+  String[] nameParts=user.getMember().getName().split("[\\s,]+");
+  boolean matchesName=expected.length()>=4&&
+    (content.contains(expected)||Arrays.stream(nameParts).filter(p->norm(p).length()>=2).allMatch(p->content.contains(norm(p))));
+  boolean matchesNumber=false;
+  // Compare only exact OCR candidates to the pre-approved HMAC reference; never disclose the reference.
+  for(String line:raw.split("[\\r\\n]+")){
+   for(String candidate:line.toUpperCase(Locale.ROOT).split("[^A-Z0-9]+")){
+    if(candidate.length()<5||candidate.length()>30)continue;
+    String digest=fingerprint(candidate);
+    if(MessageDigest.isEqual(q.licenseNumberMac.getBytes(StandardCharsets.US_ASCII),
+        digest.getBytes(StandardCharsets.US_ASCII))){matchesNumber=true;break;}
+   }
+   if(matchesNumber)break;
+  }
+  if(!matchesName||!matchesNumber)
+   throw new ResponseStatusException(HttpStatus.CONFLICT,"Name oder Führerscheinnummer im Foto nicht eindeutig erkannt. Bitte ein besseres Foto aufnehmen oder Wehrleitung kontaktieren.");
   // Positive status refers to the DATA MATCH. OCR cannot independently verify document authenticity.
   return finish(q,userId,"AUTO_OCR_MATCH");
  }
