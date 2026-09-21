@@ -37,5 +37,18 @@ jobs:
           NODE
       - name: Run menu and permission smoke tests
         run: node src/test/js/menu-designer-smoke.cjs
+      - name: Verify public menu assets are loadable without JWT
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          security=Path('src/main/java/de/bierverein/api/SecurityConfig.java').read_text()
+          html=Path('src/main/resources/static/index.html').read_text()
+          sw=Path('src/main/resources/static/sw.js').read_text()
+          for asset in ('menu-designer.js','menu-designer.css'):
+              assert f'"/{asset}"' in security, f'Browser fetch for /{asset} would be denied without a JWT'
+              assert f'/{asset}?v=' in html, f'Missing {asset} reference'
+          assert 'ffh-verwaltung-menu577-v33' in sw, 'Old PWA cache could mask the new code'
+          print('PASS static menu assets are permitted and cache is versioned')
+          PY
       - name: Compile and run permission tests
         run: mvn -B -ntp test
