@@ -53,7 +53,7 @@ public class AdminMemberCsvController {
   char separator=delimiter(text);
   try(CSVParser csv=CSVFormat.DEFAULT.builder().setDelimiter(separator).setHeader()
     .setSkipHeaderRecord(true).setIgnoreEmptyLines(true).setIgnoreSurroundingSpaces(true)
-    .get().parse(new StringReader(text))){
+    .build().parse(new StringReader(text))){
    Map<String,String> headers=new HashMap<>();
    for(String h:csv.getHeaderMap().keySet())headers.put(normal(h),h);
    if(!has(headers,"name","fullname","givenname","vorname")||!has(headers,"name","fullname","familyname","nachname","givenname","vorname"))
