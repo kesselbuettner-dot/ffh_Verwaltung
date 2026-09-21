@@ -6,6 +6,8 @@ COPY src ./src
 RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:21-jre
+ARG APP_GIT_COMMIT=unknown
+ENV APP_GIT_COMMIT=${APP_GIT_COMMIT}
 WORKDIR /app
 COPY --from=build /src/target/ffh-verwaltung-0.0.1-SNAPSHOT.jar /app/app.jar
 EXPOSE 8080
