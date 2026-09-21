@@ -4,6 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FFH Verwaltung</title>
 <link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="/menu-designer.css">
 <meta name="theme-color" content="#b51f2b">
 <link rel="icon" type="image/svg+xml" href="/icons/fw-cockpit-logo.svg">
 <style>
@@ -97,6 +98,17 @@ const menuDefinitions=[
 ];
 function menuAllowed(item){return item.roles.includes('*')||item.roles.includes(role)}
 function renderNavigation(){
+ const host=document.getElementById('navContainer');
+ try {
+  if(window.MenuDesigner) {
+   window.MenuDesigner.renderNavigation();
+   if(host?.querySelector('.nav-item'))return;
+   console.error('Menü-Designer hat keine Navigation ausgegeben. Standardmenü wird angezeigt.');
+  } else console.warn('Menü-Designer wurde nicht geladen. Standardmenü wird angezeigt.');
+ } catch(error){console.error('Menü-Designer fehlgeschlagen. Standardmenü wird angezeigt.',error);}
+ renderLegacyNavigation();
+}
+function renderLegacyNavigation(){
  const host=document.getElementById('navContainer');if(!host)return;
  const hidden=new Set((appSettings?.hiddenMenuItems||[]));
  let order=appSettings?.menuOrder?.length?appSettings.menuOrder:[...menuDefinitions.map(x=>x.id)];
@@ -109,9 +121,11 @@ function renderNavigation(){
  host.querySelectorAll('[data-nav-id]').forEach(button=>{button.addEventListener('click',()=>{const item=menuDefinitions.find(x=>x.id===button.dataset.navId);if(item)item.action()})});
  setActive(window.currentPage||'dashboard');
 }
+
 function applyAppSettings(){
  const root=document.documentElement.style;
  if(appSettings){root.setProperty('--accent',appSettings.primaryColor||'#c51f2d');root.setProperty('--nav',appSettings.navColor||'#071827');root.setProperty('--blue',appSettings.accentColor||'#1479e9');}
+ window.MenuDesigner?.applyStyle();
  const logo=document.getElementById('brandLogo');if(logo)logo.src='/icons/fw-cockpit-logo.svg'
  const name=document.getElementById('brandName');if(name){const n=appSettings?.appName||'FFH Verwaltung';name.innerHTML=esc(n).replace(/ /g,'<br>')}
  document.title=appSettings?.appName||'FFH Verwaltung';
@@ -122,7 +136,7 @@ async function loadAppSettings(){
 async function showApp(){loginView.classList.add('hidden');appView.classList.remove('hidden');currentUser.textContent=username;currentRole.textContent=roleLabels[role]||role;await loadAppSettings();navigate(role==='THEKE'?'theke':'dashboard');refreshInspectionNotice()}
 function logout(){localStorage.clear();location.reload()}
 function toggleMenu(){sidebar.classList.toggle('open')}
-function setActive(page){window.currentPage=page;document.querySelectorAll('.nav-item[data-page]').forEach(x=>{x.classList.toggle('active',x.dataset.page===page);if(x.dataset.page===page){const g=x.closest('.nav-group');document.querySelectorAll('.nav-group').forEach(group=>{const open=group===g;group.classList.toggle('expanded',open);group.querySelector('.nav-group-toggle').setAttribute('aria-expanded',String(open))})}})}
+function setActive(page){window.currentPage=page;document.querySelectorAll('.nav-item[data-page]').forEach(x=>{x.classList.toggle('active',x.dataset.page===page);if(x.dataset.page===page){const g=x.closest('.nav-group');document.querySelectorAll('.nav-group').forEach(group=>{const open=group===g||group.contains(g);group.classList.toggle('expanded',open);group.querySelector('.nav-group-toggle').setAttribute('aria-expanded',String(open))})}})}
 function navigate(page){setActive(page);sidebar.classList.remove('open');if(page==='dashboard')dashboard();else if(page==='members')membersPage();else if(page==='theke')thekePage();else if(page==='admin')adminPage();else if(page==='admin-members')adminMembersPage();else if(page==='admin-users')adminUsersPage();else if(page==='admin-settings')adminSettingsPage();else if(page==='devices')devicePage();else if(page==='my-inspections')myInspectionPage();else if(page==='inspection-jobs')inspectionJobsPage();else if(['shopping','purchase','articles','inventory'].includes(page))inventoryPage(page)}
 function module(name){if(name==='Schulung / Dienst'){trainingPage();return}content.innerHTML=`<div class="title-row"><h1>${esc(name)}</h1></div><div class="panel"><h3>Modul vorbereitet</h3><p>Die Navigation steht. Dieses Modul wird in einer nächsten Ausbaustufe fachlich verbunden.</p></div>`}
 function money(v){return Number(v||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
@@ -226,12 +240,8 @@ async function adminAppearanceSettingsPage(){settingsContent.innerHTML='<div cla
 async function uploadSettingsLogo(){const file=settingsLogoFile.files?.[0];if(!file){logoMsg.innerHTML='<div class="message error">Bitte zuerst eine Bilddatei auswählen.</div>';return}const fd=new FormData();fd.append('file',file);try{const response=await fetch('/api/settings/logo',{method:'POST',headers:{Authorization:'Bearer '+token},body:fd});let data={};try{data=await response.json()}catch{}if(!response.ok)throw Error(data.message||data.detail||'Wachenlogo konnte nicht gespeichert werden');appSettings=data;wacheLogoCache=null;settingsWacheLogoPreview.src=await wacheLogoUrl(true);updateDashboardWacheLogo();logoMsg.innerHTML='<div class="message success">Wachenlogo gespeichert.</div>'}catch(e){logoMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
 async function removeSettingsLogo(){if(!confirm('Wachenlogo wirklich entfernen?'))return;try{appSettings=await api('/api/settings/logo',{method:'DELETE'});wacheLogoCache=null;settingsWacheLogoPreview.src=FIXED_APP_LOGO;updateDashboardWacheLogo();logoMsg.innerHTML='<div class="message success">Festes App-Logo wird als Ersatz angezeigt.</div>'}catch(e){logoMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
 async function saveAppearanceSettings(){try{appSettings=await api('/api/settings',{method:'PUT',body:JSON.stringify({appName:setAppName.value.trim(),primaryColor:setPrimary.value,navColor:setNav.value,accentColor:setAccent.value,menuOrder:appSettings?.menuOrder||[],hiddenMenuItems:appSettings?.hiddenMenuItems||[]})});applyAppSettings();renderNavigation();appearanceMsg.innerHTML='<div class="message success">✓ Erscheinungsbild gespeichert.</div>'}catch(e){appearanceMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
-function adminMenuSettingsPage(){const defs=menuDefinitions.filter(x=>!x.id.startsWith('admin'));const hidden=new Set(appSettings?.hiddenMenuItems||[]);const order=appSettings?.menuOrder?.length?appSettings.menuOrder:defs.map(x=>x.id);const rank=new Map(order.map((id,i)=>[id,i]));defs.sort((a,b)=>(rank.get(a.id)??999)-(rank.get(b.id)??999));settingsContent.innerHTML='<div class="panel"><h3>☰ Menübalken</h3><p class="sub">Einträge mit den Pfeilen verschieben oder ausblenden. Die Berechtigungen der einzelnen Bereiche bleiben weiterhin aktiv.</p><div id="menuSettingsList" class="menu-list">'+defs.map((x,i)=>'<div class="menu-row '+(hidden.has(x.id)?'disabled':'')+'" data-menu-id="'+x.id+'"><span class="drag-handle">'+x.icon+'</span><div><strong>'+esc(x.label)+'</strong><small class="sub">'+esc(x.section)+'</small></div><button class="btn small secondary" onclick="moveMenuItem(\''+x.id+'\',-1)">↑</button><button class="btn small secondary" onclick="moveMenuItem(\''+x.id+'\',1)">↓</button><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" '+(hidden.has(x.id)?'':'checked')+' onchange="toggleMenuItem(\''+x.id+'\',this.checked)"> sichtbar</label></div>').join('')+'</div><div class="quick" style="margin-top:15px"><button class="btn primary" onclick="saveMenuSettings()">Menü speichern</button><button class="btn secondary" onclick="adminSettingsPage(\'menu\')">Neu laden</button></div><div id="menuMsg"></div></div>'}
-function currentMenuOrder(){return [...document.querySelectorAll('#menuSettingsList .menu-row')].map(x=>x.dataset.menuId)}
-function moveMenuItem(id,delta){const rows=[...document.querySelectorAll('#menuSettingsList .menu-row')],i=rows.findIndex(x=>x.dataset.menuId===id),j=i+delta;if(i<0||j<0||j>=rows.length)return;const list=document.getElementById('menuSettingsList');if(delta<0)list.insertBefore(rows[i],rows[j]);else list.insertBefore(rows[j],rows[i]);}
-function toggleMenuItem(id,visible){const row=document.querySelector('#menuSettingsList [data-menu-id="'+id+'"]');if(row)row.classList.toggle('disabled',!visible)}
-async function saveMenuSettings(){const order=currentMenuOrder();const hidden=[...document.querySelectorAll('#menuSettingsList .menu-row.disabled')].map(x=>x.dataset.menuId);try{appSettings=await api('/api/settings',{method:'PUT',body:JSON.stringify({appName:appSettings?.appName||'FFH Verwaltung',primaryColor:appSettings?.primaryColor||'#c51f2d',navColor:appSettings?.navColor||'#071827',accentColor:appSettings?.accentColor||'#1479e9',menuOrder:order,hiddenMenuItems:hidden})});renderNavigation();menuMsg.innerHTML='<div class="message success">✓ Menü gespeichert.</div>'}catch(e){menuMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
-async function adminUpdateSettingsPage(){settingsContent.innerHTML='<div class="panel"><div id="updateStatus" class="update-status"><span class="update-icon">⏳</span><div><strong>Update wird geprüft …</strong><small>GitHub-Release wird geprüft.</small></div></div><p class="sub">Beim Öffnen dieses Bereichs wird automatisch das neueste veröffentlichte GitHub-Release geprüft. Wenn eine neuere Version vorhanden ist, wird das Server-Update automatisch gestartet.</p></div>';await checkForUpdate(true)}
+function adminMenuSettingsPage(){return window.MenuDesigner?.start();}
+async function adminUpdateSettingsPage(){settingsContent.innerHTML='<div class="panel"><div id="updateStatus" class="update-status"><span class="update-icon">⏳</span><div><strong>Update wird geprüft …</strong><small>GitHub-Release wird geprüft.</small></div></div><p class="sub">Beim Öffnen dieses Bereichs wird automatisch das neueste veröffentlichte GitHub-Release geprüft. Neue Versionen können nach Prüfung über die Administration oder wie bisher lokal am Server installiert werden.</p></div>';await checkForUpdate(false)}
 async function topupPanel(){const host=document.getElementById('topupPanel');if(!host)return;try{const cfg=await api('/api/credit-topups/config');let html='<h2>Guthaben buchen</h2><div id="topupMsg"></div>';if(role==='MEMBER'&&memberId){const mine=await api('/api/credit-topups/mine');html+='<div class="field"><label>Mein Aufladebetrag (€)</label><input id="topupAmount" type="number" min="0.01" max="1000" step="0.01"></div><button class="btn primary" onclick="startTopup()">PayPal-Guthaben buchen</button><p class="sub">Zahlung wird erst nach Prüfung durch Admin oder Getränkewart gutgeschrieben.</p>'+mine.filter(t=>t.status==='PENDING').map(t=>'<p>'+esc(t.referenceCode)+' · '+money(t.amount)+' <button class="btn small" onclick="reportTopup('+t.id+')">Zahlung erledigt – zur Prüfung melden</button></p>').join('');}if(['ADMIN','GETRAENKEWART'].includes(role)){const pending=await api('/api/credit-topups/review');html+='<h3>Offene PayPal-Prüfungen</h3>'+pending.map(t=>'<p>'+esc(t.memberName)+' · '+money(t.amount)+' · '+esc(t.referenceCode)+' <button class="btn small" onclick="reviewTopup('+t.id+',true)">Zahlung geprüft: gutschreiben</button> <button class="btn small secondary" onclick="reviewTopup('+t.id+',false)">Ablehnen</button></p>').join('')+'<h3>Manuelle Buchung</h3><select id="topupMember"><option value="">Mitglied wählen</option></select><input id="manualAmount" type="number" min="0.01" step="0.01" placeholder="Betrag €"><select id="manualMethod"><option value="CASH">Bar</option><option value="TRANSFER">Überweisung</option><option value="PAYPAL">PayPal</option><option value="OTHER">Sonstiges</option></select><input id="manualNote" placeholder="Bemerkung"><button class="btn primary" onclick="manualTopup()">Guthaben buchen</button>';}host.innerHTML=html;if(document.getElementById('topupMember')){const ms=await api('/api/credit-topups/eligible-members');topupMember.innerHTML='<option value="">Mitglied wählen</option>'+ms.map(m=>'<option value="'+m.id+'">'+esc(m.name)+'</option>').join('');}}catch(e){host.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
 async function startTopup(){try{const t=await api('/api/credit-topups/mine',{method:'POST',body:JSON.stringify({amount:topupAmount.value})});const cfg=await api('/api/credit-topups/config');topupMsg.textContent='Anfrage '+t.referenceCode+' angelegt. Bitte Betrag '+money(t.amount)+' bei PayPal spenden und die Referenz im Verwendungszweck angeben, soweit möglich.';const paypalBase=String(cfg.paypalDonationUrl||'').replace(/\/+$/,'');const paypalAmount=Number(t.amount).toFixed(2);const paypalUrl=paypalBase+'/'+paypalAmount+'/';window.open(paypalUrl,'_blank','noopener,noreferrer');await topupPanel()}catch(e){alert(e.message)}}
 async function reportTopup(id){if(!confirm('Hast du die PayPal-Spende tatsächlich abgeschlossen?'))return;try{await api('/api/credit-topups/mine/'+id+'/report',{method:'POST'});await topupPanel()}catch(e){alert(e.message)}}
@@ -361,7 +371,7 @@ const oldCloseModal=closeModal;
 closeModal=function(){if(barcodeTimer){clearTimeout(barcodeTimer);barcodeTimer=null}if(barcodeStream){barcodeStream.getTracks().forEach(t=>t.stop());barcodeStream=null}oldCloseModal()}
 
 let inspectionJobs=[];
-async function refreshInspectionNotice(){try{const list=await api('/api/inspection-jobs/mine');const count=list.filter(j=>!j.completedAt).length;const b=document.querySelector('[data-nav-id="my-inspections"]');if(b){b.style.display=count?'':'none';b.classList.toggle('pending-inspection',count>0);b.querySelector('span').textContent='Offene Geräteprüfung'+(count?' ('+count+')':'')}}catch(e){console.warn('Prüfaufträge nicht verfügbar',e)}}
+async function refreshInspectionNotice(){try{const list=await api('/api/inspection-jobs/mine');const count=list.filter(j=>!j.completedAt).length;window.ffhPendingInspectionCount=count;const b=document.querySelector('[data-nav-id="my-inspections"]');if(b){b.style.display=count?'':'none';b.classList.toggle('pending-inspection',count>0);b.querySelector('span').textContent='Offene Geräteprüfung'+(count?' ('+count+')':'')}}catch(e){console.warn('Prüfaufträge nicht verfügbar',e)}}
 async function createInspectionJob(){try{const [devices,assignees]=await Promise.all([api('/api/devices'),api('/api/inspection-jobs/assignees')]);modalTitle.textContent='Geräteprüfung an Mitglied senden';modalBody.innerHTML='<div class="field"><label>Titel der Prüfung</label><input id="jobTitle" placeholder="z. B. Monatsprüfung LF 20"></div><div class="field"><label>Mitglied mit freigeschaltetem Zugang</label><select id="jobAssignee">'+assignees.map(a=>'<option value="'+a.id+'">'+esc(a.name)+' ('+esc(a.username)+')</option>').join('')+'</select></div><p>Geräte auswählen:</p><div style="max-height:40vh;overflow:auto">'+devices.map(d=>'<label class="inspection-card" style="display:block"><input type="checkbox" class="job-device" value="'+d.id+'"> '+esc(d.name)+' · '+esc(d.location||'ohne Standort')+'</label>').join('')+'</div><button class="btn primary" onclick="submitInspectionJob()">Prüfung zuweisen</button>';modal.classList.remove('hidden')}catch(e){alert(e.message)}}
 async function submitInspectionJob(){try{const deviceIds=[...document.querySelectorAll('.job-device:checked')].map(x=>Number(x.value));await api('/api/inspection-jobs',{method:'POST',body:JSON.stringify({title:jobTitle.value,assigneeId:Number(jobAssignee.value),deviceIds})});closeModal();inspectionJobsPage()}catch(e){alert(e.message)}}
 async function myInspectionPage(){setActive('my-inspections');sidebar.classList.remove('open');try{const jobs=await api('/api/inspection-jobs/mine');const open=jobs.filter(j=>!j.completedAt);content.innerHTML='<h1>Meine Geräteprüfungen</h1>'+ (open.map(j=>'<div class="inspection-card"><h2>'+esc(j.title)+'</h2><p>'+j.items.filter(i=>!i.result).length+' von '+j.items.length+' Geräten offen</p><button class="btn primary" onclick="openInspectionJob('+j.id+')">Prüfung öffnen</button></div>').join('')||'<div class="panel">Keine offenen Prüfungen.</div>');refreshInspectionNotice()}catch(e){content.textContent=e.message}}
@@ -449,71 +459,67 @@ window.uploadTraining=async function(){
 };
 window.openTrainingFile=async function(id){try{const r=await fetch('/api/training/'+id+'/file',{headers:{'Authorization':'Bearer '+token}});if(!r.ok)throw new Error('Datei konnte nicht geöffnet werden');const blob=await r.blob();const url=URL.createObjectURL(blob);window.open(url,'_blank');setTimeout(()=>URL.revokeObjectURL(url),60000)}catch(e){alert(e.message)}};
 window.deleteTraining=async function(id){if(!confirm('Unterlage wirklich löschen?'))return;try{await api('/api/training/'+id,{method:'DELETE'});trainingPage()}catch(e){alert(e.message)}};
-window.checkForUpdate = async function(autoInstall = false) {
-  const el = document.getElementById('updateStatus');
-  if (!el) return;
-  el.className = 'update-status';
-  el.innerHTML = '<span class="update-icon">⏳</span><div><strong>Update wird geprüft …</strong><small>GitHub-Release wird geprüft.</small></div>';
+window.checkForUpdate = async function() {
+  const el=document.getElementById('updateStatus');if(!el)return;
+  el.className='update-status';
+  el.innerHTML='<span class="update-icon">⏳</span><div><strong>GitHub main wird geprüft …</strong></div>';
   try {
-    const x = await api('/api/admin/update-check');
-    if (x.updateAvailable) {
-      el.className = 'update-status available';
-      el.innerHTML = '<span class="update-icon">⬆️</span><div><strong>Update verfügbar</strong><small>Installiert: ' + esc(x.currentVersion) + ' · GitHub: ' + esc(x.remoteVersion) + '</small></div>';
-      if (autoInstall) {
-        await installServerUpdate(true);
-      } else {
-        const button = document.createElement('button');
-        button.className = 'btn small primary';
-        button.textContent = 'Update installieren';
-        button.onclick = () => installServerUpdate(false);
-        el.appendChild(button);
-      }
-    } else {
-      el.className = 'update-status current';
-      el.innerHTML = '<span class="update-icon">✓</span><div><strong>System ist aktuell</strong><small>Version ' + esc(x.currentVersion) + ' · GitHub ' + esc(x.remoteVersion) + '</small></div>';
-      const button = document.createElement('button');
-      button.className = 'btn small secondary';
-      button.textContent = 'Erneut prüfen';
-      button.onclick = () => checkForUpdate(false);
+    const x=await api('/api/admin/update-check');
+    const unknown=x.currentVersion==='unbekannt';
+    const different=!unknown&&x.currentVersion!==x.remoteVersion;
+    el.className='update-status '+(unknown||different&&!x.updateAvailable?'error':x.updateAvailable?'available':'current');
+    el.innerHTML='<span class="update-icon">'+(unknown||different&&!x.updateAvailable?'⚠️':x.updateAvailable?'⬆️':'✓')+'</span><div><strong>'+
+      (unknown?'Installierter Commit unbekannt':x.updateAvailable?'Update verfügbar':different?'Abweichender Entwicklungsstand':'System ist aktuell')+
+      '</strong><small>Installiert: '+esc(x.currentVersion)+' · GitHub main: '+esc(x.remoteVersion)+
+      '<br>'+esc(x.message||'')+'</small></div>';
+    if(x.updateAvailable&&x.installAvailable){
+      const button=document.createElement('button');button.className='btn small primary';
+      button.textContent='Update installieren';button.onclick=()=>installServerUpdate();
       el.appendChild(button);
+    }else if(x.updateAvailable&&!x.installAvailable){
+      const info=document.createElement('small');info.textContent='Update bitte lokal am Server installieren.';
+      el.appendChild(info);
     }
-  } catch (e) {
-    el.className = 'update-status error';
-    el.innerHTML = '<span class="update-icon">⚠️</span><div><strong>Updateprüfung fehlgeschlagen</strong><small></small></div>';
-    el.querySelector('small').textContent = e.message || 'GitHub konnte nicht erreicht werden';
-    const button = document.createElement('button');
-    button.className = 'btn small secondary';
-    button.textContent = 'Erneut prüfen';
-    button.onclick = () => checkForUpdate(false);
-    el.appendChild(button);
+    const again=document.createElement('button');again.className='btn small secondary';
+    again.textContent='Erneut prüfen';again.onclick=()=>checkForUpdate();el.appendChild(again);
+  }catch(e){
+    el.className='update-status error';
+    el.innerHTML='<span class="update-icon">⚠️</span><div><strong>Updateprüfung fehlgeschlagen</strong><small></small></div>';
+    el.querySelector('small').textContent=e.message||'GitHub konnte nicht erreicht werden';
+    const button=document.createElement('button');button.className='btn small secondary';
+    button.textContent='Erneut prüfen';button.onclick=()=>checkForUpdate();el.appendChild(button);
   }
 };
-window.installServerUpdate = async function(autoInstall = false) {
-  const el = document.getElementById('updateStatus');
-  if (!el) return;
-  if (!autoInstall && !confirm('Neues Release jetzt auf dem Server installieren? Die Anwendung wird dabei kurz neu gestartet.')) return;
-  el.className = 'update-status';
-  el.innerHTML = '<span class="update-icon">⏳</span><div><strong>Server-Update wird gestartet …</strong><small>Das neue GitHub-Release wird auf dem Server installiert.</small></div>';
-  try {
-    const response = await fetch('/api/admin/update-check/install', {
-      method: 'POST',
-      headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
-    });
-    let data = {};
-    try { data = await response.json(); } catch (_) {}
-    if (!response.ok) throw new Error(data.message || data.detail || data.error || ('HTTP ' + response.status));
-    el.className = 'update-status current';
-    el.innerHTML = '<span class="update-icon">✓</span><div><strong>Update gestartet</strong><small>' + esc(data.message || 'Der Server wird aktualisiert.') + '</small></div>';
-    setTimeout(() => window.location.reload(), 12000);
-  } catch (e) {
-    el.className = 'update-status error';
-    el.innerHTML = '<span class="update-icon">⚠️</span><div><strong>Server-Update konnte nicht gestartet werden</strong><small></small></div>';
-    el.querySelector('small').textContent = e.message || 'Update fehlgeschlagen';
-    const button = document.createElement('button');
-    button.className = 'btn small secondary';
-    button.textContent = 'Erneut prüfen';
-    button.onclick = () => checkForUpdate(false);
-    el.appendChild(button);
+window.installServerUpdate = async function(){
+  const el=document.getElementById('updateStatus');if(!el)return;
+  if(!confirm('GitHub main jetzt auf dem Server installieren? Die Anwendung wird kurz neu gestartet.'))return;
+  el.className='update-status';
+  el.innerHTML='<span class="update-icon">⏳</span><div><strong>Update wird vorbereitet …</strong><small>Der Installationsstatus wird geprüft.</small></div>';
+  try{
+    const response=await fetch('/api/admin/update-check/install',{method:'POST',
+      headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}});
+    let data={};try{data=await response.json();}catch(_){}
+    if(!response.ok)throw Error(data.message||data.detail||('HTTP '+response.status));
+    let final=null;
+    for(let attempt=0;attempt<50;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,3000));
+      try{
+        const status=await api('/api/admin/update-check/status');
+        if(status?.status==='success'||status?.status==='error'){final=status;break;}
+        const small=el.querySelector('small');if(small)small.textContent=status?.message||'Installation läuft …';
+      }catch(_){const small=el.querySelector('small');if(small)small.textContent='App startet neu …';}
+    }
+    if(!final)throw Error('Status konnte nicht bestätigt werden. Bitte Serverprotokoll prüfen.');
+    if(final.status!=='success')throw Error(final.message||'Update fehlgeschlagen');
+    el.className='update-status current';
+    el.innerHTML='<span class="update-icon">✓</span><div><strong>App-Startprüfung erfolgreich</strong><small>'+esc(final.message||'')+'</small></div>';
+    setTimeout(()=>window.location.reload(),3000);
+  }catch(e){
+    el.className='update-status error';
+    el.innerHTML='<span class="update-icon">⚠️</span><div><strong>Update nicht abgeschlossen</strong><small></small></div>';
+    el.querySelector('small').textContent=e.message||'Status unbekannt';
+    const button=document.createElement('button');button.className='btn small secondary';
+    button.textContent='Status erneut prüfen';button.onclick=()=>checkForUpdate();el.appendChild(button);
   }
 };
 window.globalSearch=async function(){const q=gs?.value.trim();if(!q)return;try{const list=await api('/api/search?q='+encodeURIComponent(q));searchResults.classList.remove('hidden');searchResults.innerHTML=list.map(x=>'<div class="search-result" onclick="openSearchResult('+x.id+',\''+x.target+'\')"><div><strong>'+esc(x.type)+' · '+esc(x.title)+'</strong><small>'+esc(x.subtitle||'')+'</small></div></div>').join('')||'<div class="empty">Keine Treffer.</div>'}catch(e){searchResults.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}};
@@ -589,4 +595,4 @@ async function openDeviceScan(target){
 async function findDeviceByScan(){const v=deviceScanValue.value.trim();if(!v)return;try{const d=await api('/api/devices/scan?value='+encodeURIComponent(v));stopDeviceScanner();closeModal();openDevice(d.id)}catch(e){deviceScanStatus.textContent=e.message}}
 function useDeviceScan(target){const v=deviceScanValue.value.trim();if(!v)return;if(target){document.getElementById(target).value=v;stopDeviceScanner();closeModal()}else findDeviceByScan()}
 function stopDeviceScanner(){if(deviceScannerTimer){clearTimeout(deviceScannerTimer);deviceScannerTimer=null}if(deviceScannerStream){deviceScannerStream.getTracks().forEach(t=>t.stop());deviceScannerStream=null}deviceScannerDetector=null}
-</script></body></html>
+</script><script src="/menu-designer.js"></script></body></html>

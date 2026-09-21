@@ -10,6 +10,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @RestController
@@ -19,6 +23,7 @@ public class AppSettingsController {
             "dashboard,members,theke,shopping,purchase,inventory,articles,devices,drivebook,devicebook,material,events,firewehr,training,finance,documents,calendar,donations,admin,admin-members,admin-users,admin-settings";
 
     private final AppSettingsRepository settings;
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     public AppSettingsController(AppSettingsRepository settings) {
         this.settings = settings;
@@ -42,6 +47,7 @@ public class AppSettingsController {
         s.setAccentColor(normalizeColor(request.accentColor(), "#1479e9"));
         s.setMenuOrder(normalizeList(request.menuOrder(), DEFAULT_ORDER));
         s.setHiddenMenuItems(normalizeList(request.hiddenMenuItems(), ""));
+        if (request.menuLayout() != null) s.setMenuLayout(validateMenuLayout(request.menuLayout()));
         return dto(settings.save(s));
     }
 
@@ -119,6 +125,7 @@ public class AppSettingsController {
                 s.getAccentColor(),
                 split(s.getMenuOrder()),
                 split(s.getHiddenMenuItems()),
+                s.getMenuLayout() == null ? "" : s.getMenuLayout(),
                 s.getLogoData() != null && s.getLogoData().length > 0
         );
     }
@@ -149,6 +156,16 @@ public class AppSettingsController {
         return v.matches("^#[0-9a-fA-F]{6}$") ? v.toLowerCase() : fallback;
     }
 
+    private String validateMenuLayout(String raw) {
+        if (raw.length() > 30000) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Menükonfiguration ist zu groß.");
+        try {
+            JsonNode node = JSON.readTree(raw);
+            if (!node.isObject() || !node.path("groups").isArray() || !node.path("entries").isObject() || !node.path("style").isObject()) throw new IllegalArgumentException("Ungültige Struktur");
+            if (node.path("groups").size() > 30 || node.path("entries").size() > 100) throw new IllegalArgumentException("Zu viele Einträge");
+            return raw;
+        } catch (Exception e) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Menükonfiguration ist ungültig."); }
+    }
+
     public record SettingsDto(
             String appName,
             String primaryColor,
@@ -156,6 +173,7 @@ public class AppSettingsController {
             String accentColor,
             List<String> menuOrder,
             List<String> hiddenMenuItems,
+            String menuLayout,
             boolean logoAvailable
     ) {}
 
@@ -165,6 +183,7 @@ public class AppSettingsController {
             String navColor,
             String accentColor,
             List<String> menuOrder,
-            List<String> hiddenMenuItems
+            List<String> hiddenMenuItems,
+            String menuLayout
     ) {}
 }
