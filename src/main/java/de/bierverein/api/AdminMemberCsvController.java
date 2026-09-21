@@ -80,7 +80,7 @@ public class AdminMemberCsvController {
     LocalDate birth=null,start=null;
     try{
      birth=parseDate(birthday);start=parseDate(joined);
-     if(name.isBlank()||name.length()>160||email!=null&&(email.length()>320||!email.matches("^[^@\\\\s]+@[^@\\\\s]+\\\\.[^@\\\\s]+$"))||
+     if(name.isBlank()||name.length()>160||email!=null&&(email.length()>320||!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))||
         phone!=null&&phone.length()>80||address!=null&&address.length()>500||birth!=null&&birth.isAfter(LocalDate.now()))
         throw new IllegalArgumentException("Ungültiger oder zu langer Datensatz");
      String normalizedName=name.toLowerCase(Locale.ROOT),normalizedMail=email==null?null:email.toLowerCase(Locale.ROOT);
@@ -107,7 +107,7 @@ public class AdminMemberCsvController {
   boolean quoted=false;int commas=0,semis=0;
   for(int i=0;i<Math.min(1000,text.length());i++){
    char c=text.charAt(i);if(c=='"'){if(quoted&&i+1<text.length()&&text.charAt(i+1)=='"'){i++;continue;}quoted=!quoted;}
-   else if(!quoted&&c=='\\n')break;
+   else if(!quoted&&c=='\n')break;
    else if(!quoted&&c==',')commas++;
    else if(!quoted&&c==';')semis++;
   }
