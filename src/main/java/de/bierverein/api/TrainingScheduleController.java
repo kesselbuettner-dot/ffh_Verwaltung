@@ -17,6 +17,7 @@ public class TrainingScheduleController {
     @PostMapping @ResponseStatus(HttpStatus.CREATED) public TrainingScheduleService.EventView create(@RequestBody TrainingScheduleService.EventRequest request,Authentication auth){return service.create(auth.getName(),request);}
     @PutMapping("/{id}") public TrainingScheduleService.EventView update(@PathVariable Long id,@RequestBody TrainingScheduleService.EventRequest request,Authentication auth){return service.update(auth.getName(),id,request);}
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable Long id,Authentication auth){service.delete(auth.getName(),id);}
+    @PutMapping("/{id}/occurrences/{date}") public TrainingScheduleService.EventView updateOccurrence(@PathVariable Long id,@PathVariable LocalDate date,@RequestBody TrainingScheduleService.EventRequest request,Authentication auth){return service.updateOccurrence(auth.getName(),id,date,request);}
     @PostMapping("/{id}/response") public TrainingScheduleService.OccurrenceView respond(@PathVariable Long id,@RequestBody ResponseRequest request,Authentication auth){return service.respond(auth.getName(),id,request.occurrenceDate(),request.status());}
     public record ResponseRequest(LocalDate occurrenceDate,String status){}
 }

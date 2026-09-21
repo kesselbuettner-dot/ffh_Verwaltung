@@ -17,6 +17,7 @@ public class TrainingScheduleService {
     private static final Set<String> TYPES = Set.of("SERVICE", "TRAINING", "EVENT");
     private final TrainingScheduleEventRepository events;
     private final TrainingAttendanceRepository attendance;
+    private final TrainingSeriesExceptionRepository seriesExceptions;
     private final AppUserRepository users;
     private final MemberRepository members;
     private final EffectivePermissionService permissions;
@@ -26,12 +27,14 @@ public class TrainingScheduleService {
 
     public TrainingScheduleService(TrainingScheduleEventRepository events,
                                    TrainingAttendanceRepository attendance,
+                                   TrainingSeriesExceptionRepository seriesExceptions,
                                    AppUserRepository users,
                                    MemberRepository members,
                                    EffectivePermissionService permissions,DeviceRepository devices,
                                    DeviceInspectionTaskRepository inspectionTasks,HolidayService holidays) {
         this.events = events;
         this.attendance = attendance;
+        this.seriesExceptions = seriesExceptions;
         this.users = users;
         this.members = members;
         this.permissions = permissions;
@@ -76,6 +79,18 @@ public class TrainingScheduleService {
         TrainingScheduleEvent event = new TrainingScheduleEvent();
         event.setCreatedBy(username);
         apply(event, request, type);
+        if (event.isRecurring() && Boolean.TRUE.equals(request.separateOccurrences())) {
+            List<LocalDate> dates = occurrenceDates(event, event.getStartDate(), event.getEndDate());
+            if (dates.isEmpty()) throw bad("Die Serie enthält keine Termine. Bitte die Wochentage prüfen.");
+            if (dates.size() > 400) throw bad("Für Einzeltermine sind höchstens 400 Termine pro Serie zulässig.");
+            TrainingScheduleEvent first = null;
+            for (LocalDate date : dates) {
+                TrainingScheduleEvent single = copyForDate(event, date, username);
+                TrainingScheduleEvent saved = events.save(single);
+                if (first == null) first = saved;
+            }
+            return eventView(first, user);
+        }
         return eventView(events.save(event), user);
     }
 
@@ -86,9 +101,13 @@ public class TrainingScheduleService {
         require(user, event.getType(), "write");
         String type = normalizeType(request == null ? null : request.type());
         require(user, type, "write");
+        LocalDate originalDate = event.isRecurring() ? null : event.getStartDate();
         apply(event, request, type);
         event.touch();
-        return eventView(events.save(event), user);
+        EventView saved = eventView(events.save(event), user);
+        if (originalDate != null && !event.isRecurring() && !originalDate.equals(event.getStartDate()))
+            moveResponsesAndTasks(id, originalDate, id, event.getStartDate());
+        return saved;
     }
 
     @Transactional
@@ -98,7 +117,56 @@ public class TrainingScheduleService {
         require(user, event.getType(), "delete");
         attendance.deleteByEventId(id);
         inspectionTasks.deleteByEventId(id);
+        seriesExceptions.deleteBySeriesEventId(id);
         events.delete(event);
+    }
+
+    /** Separate one occurrence from its series and preserve all registrations and inspection work. */
+    @Transactional
+    public EventView updateOccurrence(String username, Long seriesId, LocalDate originalDate, EventRequest request) {
+        AppUser user = user(username);
+        TrainingScheduleEvent series = find(seriesId);
+        require(user, series.getType(), "write");
+        if (!series.isRecurring() || originalDate == null || !occursOn(series, originalDate))
+            throw bad("Dieser Einzeltermin gehört nicht zu einer aktiven Serie.");
+        if (request == null || Boolean.TRUE.equals(request.recurring()))
+            throw bad("Einzeltermine dürfen keine eigene Serie enthalten.");
+        String type = normalizeType(request.type());
+        if (!series.getType().equals(type)) throw bad("Der Termintyp der Serie darf beim Einzeltermin nicht geändert werden.");
+        TrainingScheduleEvent single = new TrainingScheduleEvent();
+        single.setCreatedBy(username);
+        apply(single, request, type);
+        if (single.isRecurring()) throw bad("Bitte einen einzelnen Tag auswählen.");
+        single = events.saveAndFlush(single);
+        seriesExceptions.save(new TrainingSeriesException(seriesId, originalDate, single.getId()));
+        moveResponsesAndTasks(seriesId, originalDate, single.getId(), single.getStartDate());
+        return eventView(single, user);
+    }
+
+    private void moveResponsesAndTasks(Long oldId, LocalDate oldDate, Long newId, LocalDate newDate) {
+        for (TrainingAttendance response : attendance.findByEventIdAndOccurrenceDate(oldId, oldDate)) {
+            response.setEventId(newId); response.setOccurrenceDate(newDate);
+            attendance.save(response);
+        }
+        for (DeviceInspectionTask task : inspectionTasks.findByEventIdAndOccurrenceDateOrderByDeviceNameAsc(oldId, oldDate)) {
+            task.setEventId(newId); task.setOccurrenceDate(newDate);
+            inspectionTasks.save(task);
+        }
+    }
+
+    private TrainingScheduleEvent copyForDate(TrainingScheduleEvent template, LocalDate date, String username) {
+        TrainingScheduleEvent single = new TrainingScheduleEvent();
+        single.setCreatedBy(username);
+        single.setType(template.getType()); single.setTitle(template.getTitle()); single.setNotes(template.getNotes());
+        single.setStartDate(date); single.setEndDate(date); single.setRecurring(false);
+        single.setWeekdays(date.getDayOfWeek().name()); single.setLastWeekdayOfMonth(false);
+        single.setAllDay(template.isAllDay()); single.setStartTime(template.getStartTime()); single.setEndTime(template.getEndTime());
+        single.setResponsibleMemberIds(template.getResponsibleMemberIds());
+        single.setAudienceType(template.getAudienceType()); single.setAudienceRole(template.getAudienceRole());
+        single.setRegistrationRequired(template.isRegistrationRequired());
+        single.setDeviceInspection(template.isDeviceInspection());
+        single.setDeviceLocations(template.getDeviceLocations()); single.setDeviceCategories(template.getDeviceCategories());
+        return single;
     }
 
     @Transactional
@@ -206,8 +274,22 @@ public class TrainingScheduleService {
     private boolean visibleTo(TrainingScheduleEvent event, AppUser user) { return can(user,event.getType(),"read") && (can(user,event.getType(),"write") || audienceMatches(event,user) || isResponsible(event,user)); }
     private boolean audienceMatches(TrainingScheduleEvent event, AppUser user) { return "ALL".equals(event.getAudienceType()) || user.getRole().name().equals(event.getAudienceRole()); }
     private boolean isResponsible(TrainingScheduleEvent event, AppUser user) { return user.getMember()!=null && ids(event.getResponsibleMemberIds()).contains(user.getMember().getId()); }
-    public boolean occursOn(TrainingScheduleEvent event, LocalDate date) { return !date.isBefore(event.getStartDate()) && !date.isAfter(event.getEndDate()) && (!event.isRecurring() ? date.equals(event.getStartDate()) : split(event.getWeekdays()).contains(date.getDayOfWeek().name())&&(!event.isLastWeekdayOfMonth()||!date.plusWeeks(1).getMonth().equals(date.getMonth()))); }
-    private List<LocalDate> occurrenceDates(TrainingScheduleEvent e, LocalDate from, LocalDate to) { List<LocalDate> result=new ArrayList<>();LocalDate date=e.getStartDate().isAfter(from)?e.getStartDate():from;LocalDate end=e.getEndDate().isBefore(to)?e.getEndDate():to;for(;!date.isAfter(end);date=date.plusDays(1))if(occursOn(e,date))result.add(date);return result; }
+    public boolean occursOn(TrainingScheduleEvent event, LocalDate date) {
+        return matchesPattern(event,date) && (event.getId()==null || !seriesExceptions.existsBySeriesEventIdAndOccurrenceDate(event.getId(),date));
+    }
+    private boolean matchesPattern(TrainingScheduleEvent e, LocalDate date) {
+        return !date.isBefore(e.getStartDate()) && !date.isAfter(e.getEndDate()) &&
+                (!e.isRecurring() ? date.equals(e.getStartDate()) : split(e.getWeekdays()).contains(date.getDayOfWeek().name()) &&
+                (!e.isLastWeekdayOfMonth() || date.plusWeeks(1).getMonth()!=date.getMonth()));
+    }
+    private List<LocalDate> occurrenceDates(TrainingScheduleEvent e, LocalDate from, LocalDate to) {
+        Set<LocalDate> excluded=e.getId()==null?Set.of():seriesExceptions.findBySeriesEventId(e.getId()).stream().map(TrainingSeriesException::getOccurrenceDate).collect(Collectors.toSet());
+        List<LocalDate> result=new ArrayList<>();
+        LocalDate date=e.getStartDate().isAfter(from)?e.getStartDate():from;
+        LocalDate end=e.getEndDate().isBefore(to)?e.getEndDate():to;
+        for(;!date.isAfter(end);date=date.plusDays(1))if(matchesPattern(e,date)&&!excluded.contains(date))result.add(date);
+        return result;
+    }
     private boolean can(AppUser user,String type,String action){return permissions.hasPermission(user.getId(),permissionArea(type)+"."+action);}
     private void require(AppUser user,String type,String action){if(!can(user,type,action))throw forbidden("Keine Berechtigung für diesen Terminbereich.");}
     private String permissionArea(String type){return switch(type){case "SERVICE"->"training.services";case "TRAINING"->"training.courses";case "EVENT"->"events";default->throw bad("Ungültiger Termintyp.");};}
@@ -224,7 +306,7 @@ public class TrainingScheduleService {
     private String roleLabel(Role role){return switch(role){case ADMIN->"Administrator";case VORSTAND->"Vorstand";case KASSENWART->"Kassenwart";case FEUERWEHRWART->"Feuerwehrwart";case GERATEWART->"Gerätewart";case GETRAENKEWART->"Getränkewart";case THEKE->"Theke";case MEMBER->"Mitglied";};}
 
     private record DateRange(LocalDate from,LocalDate to){}
-    public record EventRequest(String type,String title,String notes,LocalDate startDate,LocalDate endDate,Boolean recurring,List<String> weekdays,Boolean allDay,LocalTime startTime,LocalTime endTime,List<Long> responsibleMemberIds,String audienceType,String audienceRole,Boolean registrationRequired,Boolean lastWeekdayOfMonth,Boolean deviceInspection,List<String> deviceLocations,List<String> deviceCategories){}
+    public record EventRequest(String type,String title,String notes,LocalDate startDate,LocalDate endDate,Boolean recurring,List<String> weekdays,Boolean allDay,LocalTime startTime,LocalTime endTime,List<Long> responsibleMemberIds,String audienceType,String audienceRole,Boolean registrationRequired,Boolean lastWeekdayOfMonth,Boolean deviceInspection,List<String> deviceLocations,List<String> deviceCategories,Boolean separateOccurrences){}
     public record EventView(Long id,String type,String title,String notes,LocalDate startDate,LocalDate endDate,boolean recurring,List<String> weekdays,boolean allDay,LocalTime startTime,LocalTime endTime,List<Long> responsibleMemberIds,String audienceType,String audienceRole,boolean registrationRequired,boolean canEdit,boolean canDelete,boolean lastWeekdayOfMonth,boolean deviceInspection,List<String> deviceLocations,List<String> deviceCategories){}
     public record OccurrenceView(Long eventId,LocalDate occurrenceDate,String type,String title,String notes,boolean allDay,LocalTime startTime,LocalTime endTime,Instant startAt,Instant endAt,boolean recurring,List<String> responsibleNames,String audienceLabel,boolean registrationRequired,String response,int yesCount,int noCount,List<String> yesNames,List<String> noNames,boolean canManage,boolean canRespond,String holidayName,boolean deviceInspection){}
     public record MemberOption(Long id,String name){} public record RoleOption(String code,String name){}

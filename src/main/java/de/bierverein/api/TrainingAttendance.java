@@ -17,6 +17,6 @@ public class TrainingAttendance {
 
     protected TrainingAttendance() {}
     public TrainingAttendance(Long eventId,LocalDate occurrenceDate,String username,Long memberId,String status){this.eventId=eventId;this.occurrenceDate=occurrenceDate;this.username=username;this.memberId=memberId;this.status=status;}
-    public Long getEventId(){return eventId;} public LocalDate getOccurrenceDate(){return occurrenceDate;} public String getUsername(){return username;} public Long getMemberId(){return memberId;}
+    public Long getEventId(){return eventId;} public void setEventId(Long v){eventId=v;} public LocalDate getOccurrenceDate(){return occurrenceDate;} public void setOccurrenceDate(LocalDate v){occurrenceDate=v;} public String getUsername(){return username;} public Long getMemberId(){return memberId;}
     public String getStatus(){return status;} public void setStatus(String v){status=v;respondedAt=Instant.now();} public Instant getRespondedAt(){return respondedAt;}
 }

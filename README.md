@@ -183,3 +183,9 @@ Die Aktionen werden nur bei passender Rollenberechtigung eingeblendet und auch s
 ### Version 2.0.6: Excel-Import für Geräte
 
 Unter **Geräte → Excel-Import** die Vorlage herunterladen, im ersten Tabellenblatt „Geräte“ eine Zeile pro Gerät ausfüllen und die `.xlsx`-Datei hochladen. Eine Vorschau zeigt neue, vorhandene und fehlerhafte Geräte. Der Import ist nur mit dem Recht `fire.devices.write` möglich; die Vorlage mit `fire.devices.read`. Bestehende Geräte bleiben unverändert. Der Abgleich nutzt Inventarnummer, Barcode und Seriennummer. Mindestens eine dieser Kennungen muss je Gerät ausgefüllt sein. Bei einem Fehler in der Datei werden keine Zeilen gespeichert. Fahrzeug und Fach müssen zusammen angegeben werden und bereits existieren. Maximal 1000 Geräte und 5 MB pro Upload.
+
+### Version 2.0.7: Terminserien und Gerätefilter
+
+Beim Anlegen eines Serientermins kann optional „Serientermine als einzelne Termine speichern“ gewählt werden. Dann wird jede Wiederholung als eigenständiger Termin erzeugt (maximal 400 Einzeltermine). Bestehende Serien lassen sich als Ganzes bearbeiten. Über „Einzeltermin bearbeiten“ wird genau ein Vorkommen herausgelöst; der neue Termin kann auch ein anderes Datum erhalten. Bereits abgegebene Zu- und Absagen sowie Geräteprüfpositionen werden diesem Einzeltermin zugeordnet. Ein herausgelöster Termin bleibt eigenständig, auch wenn die ursprüngliche Serie gelöscht wird. Die Ausnahme wird in der Tabelle `training_series_exceptions` gespeichert und von Dienstkalender und Prüfplanung berücksichtigt. Rechte für Bearbeitung und Löschung werden wie bisher am Terminbereich geprüft.
+
+Unter **Geräte** lässt sich die Tabelle nach Suchtext (auch Barcode, Seriennummer und Ablageort), Kategorie, Fahrzeug, Zustand und Prüfpflicht filtern. „Zurücksetzen“ leert alle Filter.
