@@ -91,6 +91,7 @@ body.dark .vehicle-loading-shell{background:linear-gradient(180deg,#10202e,#0b18
 @media(max-width:800px){.vehicle-loading-shell{padding:10px;border-radius:15px}.vehicle-room-board{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:155px;min-height:330px;padding:10px;border-width:7px;gap:9px}.vehicle-room-board .vehicle-room-v2{grid-column:auto!important;grid-row:auto!important;min-height:155px}.vehicle-orientation{grid-template-columns:48px minmax(110px,150px) 48px;gap:8px}.vehicle-orientation .vehicle-view-arrow{min-width:46px;min-height:46px}.vehicle-orientation-icon{width:82px;height:44px}.vehicle-loading-help{font-size:11px}.vehicle-room-board .mini-device{font-size:7px}.vehicle-room-resize{display:none}}
 </style>
 <link rel="stylesheet" href="/menu-designer.css?v=577e741-v2">
+<link rel="stylesheet" href="/ui-theme.css?v=1">
 <script defer src="/menu-designer.js?v=577e741-v2"></script>
 </head>
 <body>
@@ -446,7 +447,29 @@ async function adminSettingsPage(section='members'){if(section==='users')section
  if(section==='update') return adminUpdateSettingsPage();
  return adminAppearanceSettingsPage();
 }
-async function adminAppearanceSettingsPage(){settingsContent.innerHTML='<div class="grid2"><div class="panel"><h3>🎨 Farben</h3><div class="form-grid"><div class="field"><label>Primärfarbe</label><input id="setPrimary" type="color"></div><div class="field"><label>Menüfarbe</label><input id="setNav" type="color"></div><div class="field"><label>Akzentfarbe</label><input id="setAccent" type="color"></div><div class="field"><label>App-Name</label><input id="setAppName"></div></div><button class="btn primary" onclick="saveAppearanceSettings()">Speichern</button><div id="appearanceMsg"></div></div><div class="panel"><h3>🖼️ Logo</h3><div class="quick" style="align-items:center"><img id="settingsLogoPreview" class="logo-preview" src="/icons/fw-cockpit-brand.svg" alt="Logo"><div><input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><p class="sub">PNG, JPG, WEBP oder SVG, maximal 2 MB.</p><button class="btn primary small" onclick="uploadSettingsLogo()">Logo hochladen</button><button class="btn danger small" onclick="removeSettingsLogo()">Logo zurücksetzen</button></div></div></div></div>';setPrimary.value=appSettings?.primaryColor||'#c51f2d';setNav.value=appSettings?.navColor||'#071827';setAccent.value=appSettings?.accentColor||'#1479e9';setAppName.value=appSettings?.appName||'FFH Verwaltung';setLogoImage(settingsLogoPreview,appSettings?.logoAvailable);const syncPreview=()=>{settingsLogoPreview.style.borderColor=setPrimary.value};setPrimary.oninput=syncPreview}
+async function adminAppearanceSettingsPage(){settingsContent.innerHTML='<div class="grid2"><div class="panel"><h3>🎨 Farben</h3><div class="form-grid"><div class="field"><label>Primärfarbe</label><input id="setPrimary" type="color"></div><div class="field"><label>Menüfarbe</label><input id="setNav" type="color"></div><div class="field"><label>Akzentfarbe</label><input id="setAccent" type="color"></div><div class="field"><label>App-Name</label><input id="setAppName"></div></div><button class="btn primary" onclick="saveAppearanceSettings()">Speichern</button><div id="appearanceMsg"></div></div><div class="panel"><h3>🖼️ Logo</h3><div class="quick" style="align-items:center"><img id="settingsLogoPreview" class="logo-preview" src="/icons/fw-cockpit-brand.svg" alt="Logo"><div><input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><p class="sub">PNG, JPG, WEBP oder SVG, maximal 2 MB.</p><button class="btn primary small" onclick="uploadSettingsLogo()">Logo hochladen</button><button class="btn danger small" onclick="removeSettingsLogo()">Logo zurücksetzen</button></div></div></div></div>';setPrimary.value=appSettings?.primaryColor||'#c51f2d';setNav.value=appSettings?.navColor||'#071827';setAccent.value=appSettings?.accentColor||'#1479e9';setAppName.value=appSettings?.appName||'FFH Verwaltung';setLogoImage(settingsLogoPreview,appSettings?.logoAvailable);const syncPreview=()=>{settingsLogoPreview.style.borderColor=setPrimary.value};setPrimary.oninput=syncPreview;renderThemePresets();}
+const UI_THEME_PRESETS={
+ red:{label:'Feuerwehr Rot',primary:'#c51f2d',nav:'#071827',accent:'#1479e9'},
+ navy:{label:'Nachtblau',primary:'#1656a1',nav:'#071827',accent:'#3288df'},
+ neutral:{label:'Neutral',primary:'#334155',nav:'#1e293b',accent:'#147d74'}
+};
+function renderThemePresets(){
+ const panel=document.getElementById('setPrimary')?.closest('.panel');
+ const grid=panel?.querySelector('.form-grid');if(!panel||!grid)return;
+ const title=document.createElement('div');title.className='ui-theme-presets';
+ title.innerHTML=Object.entries(UI_THEME_PRESETS).map(([id,t])=>'<button type="button" class="ui-theme-preset" data-theme-preset="'+id+'" aria-pressed="false"><span class="swatch" style="--swatch:'+t.primary+'"></span>'+esc(t.label)+'</button>').join('');
+ const info=document.createElement('p');info.className='sub';info.textContent='Farbvorschläge für Menü, Primärbuttons und Akzentfarbe; Löschen, Erfolg und Warnung bleiben semantisch getrennt. Hell/Dunkel kannst du über „Darstellung wechseln“ für dein Gerät umschalten.';
+ grid.before(info,title);
+ title.querySelectorAll('[data-theme-preset]').forEach(button=>button.onclick=()=>{
+  const t=UI_THEME_PRESETS[button.dataset.themePreset];if(!t)return;
+  document.getElementById('setPrimary').value=t.primary;
+  document.getElementById('setNav').value=t.nav;
+  document.getElementById('setAccent').value=t.accent;
+  document.getElementById('settingsLogoPreview').style.borderColor=t.primary;
+  title.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+  document.getElementById('appearanceMsg').textContent='Vorschlag „'+t.label+'“ ausgewählt. Mit „Speichern“ für alle Nutzer übernehmen.';
+ });
+}
 async function saveAppearanceSettings(){try{appSettings=await api('/api/settings',{method:'PUT',body:JSON.stringify({appName:setAppName.value.trim(),primaryColor:setPrimary.value,navColor:setNav.value,accentColor:setAccent.value,menuOrder:appSettings?.menuOrder||[],hiddenMenuItems:appSettings?.hiddenMenuItems||[]})});applyAppSettings();renderNavigation();appearanceMsg.innerHTML='<div class="message success">✓ Erscheinungsbild gespeichert.</div>'}catch(e){appearanceMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
 async function uploadSettingsLogo(){const file=settingsLogoFile.files?.[0];if(!file){appearanceMsg.innerHTML='<div class="message error">Bitte zuerst eine Bilddatei auswählen.</div>';return}const fd=new FormData();fd.append('file',file);try{const r=await fetch('/api/settings/logo',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});let x={};try{x=await r.json()}catch{}if(!r.ok)throw new Error(x.message||x.detail||'Logo konnte nicht gespeichert werden');appSettings=x;applyAppSettings();appearanceMsg.innerHTML='<div class="message success">✓ Logo gespeichert.</div>';setLogoImage(settingsLogoPreview,true)}catch(e){appearanceMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
 async function removeSettingsLogo(){if(!confirm('Eigenes Logo wirklich entfernen?'))return;try{appSettings=await api('/api/settings/logo',{method:'DELETE'});applyAppSettings();setLogoImage(settingsLogoPreview,false);appearanceMsg.innerHTML='<div class="message success">✓ Standardlogo wiederhergestellt.</div>'}catch(e){appearanceMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
