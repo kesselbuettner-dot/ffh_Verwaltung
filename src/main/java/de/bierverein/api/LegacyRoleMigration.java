@@ -45,8 +45,9 @@ public class LegacyRoleMigration {
                     throw new IllegalStateException("Incomplete legacy role migration: " + legacy);
                 }
             }
-            seedLegacyDevicePermissions();
-            seedLegacyTrainingReadPermissions();
+            // Existing roles may already have been edited by an administrator.
+            // Never reseed permissions on restart: doing so would undo deliberate
+            // revocations (especially for GERATEWART and training-read grants).
             // Do not infer an incomplete migration from users created later or
             // assignments intentionally removed by an administrator.
             return;
