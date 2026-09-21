@@ -1,9 +1,12 @@
-const CACHE_NAME = "ffh-verwaltung-menu577-imprint-v34";
+const CACHE_NAME = "ffh-verwaltung-wehrleiter-v36";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/menu-designer.js?v=577e741-v2",
   "/menu-designer.css?v=577e741-v2",
+  "/wehrleiter.js?v=1",
+  "/wehrleiter.css?v=1",
+  "/ui-theme.css?v=1",
   "/icons/fw-cockpit-brand.svg",
   "/icons/fw-cockpit-icon-192.png",
   "/icons/fw-cockpit-icon-512.png",
