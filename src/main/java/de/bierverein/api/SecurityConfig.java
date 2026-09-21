@@ -44,7 +44,7 @@ public class SecurityConfig {
                 s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(a -> a
-                .requestMatchers(HttpMethod.GET, "/api/settings/logo").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/settings/logo", "/api/settings/imprint").permitAll()
                 .requestMatchers(
                     "/",
                     "/index.html",
