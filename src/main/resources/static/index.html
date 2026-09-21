@@ -139,7 +139,7 @@ async function registerMember(){const first=regFirst.value.trim(),last=regLast.v
 async function login(){const u=loginUser.value.trim(),p=loginPass.value;loginMsg.innerHTML='';beginLoading();try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});if(!r.ok){let t='Ungültige Zugangsdaten';try{const j=await r.json();t=j.message||j.error||t}catch{}throw Error(t)}const x=await r.json();token=x.token;role=x.role;username=x.username;memberId=x.memberId;memberName=x.memberName||'';localStorage.setItem('token',token);localStorage.setItem('role',role);localStorage.setItem('username',username);if(memberId)localStorage.setItem('memberId',memberId);else localStorage.removeItem('memberId');localStorage.setItem('memberName',memberName);await showApp()}catch(e){loginMsg.innerHTML=`<div class="message error">${esc(e.message)}</div>`}finally{endLoading()}}
 const menuDefinitions=[
  {id:'dashboard',section:'Übersicht',label:'Dashboard',icon:'🏠',action:()=>navigate('dashboard'),roles:['*']},
- {id:'members',section:'Verein',label:'Mitglieder',icon:'👥',action:()=>navigate('members'),roles:['ADMIN','VORSTAND','KASSENWART','THEKE']},
+ {id:'members',section:'Verein',label:'Mitgliederübersicht',icon:'👥',action:()=>navigate('members'),roles:['ADMIN','VORSTAND','KASSENWART','THEKE']},
  {id:'theke',section:'Verkauf',label:'Kasse / Theke',icon:'🍺',action:()=>navigate('theke'),roles:['ADMIN','THEKE','MEMBER','GETRAENKEWART']},
  {id:'shopping',section:'Einkauf & Lager',label:'Einkaufsliste',icon:'🛒',action:()=>inventoryPage('shopping'),roles:['ADMIN','GETRAENKEWART']},
  {id:'purchase',section:'Einkauf & Lager',label:'Wareneingang',icon:'📥',action:()=>inventoryPage('purchase'),roles:['ADMIN','GETRAENKEWART']},
@@ -162,10 +162,10 @@ const menuDefinitions=[
  {id:'documents',section:'Weitere Bereiche',label:'Dokumente',icon:'📄',action:()=>module('Dokumente'),roles:['*'],implemented:false},
  {id:'calendar',section:'Weitere Bereiche',label:'Kalender',icon:'📆',action:()=>navigate('calendar'),roles:['*']},
  {id:'donations',section:'Weitere Bereiche',label:'Spenden',icon:'🤝',action:()=>module('Spenden'),roles:['ADMIN','VORSTAND'],implemented:false},
- {id:'admin',section:'Administration',label:'Administration',icon:'⚙️',action:()=>navigate('admin'),roles:['ADMIN']},
- {id:'admin-members',section:'Administration',label:'Mitglieder bearbeiten',icon:'👥',action:()=>navigate('admin-members'),roles:['ADMIN']},
- {id:'admin-users',section:'Administration',label:'Benutzer & Rechte',icon:'🔐',action:()=>navigate('admin-users'),roles:['ADMIN']},
- {id:'admin-settings',section:'Administration',label:'Einstellungen',icon:'🎨',action:()=>navigate('admin-settings'),roles:['ADMIN']}
+ {id:'admin',section:'Administration',label:'Administration (alte Seite)',icon:'⚙️',action:()=>adminSettingsPage('members'),roles:['ADMIN'],implemented:false},
+ {id:'admin-members',section:'Administration',label:'Mitglieder (alte Seite)',icon:'👥',action:()=>adminSettingsPage('members'),roles:['ADMIN'],implemented:false},
+ {id:'admin-users',section:'Administration',label:'Benutzer & Rechte (alte Seite)',icon:'🔐',action:()=>adminSettingsPage('accounts'),roles:['ADMIN'],implemented:false},
+ {id:'admin-settings',section:'Administration',label:'Administration',icon:'⚙️',action:()=>navigate('admin-settings'),roles:['ADMIN']}
 ];
 function hasPermission(key){return Array.isArray(myPermissions)&&myPermissions.includes(key)}
 function menuAllowed(item){return item.implemented!==false&&(!item.permission||hasPermission(item.permission))&&(item.roles.includes('*')||item.roles.includes(role))}
@@ -303,13 +303,59 @@ async function openCalendarSubscription(regenerate=false){try{if(regenerate&&!co
 function openCalendarFeed(){const input=document.getElementById('calendarFeedUrl');if(input?.value)location.href=input.value.replace(/^https?:/,'webcal:')}
 async function copyCalendarFeed(){const input=document.getElementById('calendarFeedUrl');if(!input)return;try{await navigator.clipboard.writeText(input.value);alert('Kalender-Link wurde kopiert.')}catch{input.select();document.execCommand('copy');alert('Kalender-Link wurde kopiert.')}}
 async function notifyNewestMessage(messages){if(!('Notification'in window)||Notification.permission!=='granted'||!messages.length)return;const newest=[...messages].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];const last=localStorage.getItem(messageNotifiedKey());if(!last){localStorage.setItem(messageNotifiedKey(),newest.createdAt);return}if(newest.createdAt<=last)return;localStorage.setItem(messageNotifiedKey(),newest.createdAt);const options={body:newest.body||'Eine neue Meldung ist verfügbar.',icon:'/icons/fw-cockpit-brand.svg',badge:'/icons/fw-cockpit-brand.svg',tag:'ffh-message-'+newest.id};try{const reg=await navigator.serviceWorker?.ready;if(reg)await reg.showNotification(newest.title,options);else new Notification(newest.title,options)}catch{}}
-async function membersPage(){content.innerHTML='<div class="title-row"><div><h1>Mitglieder</h1><span class="sub">Rolle und Kontostand</span></div></div><div class="panel"><div class="toolbar"><input id="memberSearch" placeholder="🔎 Mitglied suchen…" oninput="renderMembers()"></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Rolle</th><th>Kontostand</th></tr></thead><tbody id="memberRows"></tbody></table></div></div>';try{members=await api('/api/members');renderMembers()}catch(e){memberRows.innerHTML='<tr><td colspan="3">'+esc(e.message)+'</td></tr>'}}
+async function membersPage(){content.innerHTML='<div class="title-row"><div><h1>Mitgliederübersicht</h1><span class="sub">Lesen: Mitglied und Kontostand. Stammdaten werden ausschließlich in der Administration verwaltet.</span></div></div><div class="panel"><div class="toolbar"><input id="memberSearch" placeholder="🔎 Mitglied suchen…" oninput="renderMembers()"></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Rolle</th><th>Kontostand</th></tr></thead><tbody id="memberRows"></tbody></table></div></div>';try{members=await api('/api/members');renderMembers()}catch(e){memberRows.innerHTML='<tr><td colspan="3">'+esc(e.message)+'</td></tr>'}}
 function renderMembers(){const q=(document.getElementById('memberSearch')?.value||'').toLowerCase();memberRows.innerHTML=members.filter(m=>m.name.toLowerCase().includes(q)).map(m=>'<tr><td>'+esc(m.name)+'</td><td>'+esc(roleLabels[m.role]||m.role||'–')+'</td><td>'+money(m.balance)+'</td></tr>').join('')||'<tr><td colspan="3">Keine Mitglieder gefunden.</td></tr>'}
-async function adminMembersPage(){if(role!=='ADMIN'){content.innerHTML='<div class="panel"><h2>Keine Berechtigung</h2></div>';return}content.innerHTML='<div class="title-row"><div><h1>Mitglieder bearbeiten</h1></div><button class="btn primary" onclick="openMemberForm()">＋ Mitglied anlegen</button></div><div class="panel"><input id="memberSearch" placeholder="Mitglied suchen" oninput="renderAdminMembers()"><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Rolle</th><th>Kontostand</th><th>Aktion</th></tr></thead><tbody id="memberRows"></tbody></table></div></div>';try{members=await api('/api/members');renderAdminMembers()}catch(e){memberRows.innerHTML='<tr><td colspan="4">'+esc(e.message)+'</td></tr>'}}
-function renderAdminMembers(){const q=(document.getElementById('memberSearch')?.value||'').toLowerCase();memberRows.innerHTML=members.filter(m=>m.name.toLowerCase().includes(q)).map(m=>'<tr><td>'+esc(m.name)+'</td><td>'+esc(roleLabels[m.role]||m.role||'–')+'</td><td>'+money(m.balance)+'</td><td><button class="btn small secondary" onclick="openMemberForm('+m.id+')">Bearbeiten</button> <button class="btn small secondary" onclick="openBalance('+m.id+')">Kontostand</button> <button class="btn small danger" onclick="deleteMember('+m.id+')">Löschen</button></td></tr>').join('')||'<tr><td colspan="4">Keine Mitglieder gefunden.</td></tr>'}
-async function adminUsersSettingsPage(){settingsContent.innerHTML='<div class="panel"><div class="toolbar"><button class="btn secondary" onclick="adminSettingsPage(\'users\')">↻ Aktualisieren</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Benutzer</th><th>Mitglied</th><th>E-Mail</th><th>Rolle</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="settingsUserRows"></tbody></table></div></div><div class="panel" id="managedRolesPanel"><h2>Zusätzliche Rollen und Berechtigungen</h2><p class="sub">Die neuen Rollen werden derzeit zusätzlich zur bisherigen Anmeldung gespeichert. Bestehende Zugriffsrechte bleiben bis zur vollständigen Umstellung unverändert.</p><div id="managedRolesMessage"></div><div id="managedRolesContent">Lade Rollen …</div></div>';loadManagedRolesPanel();try{const us=await api('/api/admin/users');window.adminUsers=us;settingsUserRows.innerHTML=us.map(u=>{const pending=!u.registrationApproved;return `<tr><td><strong>${esc(u.username)}</strong></td><td>${esc(u.memberName||'–')}</td><td>${esc(u.email||'–')}</td><td>${esc(roleLabels[u.role]||u.role)}</td><td>${pending?'<span class="badge">Freigabe ausstehend</span>':`<span class="badge ${u.enabled?'ok':'off'}">${u.enabled?'Aktiv':'Deaktiviert'}</span>`}</td><td>${pending?`<button class="btn small primary" onclick="approveRegistration(${u.id})">Freigeben</button> `:''}<button class="btn small secondary" onclick="editAdminUser(${u.id})">Bearbeiten</button></td></tr>`}).join('')||'<tr><td colspan="6" class="empty">Keine Benutzer vorhanden.</td></tr>'}catch(e){settingsUserRows.innerHTML=`<tr><td colspan="6" class="empty">${esc(e.message)}</td></tr>`}}
-async function adminUsersPage(){if(role!=='ADMIN'){content.innerHTML='<div class="panel"><h2>Keine Berechtigung</h2></div>';return}content.innerHTML='<div class="title-row"><div><h1>Benutzer & Rechte</h1><span class="sub">Login-Konten, Rollen, Freigaben und Status verwalten.</span></div></div><div class="panel" id="managedRolesPanel"><h2>Zusätzliche Rollen und Berechtigungen</h2><p class="sub">Die neuen Rollen werden derzeit zusätzlich zur bisherigen Anmeldung gespeichert. Bestehende Zugriffsrechte bleiben bis zur vollständigen Umstellung unverändert.</p><div id="managedRolesMessage"></div><div id="managedRolesContent">Lade Rollen …</div></div><div class="panel"><div id="adminUsersMsg"></div><div class="table-wrap"><table class="table"><thead><tr><th>Benutzer</th><th>Mitglied</th><th>E-Mail</th><th>Rolle</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="userRows"></tbody></table></div></div>';loadManagedRolesPanel();try{const us=await api('/api/admin/users');window.adminUsers=us;userRows.innerHTML=us.map(u=>{const pending=!u.registrationApproved;return `<tr><td><strong>${esc(u.username)}</strong></td><td>${esc(u.memberName||'–')}</td><td>${esc(u.email||'–')}</td><td>${esc(roleLabels[u.role]||u.role)}</td><td>${pending?'<span class="badge">Freigabe ausstehend</span>':`<span class="badge ${u.enabled?'ok':'off'}">${u.enabled?'Aktiv':'Deaktiviert'}</span>`}</td><td>${pending?`<button class="btn small primary" onclick="approveRegistration(${u.id})">Freigeben</button> `:''}<button class="btn small secondary" onclick="editAdminUser(${u.id})">Bearbeiten</button></td></tr>`}).join('')||'<tr><td colspan="6" class="empty">Keine Benutzer vorhanden.</td></tr>'}catch(e){userRows.innerHTML=`<tr><td colspan="6" class="empty">${esc(e.message)}</td></tr>`}}
-
+async function adminPage(){return adminSettingsPage('members')}
+function adminMembersPage(){return adminSettingsPage('members')}
+function adminUsersPage(){return adminSettingsPage('accounts')}
+async function adminMembersSettingsPage(){
+ if(role!=='ADMIN')return;
+ settingsContent.innerHTML='<div class="panel"><div class="title-row"><div><h2>👥 Mitgliederstammdaten</h2><p class="sub">Hier werden Mitglieder angelegt und Stammdaten gepflegt. Login-Konten und Rollen sind getrennte Bereiche.</p></div><button class="btn primary" onclick="openMemberForm()">＋ Mitglied anlegen</button></div><div class="toolbar"><input id="memberSearch" placeholder="Mitglied suchen" oninput="renderAdminMembers()"></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Kontakt</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="memberRows"></tbody></table></div><div class="sub">Geburtsdatum, Eintritt, frei definierbare Felder und Kontaktimport werden in der nächsten Ausbaustufe ergänzt.</div></div>';
+ try{members=await api('/api/members');renderAdminMembers()}catch(e){document.getElementById('memberRows').innerHTML='<tr><td colspan="4">'+esc(e.message)+'</td></tr>'}
+}
+function renderAdminMembers(){
+ const host=document.getElementById('memberRows');if(!host)return;
+ const q=(document.getElementById('memberSearch')?.value||'').trim().toLocaleLowerCase('de');
+ host.innerHTML=members.filter(m=>String(m.name||'').toLocaleLowerCase('de').includes(q)).map(m=>
+ '<tr><td><strong>'+esc(m.name)+'</strong></td><td>'+esc(m.email||'–')+'</td><td><span class="badge '+(m.active?'ok':'off')+'">'+(m.active?'Aktiv':'Inaktiv')+'</span></td><td><button class="btn small secondary" onclick="openMemberForm('+Number(m.id)+')">Bearbeiten</button></td></tr>'
+ ).join('')||'<tr><td colspan="4" class="empty">Keine Mitglieder gefunden.</td></tr>';
+}
+function openMemberForm(id){
+ if(role!=='ADMIN')return;
+ const m=id==null?null:members.find(x=>Number(x.id)===Number(id));if(id!=null&&!m)return;
+ modalTitle.textContent=m?'Mitgliederstammdaten bearbeiten':'Mitglied anlegen';
+ modalBody.innerHTML='<div id="memberFormMsg"></div><div class="field"><label for="memberFormName">Name *</label><input id="memberFormName" maxlength="160" value="'+esc(m?.name||'')+'" required></div>'+
+ '<div class="field"><label for="memberFormEmail">E-Mail</label><input id="memberFormEmail" type="email" maxlength="320" value="'+esc(m?.email||'')+'"></div>'+
+ '<div class="field"><label for="memberFormPhone">Telefon</label><input id="memberFormPhone" maxlength="80" value="'+esc(m?.phone||'')+'"></div>'+
+ '<div class="field"><label for="memberFormAddress">Anschrift</label><textarea id="memberFormAddress" maxlength="500">'+esc(m?.address||'')+'</textarea></div>'+
+ '<div class="field"><label><input id="memberFormActive" type="checkbox" '+(m?.active!==false?'checked':'')+'> Aktives Mitglied</label></div>'+
+ '<p class="sub">Benutzerkonto, Passwort und Berechtigungen bitte ausschließlich unter „Konten“ und „Rollen & Rechte“ bearbeiten. Das Deaktivieren eines Mitglieds ist keine automatische Kontosperrung.</p>'+
+ '<div class="quick"><button class="btn secondary" onclick="closeModal()">Abbrechen</button><button class="btn primary" onclick="saveMemberMaster('+(m?Number(m.id):'null')+')">Stammdaten speichern</button></div>';
+ modal.classList.remove('hidden');
+}
+async function saveMemberMaster(id){
+ if(role!=='ADMIN')return;
+ const data={name:document.getElementById('memberFormName').value.trim(),email:document.getElementById('memberFormEmail').value.trim()||null,
+ phone:document.getElementById('memberFormPhone').value.trim()||null,address:document.getElementById('memberFormAddress').value.trim()||null,
+ active:document.getElementById('memberFormActive').checked,loginEnabled:null};
+ if(!data.name){document.getElementById('memberFormMsg').textContent='Der Name ist erforderlich.';return;}
+ try{await api('/api/members'+(id==null?'':'/'+Number(id)),{method:id==null?'POST':'PUT',body:JSON.stringify(data)});
+ closeModal();await adminSettingsPage('members');
+ }catch(e){document.getElementById('memberFormMsg').textContent=e.message||'Speichern fehlgeschlagen.';}
+}
+async function adminUsersSettingsPage(){
+ if(role!=='ADMIN')return;
+ settingsContent.innerHTML='<div class="panel"><div class="title-row"><div><h2>🔐 Benutzerkonten</h2><p class="sub">Anmeldungen, Freigaben, Hauptrolle und Kontostatus. Mitglieder werden unter Mitgliederstammdaten angelegt.</p></div><button class="btn secondary" onclick="adminSettingsPage(\'accounts\')">↻ Aktualisieren</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Benutzer</th><th>Mitglied</th><th>E-Mail</th><th>Hauptrolle</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="settingsUserRows"></tbody></table></div></div>';
+ try{
+  const us=await api('/api/admin/users');window.adminUsers=us;
+  document.getElementById('settingsUserRows').innerHTML=us.map(u=>'<tr><td><strong>'+esc(u.username)+'</strong></td><td>'+esc(u.memberName||'–')+'</td><td>'+esc(u.email||'–')+'</td><td>'+esc(roleLabels[u.role]||u.role)+'</td><td>'+(u.registrationApproved?'<span class="badge '+(u.enabled?'ok':'off')+'">'+(u.enabled?'Aktiv':'Deaktiviert')+'</span>':'<span class="badge">Freigabe ausstehend</span>')+'</td><td>'+(u.registrationApproved?'':'<button class="btn small primary" onclick="approveRegistration('+u.id+')">Freigeben</button> ')+'<button class="btn small secondary" onclick="editAdminUser('+u.id+')">Bearbeiten</button></td></tr>').join('')||'<tr><td colspan="6" class="empty">Keine Benutzer vorhanden.</td></tr>';
+ }catch(e){document.getElementById('settingsUserRows').innerHTML='<tr><td colspan="6">'+esc(e.message)+'</td></tr>';}
+}
+function adminRolesSettingsPage(){
+ if(role!=='ADMIN')return;
+ settingsContent.innerHTML='<div class="panel" id="managedRolesPanel"><h2>🛡️ Rollen & Rechte</h2><p class="sub">Rollen definieren, Berechtigungen setzen und Benutzern zuweisen. Mitgliederstammdaten werden hier nicht bearbeitet.</p><div id="managedRolesMessage"></div><div id="managedRolesContent">Rollen werden geladen …</div></div>';
+ loadManagedRolesPanel();
+}
 async function loadManagedRolesPanel(){
  const host=document.getElementById('managedRolesContent');if(!host)return;
  try{
@@ -376,11 +422,13 @@ async function saveManagedUserRoles(userId){
 
 function editAdminUser(id){const u=adminUsers.find(x=>x.id===id);modalTitle.textContent='Benutzer bearbeiten';modalBody.innerHTML=`<div id="adminMsg"></div><div class="field"><label>Benutzername *</label><input id="uUsername" value="${esc(u.username)}"></div><div class="field"><label>Rolle</label><select id="uRole">${roles.map(r=>`<option value="${r}" ${r===u.role?'selected':''}>${esc(roleLabels[r]||r)}</option>`).join('')}</select></div><div class="field"><label>Status</label><select id="uEnabled"><option value="true" ${u.enabled?'selected':''}>Aktiv</option><option value="false" ${!u.enabled?'selected':''}>Deaktiviert</option></select></div><div class="field"><label>Neues Passwort (optional)</label><input id="uPassword" type="password" autocomplete="new-password"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn secondary" onclick="closeModal()">Abbrechen</button><button class="btn primary" onclick="saveAdminUser(${id})">Speichern</button></div>`;modal.classList.remove('hidden')}
 async function saveAdminUser(id){try{await api(`/api/admin/users/${id}`,{method:'PUT',body:JSON.stringify({username:uUsername.value.trim(),password:uPassword.value||null,role:uRole.value,enabled:uEnabled.value==='true'})});closeModal();adminPage()}catch(e){adminMsg.innerHTML=`<div class="message error">${esc(e.message)}</div>`}}
-async function adminSettingsPage(section='appearance'){
+async function adminSettingsPage(section='members'){if(section==='users')section='accounts';
  if(role!=='ADMIN'){content.innerHTML='<div class="panel"><h2>Keine Berechtigung</h2></div>';return}
  content.innerHTML=`<div class="title-row"><div><h1>Einstellungen</h1><span class="sub">Zentrale Konfiguration der FFH Verwaltung</span></div></div>
  <div class="settings-tabs">
-  <button class="settings-tab" id="stab-users" onclick="adminSettingsPage('users')">🔐 Benutzer & Rechte</button>
+  <button class="settings-tab" id="stab-members" onclick="adminSettingsPage('members')">👥 Mitgliederstammdaten</button>
+  <button class="settings-tab" id="stab-accounts" onclick="adminSettingsPage('accounts')">🔐 Konten</button>
+  <button class="settings-tab" id="stab-roles" onclick="adminSettingsPage('roles')">🛡️ Rollen & Rechte</button>
   <button class="settings-tab" id="stab-menu" onclick="adminSettingsPage('menu')">☰ Menü</button>
   <button class="settings-tab" id="stab-dashboard" onclick="adminSettingsPage('dashboard')">📊 Dashboard</button>
   <button class="settings-tab" id="stab-master" onclick="adminSettingsPage('master')">🏢 Stammdaten & Impressum</button>
@@ -389,7 +437,9 @@ async function adminSettingsPage(section='appearance'){
  </div>
  <div id="settingsContent"></div>`;
  document.getElementById('stab-'+section)?.classList.add('active');
- if(section==='users') return adminUsersSettingsPage();
+ if(section==='members') return adminMembersSettingsPage();
+ if(section==='accounts') return adminUsersSettingsPage();
+ if(section==='roles') return adminRolesSettingsPage();
  if(section==='menu') return adminMenuSettingsPage();
  if(section==='dashboard') return adminDashboardSettingsPage();
  if(section==='master') return adminMasterSettingsPage();
