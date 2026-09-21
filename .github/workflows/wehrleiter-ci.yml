@@ -25,3 +25,12 @@ jobs:
           node src/test/js/admin-layout-smoke.cjs
       - name: Build and test Java
         run: mvn -B -ntp test
+      - name: Build deployment image with local OCR
+        run: docker build --progress=plain -t fw-cockpit-ocr-test .
+      - name: Verify runtime image contains German and English OCR
+        run: |
+          docker run --rm --entrypoint tesseract fw-cockpit-ocr-test --version
+          docker run --rm --entrypoint tesseract fw-cockpit-ocr-test --list-langs | tee /tmp/ocr-langs.txt
+          grep -qx 'deu' /tmp/ocr-langs.txt
+          grep -qx 'eng' /tmp/ocr-langs.txt
+
