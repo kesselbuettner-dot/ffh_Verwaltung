@@ -55,7 +55,7 @@ assert.equal(sidebar.dataset.menuEffect,'gradient');
 const test=context.window.MenuDesigner.__test;
 const recovered=test.normalized();
 test.setDraft(recovered);
-test.moveTo([0,0,0],[]); // Move a nested page to root level without creating an empty fake group
+test.moveTo([0,0],[]); // Move a nested page to root level without creating an empty fake group
 assert(test.layout().groups.some(node=>node==='dashboard'),'Dashboard may be a standalone root item');
 output=render();
 assert(output.includes('nav-root'),'Root-level pages display as direct menu entries');
