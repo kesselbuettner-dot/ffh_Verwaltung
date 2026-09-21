@@ -166,7 +166,7 @@ const menuDefinitions=[
  {id:'admin-users',section:'Administration',label:'Benutzer & Rechte',icon:'🔐',action:()=>navigate('admin-users'),roles:['ADMIN']},
  {id:'admin-settings',section:'Administration',label:'Einstellungen',icon:'🎨',action:()=>navigate('admin-settings'),roles:['ADMIN']}
 ];
-function hasPermission(key){return role==='ADMIN'||(myPermissions||[]).includes(key)}
+function hasPermission(key){return Array.isArray(myPermissions)&&myPermissions.includes(key)}
 function menuAllowed(item){return item.implemented!==false&&(!item.permission||hasPermission(item.permission))&&(item.roles.includes('*')||item.roles.includes(role))}
 function renderNavigation(){
  const host=document.getElementById('navContainer');
