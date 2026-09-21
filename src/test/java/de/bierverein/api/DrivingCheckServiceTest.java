@@ -83,4 +83,29 @@ class DrivingCheckServiceTest {
   assertTrue(java.util.Arrays.stream(components).noneMatch(c->c.getName().contains("recognized")),
     "Client-supplied OCR fields must not automatically attest a driving check");
  }
+ @Test void tooEarlyDrivingChecksNeverProcessPhoto(){
+  var member=new Member();ReflectionTestUtils.setField(member,"id",42L);member.setName("Max Muster");
+  var q=data(7L,42L);q.nextDueOn=java.time.LocalDate.now(java.time.ZoneId.of("Europe/Berlin")).plusMonths(4);
+  when(permission.userId(auth)).thenReturn(9L);
+  when(users.findById(9L)).thenReturn(Optional.of(user(9L,member)));
+  when(qualified.findByIdForUpdate(7L)).thenReturn(Optional.of(q));
+  assertThrows(ResponseStatusException.class,()->service.autoScan(7L,new DrivingCheckService.ScanInput("camera-image"),auth));
+  verifyNoInteractions(ocr,checks);
+ }
+ @Test void limitsRepeatedMemberOcrAttempts(){
+  var member=new Member();ReflectionTestUtils.setField(member,"id",42L);member.setName("Max Muster");
+  var q=data(7L,42L);
+  when(permission.userId(auth)).thenReturn(9L);
+  when(users.findById(9L)).thenReturn(Optional.of(user(9L,member)));
+  when(qualified.findByIdForUpdate(7L)).thenReturn(Optional.of(q));
+  when(ocr.read("camera-image")).thenReturn("NOT AN ACCEPTABLE LICENSE");
+  for(int i=0;i<6;i++){
+   assertThrows(ResponseStatusException.class,()->service.autoScan(7L,new DrivingCheckService.ScanInput("camera-image"),auth));
+  }
+  var over=assertThrows(ResponseStatusException.class,()->service.autoScan(7L,new DrivingCheckService.ScanInput("camera-image"),auth));
+  assertEquals(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,over.getStatusCode());
+  verify(ocr,times(6)).read("camera-image");
+  verifyNoInteractions(checks);
+ }
+
 }
