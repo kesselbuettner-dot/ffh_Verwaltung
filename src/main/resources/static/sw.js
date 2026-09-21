@@ -1,13 +1,13 @@
-const CACHE_NAME = "ffh-verwaltung-menu577-v33";
+const CACHE_NAME = "ffh-verwaltung-menu577-imprint-v34";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/menu-designer.js?v=577e741-v2",
   "/menu-designer.css?v=577e741-v2",
-  "/icons/wache48-logo.svg",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/icon-512-maskable.png"
+  "/icons/fw-cockpit-brand.svg",
+  "/icons/fw-cockpit-icon-192.png",
+  "/icons/fw-cockpit-icon-512.png",
+  "/icons/fw-cockpit-icon-maskable-512.png"
 ];
 
 self.addEventListener("install", event => {
@@ -90,8 +90,8 @@ self.addEventListener("push", event => {
   try { if (event.data) data = { ...data, ...event.data.json() }; } catch (_) {}
   event.waitUntil(self.registration.showNotification(data.title, {
     body: data.body,
-    icon: "/icons/wache48-logo.svg",
-    badge: "/icons/wache48-logo.svg",
+    icon: "/icons/fw-cockpit-brand.svg",
+    badge: "/icons/fw-cockpit-brand.svg",
     tag: data.tag || "ffh-message",
     data: { url: data.url || "/?messages=1" }
   }));
