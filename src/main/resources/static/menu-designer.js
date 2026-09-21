@@ -23,7 +23,8 @@ function originalLayout(){
    if(!byName.has(item.section)){const node=group('section-'+groups.length,item.section,[],item.section==='Gerätewart'?'🚒':'☰');groups.push(node);byName.set(item.section,node);}
    byName.get(item.section).children.push(item.id);
  });
- return {version:2,groups,entries:{},style:{...DEFAULT_STYLE,background:appSettings?.navColor||'#071827'}};
+ const entries={};(appSettings?.hiddenMenuItems||[]).forEach(item=>{entries[item]={hidden:true};});
+ return {version:2,groups,entries,style:{...DEFAULT_STYLE,background:appSettings?.navColor||'#071827'}};
 }
 function parseLayout(){
  try {
@@ -116,7 +117,7 @@ function renderNavigation(){
   return nodes.map(node=>{
    if(typeof node==='string'){
     const item=allowed.get(node),custom=layout.entries[node]||{};
-    if(!item||!menuAllowed(item)||((custom.hidden||appSettings?.hiddenMenuItems?.includes(node))&&!adminRequired.has(node)))return '';
+    if(!item||!menuAllowed(item)||(custom.hidden&&!adminRequired.has(node)))return '';
     const icon=custom.icon||item.icon,label=custom.label||item.label;
     return '<button type="button" class="nav-item nav-child" data-page="'+safe(node)+'" data-nav-id="'+safe(node)+'">'+iconHtml(icon)+' <span>'+safe(label)+'</span></button>';
    }
@@ -159,8 +160,8 @@ function removeGroup(path){
 }
 function moveTo(path,target){
  const source=nodeAt(path,draft),destination=target.length?nodeAt(target,draft):null;
- if(!source||target.length&&!isGroup(destination)||target.length>1||target.length===0&&!isGroup(source))return;
- if(target.length&&path.join('.')===target.join('.'))return;
+ if(!source||target.length&&!isGroup(destination)||target.length>2||isGroup(source)&&target.length>1||target.length===0&&!isGroup(source))return;
+ if(target.length&&target.slice(0,path.length).join('.')===path.join('.'))return;
  if(isGroup(source)&&target.length&&source.children.some(isGroup))return;
  const own=parentAt(path,draft);if(!own)return;
  own.splice(path.at(-1),1);
@@ -203,7 +204,7 @@ function rowHtml(node,path){
   '<div class="designer-entry"><input aria-label="Beschriftung" maxlength="60" value="'+safe(label)+'" data-title="'+p+'"><small>'+safe(g?'Gruppe · Ebene '+(depth+1):'Seite · '+node)+'</small></div>'+
   settings+controls+
   (g?'<button type="button" class="btn small secondary" data-add="'+p+'">+ Untergruppe</button><button type="button" class="btn small danger" data-delete="'+p+'">✕</button>':
-  '<label class="designer-visible"><input type="checkbox" data-visible="'+safe(node)+'" '+((adminRequired.has(node)||(!cfg.hidden&&!appSettings?.hiddenMenuItems?.includes(node)))?'checked':'')+(adminRequired.has(node)?' disabled':'')+'> Sichtbar</label>')+
+  '<label class="designer-visible"><input type="checkbox" data-visible="'+safe(node)+'" '+((adminRequired.has(node)||!cfg.hidden)?'checked':'')+(adminRequired.has(node)?' disabled':'')+'> Sichtbar</label>')+
   '<select class="designer-move" data-move="'+p+'" aria-label="In Gruppe verschieben"><option value="">In Gruppe…</option>'+
   draft.groups.flatMap((top,i)=>[[''+i,top.title],...(top.children||[]).flatMap((sub,j)=>isGroup(sub)?[[''+i+'.'+j,'↳ '+sub.title]]:[])]).filter(([dest])=>dest!==p).map(([dest,name])=>'<option value="'+dest+'">'+safe(name)+'</option>').join('')+'</select></div>'+
   (g?'<div class="designer-children">'+node.children.map((child,i)=>rowHtml(child,[...path,i])).join('')+'</div>':'');
@@ -283,6 +284,7 @@ async function save(){
   draft=null;
   renderNavigation();
   if(typeof refreshInspectionNotice==='function')refreshInspectionNotice();
+  draft=normalized();
   renderEditor();
   const msg=document.getElementById('designerNotice');
   if(msg)msg.innerHTML='<p class="message success">✓ Menükonfiguration dauerhaft gespeichert.</p>';
