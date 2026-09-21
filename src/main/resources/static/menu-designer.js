@@ -131,7 +131,7 @@ function renderNavigation(){
  host.querySelectorAll('.nav-group-toggle').forEach(button=>{
   button.onclick=()=>{
    const target=button.closest('.nav-group'),wasOpen=target.classList.contains('expanded');
-   host.querySelectorAll('.nav-group').forEach(g=>{g.classList.remove('expanded');g.querySelector('.nav-group-toggle').setAttribute('aria-expanded','false');});
+   host.querySelectorAll('.nav-group').forEach(g=>{const open=g.contains(target)&&g!==target;g.classList.toggle('expanded',open);g.querySelector('.nav-group-toggle').setAttribute('aria-expanded',String(open));});
    if(!wasOpen){target.classList.add('expanded');button.setAttribute('aria-expanded','true');}
   };
  });
