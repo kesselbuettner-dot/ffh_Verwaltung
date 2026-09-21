@@ -106,7 +106,6 @@ public class AppSettingsController {
 
     @GetMapping("/logo")
     @Transactional(readOnly = true)
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> logo() {
         AppSettings s = current();
         if (s.getLogoData() == null || s.getLogoData().length == 0) {
