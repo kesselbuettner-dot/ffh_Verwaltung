@@ -46,6 +46,7 @@ public class InspectionJobController {
  }
  @GetMapping
  public List<JobDto> list(Authentication auth){return (manager(auth)?jobs.findAllByOrderByCreatedAtDesc():jobs.findByAssigneeIdOrderByCreatedAtDesc(userId(auth))).stream().map(this::dto).toList();}
+ @GetMapping("/mine") public List<JobDto> mine(Authentication auth){return jobs.findByAssigneeIdOrderByCreatedAtDesc(userId(auth)).stream().map(this::dto).toList();}
  @GetMapping("/{id}") public JobDto detail(@PathVariable Long id,Authentication auth){return dto(visible(id,auth));}
  @PutMapping("/{id}/items/{itemId}") @Transactional
  public JobDto result(@PathVariable Long id,@PathVariable Long itemId,@RequestBody Result request,Authentication auth){
