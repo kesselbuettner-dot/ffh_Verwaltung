@@ -52,6 +52,7 @@ public class SecurityConfig {
                     "/sw.js",
                     "/menu-designer.js",
                     "/menu-designer.css",
+                    "/ui-theme.css",
                     "/favicon.ico",
                     "/icons/**",
                     "/css/**",
