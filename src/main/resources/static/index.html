@@ -442,9 +442,10 @@ window.checkForUpdate = async function() {
   try {
     const x=await api('/api/admin/update-check');
     const unknown=x.currentVersion==='unbekannt';
-    el.className='update-status '+(unknown?'error':x.updateAvailable?'available':'current');
-    el.innerHTML='<span class="update-icon">'+(unknown?'⚠️':x.updateAvailable?'⬆️':'✓')+'</span><div><strong>'+
-      (unknown?'Installierter Commit unbekannt':x.updateAvailable?'Update verfügbar':'System ist aktuell')+
+    const different=!unknown&&x.currentVersion!==x.remoteVersion;
+    el.className='update-status '+(unknown||different&&!x.updateAvailable?'error':x.updateAvailable?'available':'current');
+    el.innerHTML='<span class="update-icon">'+(unknown||different&&!x.updateAvailable?'⚠️':x.updateAvailable?'⬆️':'✓')+'</span><div><strong>'+
+      (unknown?'Installierter Commit unbekannt':x.updateAvailable?'Update verfügbar':different?'Abweichender Entwicklungsstand':'System ist aktuell')+
       '</strong><small>Installiert: '+esc(x.currentVersion)+' · GitHub main: '+esc(x.remoteVersion)+
       '<br>'+esc(x.message||'')+'</small></div>';
     if(x.updateAvailable&&x.installAvailable){
