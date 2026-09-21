@@ -9,19 +9,16 @@
   "background_color": "#f3f5f7",
   "theme_color": "#b51f2b",
   "lang": "de",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
-      "src": "/icons/wache48-logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/fw-cockpit-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/icons/wache48-logo.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
     }
   ],
   "shortcuts": [
