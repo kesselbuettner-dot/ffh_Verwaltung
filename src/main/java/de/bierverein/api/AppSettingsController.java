@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +66,26 @@ public class AppSettingsController {
         if(request.contactEmail()!=null)s.setContactEmail(optional(request.contactEmail(),160));
         if(request.contactPhone()!=null)s.setContactPhone(optional(request.contactPhone(),60));
         if(request.legalRepresentative()!=null)s.setLegalRepresentative(optional(request.legalRepresentative(),160));
+        return dto(settings.save(s));
+    }
+
+    /** Menu-only update: changing the menu must never reset dashboard roles or organizational master data. */
+    @PutMapping("/menu-layout")
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public SettingsDto updateMenuLayout(@RequestBody JsonNode layout) {
+        if (layout == null || !layout.isObject() ||
+                layout.path("version").asInt(0) != 2 ||
+                !layout.path("groups").isArray() ||
+                !layout.path("entries").isObject() ||
+                !layout.path("style").isObject() ||
+                layout.path("groups").size() > 40 ||
+                layout.path("entries").size() > 150 ||
+                layout.toString().length() > 60000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Menükonfiguration ungültig oder zu groß.");
+        }
+        AppSettings s = current();
+        s.setMenuLayout(layout.toString());
         return dto(settings.save(s));
     }
 
@@ -146,7 +169,8 @@ public class AppSettingsController {
                 s.getLogoData() != null && s.getLogoData().length > 0,
                 s.getOrganizationName(),s.getStreet(),s.getPostalCode(),s.getCity(),
                 s.getFederalState()==null?"SN":s.getFederalState(),s.getContactEmail(),s.getContactPhone(),s.getLegalRepresentative(),
-                "Eric Kessel-Büttner","© Eric Kessel-Büttner – Alle Rechte vorbehalten. Nutzung, Vervielfältigung, Veränderung oder Weitergabe nur mit ausdrücklicher schriftlicher Genehmigung des Urhebers."
+                "Eric Kessel-Büttner","© Eric Kessel-Büttner – Alle Rechte vorbehalten. Nutzung, Vervielfältigung, Veränderung oder Weitergabe nur mit ausdrücklicher schriftlicher Genehmigung des Urhebers.",
+                s.getMenuLayout()
         );
     }
 
@@ -263,7 +287,8 @@ public class AppSettingsController {
             Map<String, List<String>> dashboardWidgetRoles,
             List<String> messageEditorRoles,
             boolean logoAvailable,String organizationName,String street,String postalCode,String city,String federalState,
-            String contactEmail,String contactPhone,String legalRepresentative,String softwareAuthor,String licenseNotice
+            String contactEmail,String contactPhone,String legalRepresentative,String softwareAuthor,String licenseNotice,
+            String menuLayout
     ) {}
 
     public record SettingsRequest(
