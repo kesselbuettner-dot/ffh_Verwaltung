@@ -179,3 +179,7 @@ Bestehende Gerätezuordnungen bleiben erhalten. Neue Felder sind nullable und we
 - Unterlagen: Titel und Beschreibung bearbeiten; Löschen war bereits vorhanden.
 
 Die Aktionen werden nur bei passender Rollenberechtigung eingeblendet und auch serverseitig geprüft. Buchungen und andere Bestandsbewegungen bleiben als Buchungshistorie erhalten.
+
+### Version 2.0.6: Excel-Import für Geräte
+
+Unter **Geräte → Excel-Import** die Vorlage herunterladen, im ersten Tabellenblatt „Geräte“ eine Zeile pro Gerät ausfüllen und die `.xlsx`-Datei hochladen. Eine Vorschau zeigt neue, vorhandene und fehlerhafte Geräte. Der Import ist nur mit dem Recht `fire.devices.write` möglich; die Vorlage mit `fire.devices.read`. Bestehende Geräte bleiben unverändert. Der Abgleich nutzt Inventarnummer, Barcode und Seriennummer. Mindestens eine dieser Kennungen muss je Gerät ausgefüllt sein. Bei einem Fehler in der Datei werden keine Zeilen gespeichert. Fahrzeug und Fach müssen zusammen angegeben werden und bereits existieren. Maximal 1000 Geräte und 5 MB pro Upload.
