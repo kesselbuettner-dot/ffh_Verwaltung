@@ -21,6 +21,19 @@ public class DrivingCheckService {
  private final FireQualificationPermissions permission;
  private final String pepper;
  private final TransientLicenseOcrService ocr;
+ private final java.util.concurrent.ConcurrentHashMap<Long,AttemptWindow> attempts=new java.util.concurrent.ConcurrentHashMap<>();
+ private record AttemptWindow(Instant started,int count){}
+ private void checkOcrRateLimit(Long uid){
+  // Per-account CPU and reference-guessing protection, no document values in keys or logs.
+  attempts.compute(uid,(key,window)->{
+   Instant now=Instant.now();
+   if(window==null||window.started().plusSeconds(900).isBefore(now))return new AttemptWindow(now,1);
+   if(window.count()>=6)throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+     "Zu viele Prüfversuche. Bitte 15 Minuten warten oder Wehrleitung kontaktieren.");
+   return new AttemptWindow(window.started(),window.count()+1);
+  });
+  if(attempts.size()>2000)attempts.entrySet().removeIf(e->e.getValue().started().plusSeconds(900).isBefore(Instant.now()));
+ }
  public DrivingCheckService(FireMemberQualificationRepository qualifications,FireQualificationCheckRepository checks,
     AppUserRepository users,FireQualificationPermissions permission,
     @Value("${app.jwt.secret}") String pepper,TransientLicenseOcrService ocr) {
@@ -79,6 +92,7 @@ public class DrivingCheckService {
   if(!q.type.tracked||due==null||today.isBefore(due.minusDays(q.type.warningDays)))
     throw new ResponseStatusException(HttpStatus.CONFLICT,"Prüfauftrag ist noch nicht fällig oder hat keinen Termin.");
   if(input==null||input.imageData()==null)throw bad("Ein Foto zur aktuellen Kontrolle ist erforderlich");
+  checkOcrRateLimit(userId);
   // Read photo once, transiently, via local OCR stdin. No image is written to file, DB, cache or audit.
   String raw=ocr.read(input.imageData());
   String content=norm(raw);
