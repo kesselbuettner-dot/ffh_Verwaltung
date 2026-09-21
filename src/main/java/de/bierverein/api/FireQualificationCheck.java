@@ -1,7 +1,7 @@
 package de.bierverein.api;
 import jakarta.persistence.*;
 import java.time.*;
-@Entity @Table(name="fire_qualification_checks",indexes={@Index(columnList="memberId,checkedAt")})
+@Entity @Table(name="fire_qualification_checks",indexes={@Index(columnList="member_id,checked_at")})
 public class FireQualificationCheck {
  @Id @GeneratedValue(strategy=GenerationType.IDENTITY) public Long id;
  @Column(nullable=false) public Long memberId;
