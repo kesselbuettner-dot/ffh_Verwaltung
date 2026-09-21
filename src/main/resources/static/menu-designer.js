@@ -119,7 +119,8 @@ function renderNavigation(){
     const item=allowed.get(node),custom=layout.entries[node]||{};
     if(!item||!menuAllowed(item)||(custom.hidden&&!adminRequired.has(node)))return '';
     const icon=custom.icon||item.icon,label=custom.label||item.label;
-    return '<button type="button" class="nav-item nav-child" data-page="'+safe(node)+'" data-nav-id="'+safe(node)+'">'+iconHtml(icon)+' <span>'+safe(label)+'</span></button>';
+    const inspection=node==='my-inspections',pending=Number(window.ffhPendingInspectionCount||0);
+    return '<button type="button" class="nav-item nav-child'+(inspection&&pending?' pending-inspection':'')+'"'+(inspection&&!pending?' style="display:none"':'')+' data-page="'+safe(node)+'" data-nav-id="'+safe(node)+'">'+iconHtml(icon)+' <span>'+safe(inspection&&pending?'Offene Geräteprüfung ('+pending+')':label)+'</span></button>';
    }
    if(depth>2)return '';
    const body=nodesHtml(node.children||[],depth+1);
