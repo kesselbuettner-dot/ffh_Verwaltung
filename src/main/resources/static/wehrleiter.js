@@ -134,8 +134,9 @@ function drawDriving(){
   const name=el('drivingSearch').value.toLocaleLowerCase('de'),status=el('drivingStatus').value;
   el('drivingRows').innerHTML=driving.filter(c=>(!name||c.memberName.toLocaleLowerCase('de').includes(name))&&(status==='ALL'||c.status===status)).map(c=>
    '<tr><td>'+safe(c.memberName)+'</td><td>'+date(c.lastCheckedOn)+'</td><td>'+date(c.nextDueOn)+'</td><td>'+badge(c)+'</td><td>'+
-   (allow?'<button class="btn small success" data-manual="'+c.id+'">✓ Führerschein geprüft</button>':'')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Keine Einträge.</td></tr>';
+   (allow?'<button class="btn small success" data-manual="'+c.id+'">✓ Führerschein geprüft</button> <button class="btn small secondary" data-notify="'+c.id+'">✉ Prüfung senden</button>':'')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Keine Einträge.</td></tr>';
   el('drivingRows').querySelectorAll('[data-manual]').forEach(b=>b.onclick=()=>manualCheck(Number(b.dataset.manual)));
+  el('drivingRows').querySelectorAll('[data-notify]').forEach(b=>b.onclick=async()=>{try{const answer=await api(BASE+'/driving/'+Number(b.dataset.notify)+'/notify',{method:'POST'});alert(answer.message);}catch(e){alert(e.message);}});
  };
  el('drivingSearch').oninput=render;el('drivingStatus').onchange=render;render();
  el('drivingExport').onclick=exportDriving;el('drivingPrint').onclick=()=>window.print();
