@@ -8,6 +8,7 @@ const ICONS = [
  ['📋','Dienstplan'],['🎓','Schulung'],['📄','Dokumente'],['⚙️','Einstellungen'],['🔐','Berechtigung'],
  ['🎨','Darstellung'],['💶','Finanzen'],['🔴','Offen'],['✓','Erledigt'],['⌂','Haus'],['☰','Menü']
 ];
+const STATIC_ICONS = [['helmet','Feuerwehrhelm'],['engine','Löschfahrzeug'],['extinguisher','Feuerlöscher'],['radio','Funkgerät'],['hose','Schlauch'],['ladder','Leiter'],['flame','Flamme']];
 const DEFAULT_STYLE = {background:'#071827',active:'#1479e9',text:'#dce7ee',font:'Inter',size:15,weight:500,width:250,gap:3,depth:2,effect:'gradient'};
 let draft=null, icons=[], iconReady=false, iconLoading=false, dragPath=null, message='';
 const safe = value => esc(value);
@@ -66,6 +67,8 @@ function parentAt(path,layout){let list=layout.groups;for(const index of path.sl
 function eachNode(nodes,fn,path=[]){nodes.forEach((node,i)=>{let p=[...path,i];fn(node,p);if(isGroup(node))eachNode(node.children,fn,p);});}
 function findRef(node,layout){let found=null;eachNode(layout.groups,(n,p)=>{if(n===node)found=p;});return found;}
 function iconSrc(value){
+ const builtin=STATIC_ICONS.find(([key])=>value==='builtin:'+key);
+ if(builtin)return '/icons/menu/'+builtin[0]+'.svg';
  if(!String(value||'').startsWith('custom:'))return null;
  let image=icons.find(i=>String(i.id)===value.slice(7));
  return image?.uri?.startsWith('data:image/')?image.uri:null;
@@ -191,7 +194,7 @@ function dropOn(srcPath,dstPath,inside){
  renderEditor();
 }
 function options(value){
- return '<option value="">Standardicon</option>'+ICONS.map(([glyph,name])=>'<option value="'+safe(glyph)+'"'+(value===glyph?' selected':'')+'>'+safe(glyph+' '+name)+'</option>').join('')+
+ return '<option value="">Standardicon</option>'+STATIC_ICONS.map(([key,name])=>'<option value="builtin:'+key+'"'+(value==='builtin:'+key?' selected':'')+'>'+safe('▣ '+name)+'</option>').join('')+ICONS.map(([glyph,name])=>'<option value="'+safe(glyph)+'"'+(value===glyph?' selected':'')+'>'+safe(glyph+' '+name)+'</option>').join('')+
  icons.map(x=>'<option value="custom:'+x.id+'"'+(value==='custom:'+x.id?' selected':'')+'>'+safe('🖼 '+x.name)+'</option>').join('');
 }
 function rowHtml(node,path){
