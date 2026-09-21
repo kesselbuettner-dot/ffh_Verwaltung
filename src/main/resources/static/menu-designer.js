@@ -184,7 +184,7 @@ function dropOn(srcPath,dstPath,inside){
  if(!updatedPath){srcParent.splice(Math.min(srcPath.at(-1),srcParent.length),0,source);return;}
  const targetParent=parentAt(updatedPath,draft);
  const newDepth=inside?updatedPath.length+1:updatedPath.length;
- if(isGroup(source)&&newDepth>2||!isGroup(source)&&newDepth===1){srcParent.push(source);return;}
+ if(isGroup(source)&&(newDepth>2||newDepth===2&&source.children.some(isGroup))||!isGroup(source)&&newDepth===1){srcParent.push(source);return;}
  if(inside)target.children.push(source);
  else targetParent.splice(updatedPath.at(-1),0,source);
  renderEditor();
