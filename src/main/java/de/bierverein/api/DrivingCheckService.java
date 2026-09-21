@@ -55,7 +55,7 @@ public class DrivingCheckService {
    check.checkedByUserId,check.method,check.result);
  }
  private FireMemberQualification license(Long id){
-  FireMemberQualification q=qualifications.findById(id)
+  FireMemberQualification q=qualifications.findByIdForUpdate(id)
    .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Qualifikation nicht gefunden"));
   if(!q.active||!"DRIVERS_LICENSE".equals(q.type.code))
    throw new ResponseStatusException(HttpStatus.CONFLICT,"Keine aktive Führerscheinqualifikation");
