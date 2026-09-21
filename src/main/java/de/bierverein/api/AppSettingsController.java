@@ -35,6 +35,22 @@ public class AppSettingsController {
         this.settings = settings;
     }
 
+    /** Public, read-only impressum, with no user, token or private admin settings. */
+    @GetMapping("/imprint")
+    @Transactional(readOnly = true)
+    public ImprintDto imprint() {
+        AppSettings record = current();
+        return new ImprintDto(record.getOrganizationName(), record.getStreet(),
+                record.getPostalCode(), record.getCity(),
+                record.getLegalRepresentative(), record.getContactEmail(),
+                record.getContactPhone(), "Eric Kessel-Büttner",
+                "© Eric Kessel-Büttner – Alle Rechte vorbehalten. Nutzung, Vervielfältigung, Veränderung oder Weitergabe nur mit ausdrücklicher schriftlicher Genehmigung des Urhebers.");
+    }
+
+    public record ImprintDto(String organizationName, String street, String postalCode,
+            String city, String legalRepresentative, String contactEmail,
+            String contactPhone, String softwareAuthor, String licenseNotice) {}
+
     @GetMapping
     @Transactional(readOnly = true)
     @PreAuthorize("isAuthenticated()")
