@@ -13,6 +13,7 @@ const DEFAULT_STYLE = {background:'#071827',active:'#1479e9',text:'#dce7ee',font
 let draft=null, icons=[], iconReady=false, iconLoading=false, dragPath=null, message='';
 const safe = value => esc(value);
 const adminRequired = new Set(['admin','admin-members','admin-users','admin-settings']);
+const PRODUCT_ICON = '/icons/fw-cockpit-brand.svg';
 const known = () => new Map(menuDefinitions.filter(item => item.implemented !== false).map(item => [item.id,item]));
 function group(id,title,children,icon){return {id,title,icon:icon||'☰',children:children||[]};}
 function originalLayout(){
@@ -25,7 +26,7 @@ function originalLayout(){
    byName.get(item.section).children.push(item.id);
  });
  const entries={};(appSettings?.hiddenMenuItems||[]).forEach(item=>{entries[item]={hidden:true};});
- return {version:2,groups,entries,style:{...DEFAULT_STYLE,background:appSettings?.navColor||'#071827'}};
+ return {version:2,groups,entries,quickNav:['dashboard','theke','messages'],style:{...DEFAULT_STYLE,background:appSettings?.navColor||'#071827'}};
 }
 function parseLayout(){
  try {
@@ -40,7 +41,7 @@ function normalized(){
  function tidy(nodes,depth){
   if(!Array.isArray(nodes))return [];
   return nodes.slice(0,100).flatMap(node=>{
-    if(typeof node==='string'){if(!byId.has(node)||seen.has(node)||depth===0)return [];seen.add(node);return [node];}
+    if(typeof node==='string'){if(!byId.has(node)||seen.has(node))return [];seen.add(node);return [node];}
     if(!node||typeof node!=='object'||Array.isArray(node)||depth>1)return [];
     const id=String(node.id||'').slice(0,48);
     if(!/^[a-zA-Z0-9_-]{1,48}$/.test(id)||groupIds.has(id))return [];
@@ -58,6 +59,7 @@ function normalized(){
  value.entries=Object.fromEntries(Object.entries(value.entries||{}).filter(([id,v])=>byId.has(id)&&v&&typeof v==='object')
   .map(([id,v])=>[id,{label:String(v.label||'').slice(0,60),icon:String(v.icon||'').slice(0,45),hidden:!!v.hidden}]));
  value.style={...DEFAULT_STYLE,...(value.style||{})};
+ value.quickNav=Array.isArray(value.quickNav)?[...new Set(value.quickNav.filter(x=>x==='messages'||byId.has(x)))].slice(0,3):['dashboard','theke','messages'];
  return value;
 }
 function active(){return draft||normalized();}
@@ -113,6 +115,24 @@ function applyStyle(){
   s.effect==='gloss'?'linear-gradient(180deg,rgba(255,255,255,.20),transparent 26%),linear-gradient(150deg,'+s.background+',#0b2234)':
   'linear-gradient(180deg,'+s.background+',#10304a 52%,'+s.background+')';
 }
+function renderQuickNav(){
+ const host=document.getElementById('mobileQuickNav');if(!host)return;
+ const entries=active().entries||{},allowed=known();
+ const choice=active().quickNav||['dashboard','theke','messages'];
+ const links=[...new Set(choice)].filter(id=>id==='messages'||(allowed.has(id)&&menuAllowed(allowed.get(id))&&!entries[id]?.hidden)).slice(0,3);
+ host.innerHTML=links.map(id=>{
+  const message=id==='messages',item=allowed.get(id),cfg=entries[id]||{};
+  const label=message?'Meldungen':cfg.label||item?.label||id;
+  const icon=message?'✉️':cfg.icon||item?.icon||'☰';
+  return '<button type="button" data-mobile-page="'+safe(id)+'" title="'+safe(label)+'" aria-label="'+safe(label)+'">'+iconHtml(icon)+'<span class="mobile-quick-label">'+safe(label)+'</span>'+(message?'<b id="mobileMessageBadge" class="message-badge hidden">0</b>':'')+'</button>';
+ }).join('');
+ host.querySelectorAll('[data-mobile-page]').forEach(button=>button.onclick=()=>{
+  const id=button.dataset.mobilePage;
+  if(id==='messages')openMobileMessages();else{const item=allowed.get(id);if(item&&menuAllowed(item))item.action();}
+ });
+ const bar=document.querySelector('.mobile-nav');if(bar)bar.style.setProperty('--mobile-quick-count',String(links.length+1));
+ document.querySelectorAll('[data-mobile-page]').forEach(button=>button.classList.toggle('active',button.dataset.mobilePage===window.currentPage));
+}
 function renderNavigation(){
  const host=document.getElementById('navContainer');if(!host)return;
  const layout=active(), allowed=known();
@@ -123,7 +143,7 @@ function renderNavigation(){
     if(!item||item.implemented===false||!menuAllowed(item)||(custom.hidden&&!adminRequired.has(node)&&node!=='dashboard'))return '';
     const icon=custom.icon||item.icon,label=custom.label||item.label;
     const inspection=node==='my-inspections',pending=Number(window.ffhPendingInspectionCount||0);
-    return '<button type="button" class="nav-item nav-child'+(inspection&&pending?' pending-inspection':'')+'"'+(inspection&&!pending?' style="display:none"':'')+' data-page="'+safe(node)+'" data-nav-id="'+safe(node)+'">'+iconHtml(icon)+' <span>'+safe(inspection&&pending?'Offene Geräteprüfung ('+pending+')':label)+'</span></button>';
+    return '<button type="button" class="nav-item '+(depth===0?'nav-root':'nav-child')+(inspection&&pending?' pending-inspection':'')+'"'+(inspection&&!pending?' style="display:none"':'')+' data-page="'+safe(node)+'" data-nav-id="'+safe(node)+'">'+iconHtml(icon)+' <span>'+safe(inspection&&pending?'Offene Geräteprüfung ('+pending+')':label)+'</span></button>';
    }
    if(depth>1)return '';
    const body=nodesHtml(node.children||[],depth+1);
@@ -140,6 +160,7 @@ function renderNavigation(){
   };
  });
  host.querySelectorAll('[data-nav-id]').forEach(button=>button.onclick=()=>{closeMenu();const item=allowed.get(button.dataset.navId);if(item&&menuAllowed(item))item.action();});
+ renderQuickNav();
  applyStyle();
  if(typeof setActive==='function')setActive(window.currentPage||'dashboard');
  if(!iconReady&&!iconLoading)loadIcons();
@@ -164,34 +185,36 @@ function removeGroup(path){
 }
 function moveTo(path,target){
  const source=nodeAt(path,draft),destination=target.length?nodeAt(target,draft):null;
- if(!source||target.length&&!isGroup(destination)||target.length>2||isGroup(source)&&target.length>1||target.length===0&&!isGroup(source))return;
+ if(!source||target.length&&(!isGroup(destination)||target.length>2)
+    ||isGroup(source)&&target.length>0&&(target.length>1||source.children.some(isGroup)))return;
  if(target.length&&target.slice(0,path.length).join('.')===path.join('.'))return;
- if(isGroup(source)&&target.length&&source.children.some(isGroup))return;
- const own=parentAt(path,draft);if(!own)return;
- own.splice(path.at(-1),1);
+ const from=parentAt(path,draft);if(!from)return;
+ from.splice(path.at(-1),1);
  const dest=target.length?findRef(destination,draft):[];
- if(target.length&&!dest)return;
- (target.length?nodeAt(dest,draft).children:draft.groups).push(source);
- renderEditor();
+ if(target.length&&!dest){from.splice(path.at(-1),0,source);return;}
+ const list=target.length?nodeAt(dest,draft).children:draft.groups;
+ list.push(source);renderEditor();renderNavigation();
 }
 function dropOn(srcPath,dstPath,inside){
  const source=nodeAt(srcPath,draft),target=nodeAt(dstPath,draft);
  if(!source||!target||srcPath.join('.')===dstPath.join('.'))return;
- const srcParent=parentAt(srcPath,draft),dstParent=parentAt(dstPath,draft);
- if(!srcParent||!dstParent)return;
- if(isGroup(source)&&dstPath.length===1&&!inside){} // root-group ordering is allowed
- else if(!inside&&dstPath.length===1&&!isGroup(source))return;
- if(inside&&(!isGroup(target)||dstPath.length>1||isGroup(source)&&source.children.some(isGroup)))return;
- if(inside&&dstPath.slice(0,srcPath.length).join('.')===srcPath.join('.'))return;
- srcParent.splice(srcPath.at(-1),1);
- const updatedPath=findRef(target,draft);
- if(!updatedPath){srcParent.splice(Math.min(srcPath.at(-1),srcParent.length),0,source);return;}
- const targetParent=parentAt(updatedPath,draft);
- const newDepth=inside?updatedPath.length+1:updatedPath.length;
- if(isGroup(source)&&(newDepth>2||newDepth===2&&source.children.some(isGroup))||!isGroup(source)&&newDepth===1){srcParent.push(source);return;}
- if(inside)target.children.push(source);
- else targetParent.splice(updatedPath.at(-1),0,source);
- renderEditor();
+ if(inside){
+  if(!isGroup(target)||dstPath.length>2)return;
+  moveTo(srcPath,dstPath);return;
+ }
+ const from=parentAt(srcPath,draft);if(!from)return;
+ if(srcPath.length!==dstPath.length){ // allow positioning at different nesting levels
+  const targetParent=dstPath.slice(0,-1);
+  const parent=targetParent.length?nodeAt(targetParent,draft):null;
+  if(isGroup(source)&&targetParent.length&&(targetParent.length>1||source.children.some(isGroup)))return;
+  if(targetParent.length&&!isGroup(parent))return;
+ }
+ if(dstPath.slice(0,srcPath.length).join('.')===srcPath.join('.')&&isGroup(source))return;
+ from.splice(srcPath.at(-1),1);
+ const destination=findRef(target,draft);
+ if(!destination){from.splice(srcPath.at(-1),0,source);return;}
+ const list=parentAt(destination,draft);
+ list.splice(destination.at(-1),0,source);renderEditor();renderNavigation();
 }
 function options(value){
  return '<option value="">Standardicon</option>'+STATIC_ICONS.map(([key,name])=>'<option value="builtin:'+key+'"'+(value==='builtin:'+key?' selected':'')+'>'+safe('▣ '+name)+'</option>').join('')+ICONS.map(([glyph,name])=>'<option value="'+safe(glyph)+'"'+(value===glyph?' selected':'')+'>'+safe(glyph+' '+name)+'</option>').join('')+
@@ -209,7 +232,7 @@ function rowHtml(node,path){
   settings+controls+
   (g?'<button type="button" class="btn small secondary" data-add="'+p+'">+ Untergruppe</button><button type="button" class="btn small danger" data-delete="'+p+'">✕</button>':
   '<label class="designer-visible"><input type="checkbox" data-visible="'+safe(node)+'" '+((adminRequired.has(node)||!cfg.hidden)?'checked':'')+(adminRequired.has(node)?' disabled':'')+'> Sichtbar</label>')+
-  '<select class="designer-move" data-move="'+p+'" aria-label="In Gruppe verschieben"><option value="">In Gruppe…</option>'+
+  '<select class="designer-move" data-move="'+p+'" aria-label="In Gruppe verschieben"><option value="">In Gruppe…</option><option value="root">Hauptmenü (ohne Untergruppe)</option>'+
   draft.groups.flatMap((top,i)=>[[''+i,top.title],...(top.children||[]).flatMap((sub,j)=>isGroup(sub)?[[''+i+'.'+j,'↳ '+sub.title]]:[])]).filter(([dest])=>dest!==p).map(([dest,name])=>'<option value="'+dest+'">'+safe(name)+'</option>').join('')+'</select></div>'+
   (g?'<div class="designer-children">'+node.children.map((child,i)=>rowHtml(child,[...path,i])).join('')+'</div>':'');
 }
@@ -226,6 +249,8 @@ function renderEditor(){
  '<label class="field">Schriftart <select data-style="font">'+['Inter','Roboto','Segoe UI','Arial','system-ui'].map(x=>'<option'+(draft.style.font===x?' selected':'')+'>'+x+'</option>').join('')+'</select></label>'+
  ['size|Schriftgröße|12|22|px','weight|Schriftstärke|400|600|','width|Menübreite|210|380|px','gap|Abstand|0|16|px'].map(value=>{const [key,title,min,max,unit]=value.split('|');return '<label class="field">'+title+' <strong data-value="'+key+'">'+safe(draft.style[key])+unit+'</strong><input type="range" data-style="'+key+'" min="'+min+'" max="'+max+'" step="'+(key==='weight'?100:1)+'" value="'+safe(draft.style[key])+'"></label>';}).join('')+
  '<label class="field">Effekt <select data-style="effect"><option value="flat">Einfarbig</option><option value="gradient">Farbverlauf</option><option value="gloss">Farbverlauf + Reflexion</option></select></label>'+
+ '<h3>Schnellzugriff Handy & Tablet</h3><p class="sub">Unten stehen maximal drei frei wählbare Seiten und der feste Menüknopf (insgesamt vier Symbole). Nicht berechtigte Seiten werden nicht angezeigt.</p>'+ 
+ '<div class="designer-quick-settings">'+[0,1,2].map(index=>'<label>Platz '+(index+1)+'<select data-quick-position="'+index+'"><option value="">Kein Eintrag</option>'+[['messages','✉️ Meldungen'],...menuDefinitions.filter(i=>i.implemented!==false).map(i=>[i.id,i.label])].map(([id,label])=>'<option value="'+safe(id)+'"'+(draft.quickNav?.[index]===id?' selected':'')+'>'+safe(label)+'</option>').join('')+'</select></label>').join('')+'</div>'+ 
  '<h3>Eigene Icons</h3><div class="field"><label>Bezeichnung <input id="designerIconName" maxlength="60" placeholder="z. B. Feuerwehrhelm"></label></div>'+
  '<div class="field"><label>Icon-Datei (PNG oder SVG, max. 160 KB) <input id="designerIconFile" type="file" accept=".png,.svg,image/png,image/svg+xml"></label></div>'+
  '<button type="button" class="btn primary small" id="designerUpload">Icon hochladen</button><div id="designerIconList">'+
@@ -249,7 +274,8 @@ function bindEditor(){
  root.querySelectorAll('[data-down]').forEach(button=>button.onclick=()=>move(parsePath(button.dataset.down),1));
  root.querySelectorAll('[data-add]').forEach(button=>button.onclick=()=>addGroup(parsePath(button.dataset.add)));
  root.querySelectorAll('[data-delete]').forEach(button=>button.onclick=()=>removeGroup(parsePath(button.dataset.delete)));
- root.querySelectorAll('[data-move]').forEach(input=>input.onchange=()=>{if(input.value)moveTo(parsePath(input.dataset.move),parsePath(input.value));});
+ root.querySelectorAll('[data-move]').forEach(input=>input.onchange=()=>{if(input.value)moveTo(parsePath(input.dataset.move),input.value==='root'?[]:parsePath(input.value));});
+ root.querySelectorAll('[data-quick-position]').forEach(input=>input.onchange=()=>{const picks=[...root.querySelectorAll('[data-quick-position]')].map(s=>s.value).filter(Boolean);if(new Set(picks).size!==picks.length){message='Jede Schnellzugriffsseite darf nur einmal ausgewählt werden.';renderEditor();return;}draft.quickNav=picks;renderQuickNav();});
  root.querySelectorAll('[data-style]').forEach(input=>input.oninput=()=>{
   const key=input.dataset.style;draft.style[key]=styleValue(input.value,key);
   const value=root.querySelector('[data-value="'+key+'"]');if(value)value.textContent=draft.style[key]+(key==='size'||key==='width'||key==='gap'?'px':'');
@@ -291,5 +317,5 @@ async function save(){
   if(msg)msg.innerHTML='<p class="message success">✓ Menükonfiguration dauerhaft gespeichert.</p>';
  }catch(e){message=e.message;renderEditor();}
 }
-window.MenuDesigner={renderNavigation,applyStyle,start,loadIcons,activatePage(page){const target=document.querySelector('#navContainer [data-page="'+String(page).replace(/[^a-z0-9-]/gi,'')+'"]');if(!target)return;document.querySelectorAll('#navContainer .nav-item').forEach(n=>n.classList.toggle('active',n===target));document.querySelectorAll('#navContainer .nav-group').forEach(g=>{const open=g.contains(target);g.classList.toggle('expanded',open);g.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded',String(open));});}};
+window.MenuDesigner={renderNavigation,renderQuickNav,applyStyle,start,loadIcons,activatePage(page){const target=document.querySelector('#navContainer [data-page="'+String(page).replace(/[^a-z0-9-]/gi,'')+'"]');if(!target)return;document.querySelectorAll('#navContainer .nav-item').forEach(n=>n.classList.toggle('active',n===target));document.querySelectorAll('#navContainer .nav-group').forEach(g=>{const open=g.contains(target);g.classList.toggle('expanded',open);g.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded',String(open));});}};
 })();
