@@ -1,0 +1,225 @@
+/* Wehrleitung: qualification cards, tracked dates, manual driving check, mobile OCR data match.
+   Photos are processed in memory only; the server accepts OCR TEXT, never images. */
+(function(){
+'use strict';
+const BASE='/api/fire/qualifications';
+let types=[],cards=[],people=[],driving=[],checks=[],visibleFilter='ALL',nameFilter='';
+const el=id=>document.getElementById(id);
+const safe=text=>esc(text==null?'':String(text));
+const date=value=>value?new Date(value+'T12:00:00').toLocaleDateString('de-DE'):'–';
+const inputDate=value=>value||'';
+const rights=key=>hasPermission(key);
+const notice=(host,message,kind='error')=>{if(host)host.innerHTML='<div class="message '+kind+'">'+safe(message)+'</div>';};
+function header(title,info,action=''){return '<div class="title-row"><div><h1>'+title+'</h1><p class="sub">'+info+'</p></div>'+action+'</div>';}
+const statusMap={VALID:'Gültig',DUE:'Prüfung fällig',OVERDUE:'Überfällig',UNSCHEDULED:'Termin nicht gesetzt',INACTIVE:'Inaktiv'};
+const statusClass={VALID:'ok',DUE:'warning',OVERDUE:'off',UNSCHEDULED:'warning',INACTIVE:'off'};
+function badge(card){return '<span class="badge '+(statusClass[card.status]||'')+'">'+safe(statusMap[card.status]||card.status)+'</span>';}
+function cardHtml(card){
+ return '<article class="wehr-card" data-card-id="'+card.id+'"><div class="wehr-card-heading"><span aria-hidden="true">'+safe(card.icon||'📋')+'</span><strong>'+safe(card.title)+'</strong>'+badge(card)+'</div>'+
+ '<div class="wehr-card-data">Ausgestellt: '+date(card.issuedOn)+' · Nächster Termin: '+date(card.nextDueOn)+'</div>'+
+ (rights('fire.qualifications.write')?'<button type="button" class="btn small secondary" data-edit-card="'+card.id+'">Kachel bearbeiten</button>':'')+'</article>';
+}
+function bind(host){host.querySelectorAll('[data-edit-card]').forEach(b=>b.onclick=()=>editCard(Number(b.dataset.editCard)));}
+async function reload(){[types,cards,people]=await Promise.all([api(BASE+'/types'),api(BASE+'/cards'),api(BASE+'/people')]);}
+function memberOptions(selected){return people.map(p=>'<option value="'+p.id+'"'+(selected===p.id?' selected':'')+'>'+safe(p.name)+'</option>').join('');}
+function typeOptions(selected){return types.filter(t=>!t.sensitive||rights('fire.qualifications.sensitive.read')).map(t=>'<option value="'+t.id+'"'+(selected===t.id?' selected':'')+'>'+safe(t.icon+' '+t.title)+'</option>').join('');}
+async function page(){
+ setActive('wehr-members');content.innerHTML=header('👥 Mitgliederverwaltung · Wehrleitung','Feuerwehrqualifikationen und Fälligkeiten; Stammdaten ausschließlich in der Administration.')+
+ '<div class="panel">Qualifikationen werden geladen …</div>';
+ try{await reload();drawPage();}catch(e){content.innerHTML+= '<div class="message error">'+safe(e.message)+'</div>';}
+}
+function drawPage(){
+ const canWrite=rights('fire.qualifications.write'),canSensitive=rights('fire.qualifications.sensitive.read');
+ content.innerHTML=header('👥 Mitgliederverwaltung · Wehrleitung','Qualifikationskacheln je Mitglied; keine Finanzdaten oder zweite Stammdatenverwaltung.',
+ canWrite?'<button class="btn primary" id="wehrAdd">＋ Qualifikation zuweisen</button>':'')+
+ '<div class="panel"><div class="toolbar"><input id="wehrSearch" placeholder="Mitglied oder Qualifikation suchen" value="'+safe(nameFilter)+'">'+
+ '<select id="wehrStatus"><option value="ALL">Alle Prüfstatus</option>'+['VALID','DUE','OVERDUE','UNSCHEDULED','INACTIVE'].map(k=>'<option value="'+k+'">'+statusMap[k]+'</option>').join('')+'</select>'+
+ '<select id="wehrType"><option value="">Alle Qualifikationen</option>'+types.filter(t=>!t.sensitive||canSensitive).map(t=>'<option value="'+t.code+'">'+safe(t.title)+'</option>').join('')+'</select>'+
+ (canWrite?'<button class="btn secondary" id="wehrConfig">⚙️ Qualifikationsbaukasten</button>':'')+'</div><div id="wehrRows"></div></div>';
+ const search=el('wehrSearch'),status=el('wehrStatus'),type=el('wehrType');
+ status.value=visibleFilter;search.oninput=()=>{nameFilter=search.value;drawRows();};
+ status.onchange=()=>{visibleFilter=status.value;drawRows();};type.onchange=drawRows;
+ el('wehrAdd')&&(el('wehrAdd').onclick=()=>editCard(null));
+ el('wehrConfig')&&(el('wehrConfig').onclick=()=>configPage());
+ drawRows();
+}
+function drawRows(){
+ const host=el('wehrRows');if(!host)return;
+ const needle=(el('wehrSearch')?.value||'').toLocaleLowerCase('de'),state=el('wehrStatus')?.value||'ALL',type=el('wehrType')?.value||'';
+ const rows=people.map(p=>({p,list:cards.filter(c=>c.memberId===p.id).filter(c=>state==='ALL'||c.status===state).filter(c=>!type||c.code===type)}))
+ .filter(row=>(!type&&state==='ALL'||row.list.length)&&(!needle||row.p.name.toLocaleLowerCase('de').includes(needle)||row.list.some(c=>c.title.toLocaleLowerCase('de').includes(needle))));
+ host.innerHTML=rows.length?rows.map(({p,list})=>'<div class="wehr-member-row"><div class="wehr-member-title">'+safe(p.name)+'</div><div class="wehr-card-list">'+(list.length?list.map(cardHtml).join(''):'<span class="sub">Keine Qualifikationen zugeordnet.</span>')+'</div></div>').join(''):'<p class="empty">Keine Mitglieder oder Qualifikationen für diesen Filter.</p>';
+ bind(host);
+}
+function inputField(label,id,value='',type='text',hint=''){return '<div class="field"><label for="'+id+'">'+safe(label)+'</label><input id="'+id+'" type="'+type+'" value="'+safe(value)+'">'+(hint?'<small class="sub">'+safe(hint)+'</small>':'')+'</div>';}
+function editCard(id){
+ if(!rights('fire.qualifications.write'))return;
+ const c=id==null?null:cards.find(x=>x.id===id);
+ modalTitle.textContent=c?'Qualifikationskachel bearbeiten':'Qualifikationskachel hinzufügen';
+ modalBody.innerHTML='<div id="wehrDialogMsg"></div>'+
+ (c?'<p><strong>'+safe(c.memberName)+'</strong> · '+safe(c.title)+'</p>':
+ '<div class="field"><label>Mitglied</label><select id="wMember">'+memberOptions()+'</select></div>'+
+ '<div class="field"><label>Qualifikationsart</label><select id="wType">'+typeOptions()+'</select></div>')+
+ inputField('Ausstellungsdatum (optional)','wIssued',inputDate(c?.issuedOn),'date')+
+ inputField('Gültig bis (optional)','wExpires',inputDate(c?.expiresOn),'date')+
+ inputField('Nächster Termin (optional)','wDue',inputDate(c?.nextDueOn),'date')+
+ inputField('Führerscheinnummer nur bei Führerschein: Referenz hinterlegen/ersetzen','wLicense','','text','Die Nummer wird lediglich als geschützter Vergleichswert gespeichert und nie wieder angezeigt.')+
+ '<div class="quick"><button class="btn secondary" id="wehrCancel">Abbrechen</button><button class="btn primary" id="wehrSave">Speichern</button></div>';
+ el('wehrCancel').onclick=closeModal;el('wehrSave').onclick=async()=>{
+  const typeId=c?c.typeId:Number(el('wType')?.value);
+  const payload={typeId,issuedOn:el('wIssued').value||null,expiresOn:el('wExpires').value||null,
+   nextDueOn:el('wDue').value||null,licenseNumber:el('wLicense').value||null,active:true};
+  if(id==null&&!typeId){notice(el('wehrDialogMsg'),'Qualifikationsart fehlt');return;}
+  try{
+   await api(id==null?BASE+'/members/'+Number(el('wMember').value):BASE+'/cards/'+id,
+    {method:id==null?'POST':'PUT',body:JSON.stringify(payload)});
+   el('wLicense').value='';closeModal();await page();
+  }catch(error){el('wLicense').value='';notice(el('wehrDialogMsg'),error.message);}
+ };
+ modal.classList.remove('hidden');
+}
+async function configPage(){
+ if(!rights('fire.qualifications.write'))return;
+ setActive('wehr-config');
+ content.innerHTML=header('⚙️ Qualifikationsbaukasten','Typen, Kacheln und Überwachungsfristen für Wehrleitung konfigurieren.',
+ '<button class="btn secondary" id="backWehr">Zur Mitgliederverwaltung</button>')+
+ '<div class="panel"><p>Qualifikationstypen werden geladen …</p></div>';
+ try{types=await api(BASE+'/types');drawConfig();}catch(e){notice(content,e.message);}
+}
+function drawConfig(){
+ content.innerHTML=header('⚙️ Qualifikationsbaukasten','Ausstellungsdatum optional. Bei überwachungspflichtigen Typen werden Vorwarnzeit und Prüfintervall verwendet.',
+ '<button class="btn secondary" id="backWehr">Zur Mitgliederverwaltung</button>')+
+ '<div class="panel"><div class="quick"><button class="btn secondary" id="defaultWehr">Standardkacheln hinzufügen</button><button class="btn primary" id="newWehrType">＋ Eigene Kachel</button></div>'+
+ '<div class="table-wrap"><table class="table"><thead><tr><th>Kachel</th><th>Überwachung</th><th>Vorwarnzeit</th><th>Prüfintervall</th><th>Aktion</th></tr></thead><tbody>'+
+ types.map(t=>'<tr><td>'+safe(t.icon+' '+t.title)+'</td><td>'+(t.tracked?'Ja':'Nein')+(t.sensitive?' · vertraulich':'')+'</td><td>'+t.warningDays+' Tage</td><td>'+t.intervalMonths+' Monate</td><td><button class="btn small secondary" data-type-id="'+t.id+'">Bearbeiten</button></td></tr>').join('')+
+ '</tbody></table></div><div id="wehrConfigMsg"></div></div>';
+ el('backWehr').onclick=()=>page();el('defaultWehr').onclick=async()=>{try{await api(BASE+'/types/defaults',{method:'POST'});types=await api(BASE+'/types');drawConfig();}catch(e){notice(el('wehrConfigMsg'),e.message);}};
+ el('newWehrType').onclick=()=>editType(null);
+ document.querySelectorAll('[data-type-id]').forEach(b=>b.onclick=()=>editType(Number(b.dataset.typeId)));
+}
+function editType(id){
+ const t=types.find(x=>x.id===id);
+ modalTitle.textContent=t?'Kachel konfigurieren':'Eigene Kachel anlegen';
+ modalBody.innerHTML='<div id="wehrTypeMsg"></div>'+
+ (t?'<p><strong>'+safe(t.code)+'</strong></p>':inputField('Technische Kennung (A–Z, 0–9, _)','wCode'))+
+ inputField('Name','wTitle',t?.title)+inputField('Symbol','wIcon',t?.icon||'📋')+
+ '<div class="field"><label><input id="wTracked" type="checkbox" '+(t?.tracked?'checked':'')+'> Überwachungspflichtig</label></div>'+
+ '<div class="field"><label><input id="wSensitive" type="checkbox" '+(t?.sensitive?'checked':'')+'> Vertraulich (gesonderte Berechtigung)</label></div>'+
+ inputField('Vorwarnzeit in Tagen (0–365)','wWarn',t?.warningDays??30,'number')+
+ inputField('Wiederholung in Monaten (0–120)','wMonths',t?.intervalMonths??0,'number')+
+ '<div class="quick"><button class="btn secondary" id="wehrTypeCancel">Abbrechen</button><button class="btn primary" id="wehrTypeSave">Speichern</button></div>';
+ el('wehrTypeCancel').onclick=closeModal;el('wehrTypeSave').onclick=async()=>{
+  const payload={code:t?.code||el('wCode').value.trim().toUpperCase(),title:el('wTitle').value,icon:el('wIcon').value,
+   tracked:el('wTracked').checked,sensitive:el('wSensitive').checked,warningDays:Number(el('wWarn').value),intervalMonths:Number(el('wMonths').value)};
+  try{await api(BASE+'/types'+(t?'/'+t.id:''),{method:t?'PUT':'POST',body:JSON.stringify(payload)});
+   closeModal();types=await api(BASE+'/types');drawConfig();
+  }catch(e){notice(el('wehrTypeMsg'),e.message);}
+ };modal.classList.remove('hidden');
+}
+async function drivingPage(){
+ setActive('wehr-driving');
+ content.innerHTML=header('🚘 Führerscheinkontrolle','Prüfliste, Fristen, manuelle Bestätigung und Prüfhistorie.')+'<div class="panel">Kontrollen werden geladen …</div>';
+ try{[driving,checks]=await Promise.all([api(BASE+'/driving'),api(BASE+'/driving/checks')]);drawDriving();}
+ catch(e){notice(content,e.message);}
+}
+function drawDriving(){
+ const allow=rights('fire.drivingcheck.write');
+ content.innerHTML=header('🚘 Führerscheinkontrolle','Automatischer positiver Status dokumentiert den OCR-Datenabgleich; alternativ kann die Wehrleitung die Prüfung manuell bestätigen.',
+ '<button class="btn secondary" id="drivingExport">⬇ CSV exportieren</button><button class="btn secondary" id="drivingPrint">🖨 Drucken</button>')+
+ '<div class="panel"><div class="toolbar"><input id="drivingSearch" placeholder="Mitglied suchen"><select id="drivingStatus"><option value="ALL">Alle</option><option value="DUE">Fällig</option><option value="OVERDUE">Überfällig</option><option value="VALID">Aktuell</option></select></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Letzte Prüfung</th><th>Nächste Prüfung</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="drivingRows"></tbody></table></div></div>'+
+ '<div class="panel"><h3>Prüfprotokoll</h3><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Datum</th><th>Prüfer / Benutzer-ID</th><th>Prüfweg</th><th>Ergebnis</th></tr></thead><tbody>'+
+ checks.map(c=>'<tr><td>'+safe(driving.find(x=>x.memberId===c.memberId)?.memberName||'Mitglied #'+c.memberId)+'</td><td>'+safe(new Date(c.checkedAt).toLocaleString('de-DE'))+'</td><td>'+c.checkedByUserId+'</td><td>'+safe(c.method)+'</td><td>Positiv</td></tr>').join('')+
+ '</tbody></table></div></div>';
+ const render=()=>{
+  const name=el('drivingSearch').value.toLocaleLowerCase('de'),status=el('drivingStatus').value;
+  el('drivingRows').innerHTML=driving.filter(c=>(!name||c.memberName.toLocaleLowerCase('de').includes(name))&&(status==='ALL'||c.status===status)).map(c=>
+   '<tr><td>'+safe(c.memberName)+'</td><td>'+date(c.lastCheckedOn)+'</td><td>'+date(c.nextDueOn)+'</td><td>'+badge(c)+'</td><td>'+
+   (allow?'<button class="btn small success" data-manual="'+c.id+'">✓ Führerschein geprüft</button>':'')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Keine Einträge.</td></tr>';
+  el('drivingRows').querySelectorAll('[data-manual]').forEach(b=>b.onclick=()=>manualCheck(Number(b.dataset.manual)));
+ };
+ el('drivingSearch').oninput=render;el('drivingStatus').onchange=render;render();
+ el('drivingExport').onclick=exportDriving;el('drivingPrint').onclick=()=>window.print();
+}
+function manualCheck(id){
+ if(!rights('fire.drivingcheck.write'))return;
+ const entry=driving.find(c=>c.id===id);if(!entry)return;
+ modalTitle.textContent='Führerscheinprüfung dokumentieren';
+ modalBody.innerHTML='<p><strong>'+safe(entry.memberName)+'</strong></p>'+
+ '<p>Bestätige nur, wenn du den Führerschein selbst geprüft hast. Der Vorgang wird mit deinem Benutzerkonto, Zeitstempel und dem Ergebnis „positiv“ protokolliert.</p>'+
+ '<div id="drivingManualMsg"></div><div class="quick"><button class="btn secondary" id="drivingCancel">Abbrechen</button><button class="btn success" id="drivingConfirm">✓ Führerschein geprüft</button></div>';
+ el('drivingCancel').onclick=closeModal;
+ el('drivingConfirm').onclick=async()=>{
+  try{await api(BASE+'/driving/'+id+'/manual',{method:'POST',body:JSON.stringify({confirmed:true})});closeModal();await drivingPage();}
+  catch(e){notice(el('drivingManualMsg'),e.message);}
+ };modal.classList.remove('hidden');
+}
+function exportDriving(){
+ const escapeCsv=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const lines=[['Mitglied','Letzte Prüfung','Nächster Termin','Status'],
+   ...driving.map(c=>[c.memberName,c.lastCheckedOn,c.nextDueOn,statusMap[c.status]||c.status])];
+ const audits=[['Prüfprotokoll','','',''],['Mitglied','Zeitpunkt','Prüfer-ID','Methode'],
+ ...checks.map(c=>[driving.find(x=>x.memberId===c.memberId)?.memberName||c.memberId,c.checkedAt,c.checkedByUserId,c.method])];
+ const data='\ufeff'+[...lines,['','','',''],...audits].map(row=>row.map(escapeCsv).join(';')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));
+ const link=document.createElement('a');link.href=url;link.download='fuehrerscheinkontrolle.csv';link.click();
+ URL.revokeObjectURL(url);
+}
+async function myDrivingPage(){
+ setActive('my-driving');
+ content.innerHTML=header('🚘 Meine Führerscheinkontrolle','Auftrag am Smartphone erledigen: Foto bleibt ausschließlich im Arbeitsspeicher.')+
+ '<div class="panel">Eigene Prüfung wird geladen …</div>';
+ try{
+  const list=await api(BASE+'/driving/my');
+  content.innerHTML=header('🚘 Meine Führerscheinkontrolle','Automatischer positiver Abschluss nach vollständigem Namens- und Nummernabgleich; keine Dokumentfotos werden gespeichert.')+
+  '<div class="panel">'+(list.length?list.map(c=>
+   '<div class="wehr-my-check"><h3>'+safe(c.memberName)+'</h3>'+badge(c)+'<p>Nächster Termin: '+date(c.nextDueOn)+'</p>'+
+   (!c.referencePresent?'<p class="message warning">Die Referenznummer wurde noch nicht von der Wehrleitung hinterlegt.</p>':
+   '<label class="field">Führerschein fotografieren<input type="file" accept="image/*" capture="environment" data-scan-file="'+c.id+'"></label><div id="scanResult-'+c.id+'" aria-live="polite"></div>')+'</div>').join(''):'<p>Du hast keinen offenen Führerscheinauftrag.</p>')+'</div>';
+  content.querySelectorAll('[data-scan-file]').forEach(f=>f.onchange=()=>scanPhoto(Number(f.dataset.scanFile),f));
+ }catch(e){notice(content,e.message);}
+}
+async function scanPhoto(id,fileInput){
+ const info=el('scanResult-'+id),file=fileInput.files?.[0];if(!info||!file)return;
+ // No upload endpoint, no base64 encoding, no persistent storage, no object URL.
+ if(!('TextDetector' in window)||!('createImageBitmap' in window)){
+  fileInput.value='';notice(info,'Automatische Texterkennung wird von diesem Browser nicht unterstützt. Bitte die Wehrleitung zur manuellen Prüfung kontaktieren.');return;
+ }
+ if(file.size>15*1024*1024){fileInput.value='';notice(info,'Bilddatei ist zu groß.');return;}
+ notice(info,'Führerschein wird nur auf diesem Gerät ausgelesen …','success');
+ let bitmap;
+ try{
+  bitmap=await createImageBitmap(file);
+  const results=await new TextDetector().detect(bitmap);
+  const lines=results.map(r=>String(r.rawValue||'').trim()).filter(Boolean).slice(0,100);
+  if(!lines.length)throw Error('Keine lesbaren Textzeilen erkannt. Bitte Wehrleitung zur manuellen Prüfung kontaktieren.');
+  info.innerHTML='<p class="sub">Bitte die tatsächlich erkannten Textzeilen für vollständigen Namen und Führerscheinnummer auswählen. Bei unsicherer Erkennung nicht abschließen.</p>'+
+   '<div class="field"><label>Name laut OCR</label><select id="scanName-'+id+'"><option value="">Bitte wählen</option>'+
+   lines.map((line,i)=>'<option value="'+i+'">'+safe(line)+'</option>').join('')+'</select></div>'+
+   '<div class="field"><label>Führerscheinnummer laut OCR</label><select id="scanNumber-'+id+'"><option value="">Bitte wählen</option>'+
+   lines.map((line,i)=>'<option value="'+i+'">'+safe(line)+'</option>').join('')+'</select></div>'+
+   '<button class="btn primary" id="scanConfirm-'+id+'">Automatischen Datenabgleich abschließen</button><div id="scanMsg-'+id+'"></div>';
+  el('scanConfirm-'+id).onclick=async()=>{
+   const ni=el('scanName-'+id).value,li=el('scanNumber-'+id).value;
+   if(ni===''||li===''){notice(el('scanMsg-'+id),'Beide erkannten Werte auswählen.');return;}
+   try{
+    await api(BASE+'/driving/my/'+id+'/scan',{method:'POST',
+     body:JSON.stringify({recognizedName:lines[Number(ni)],recognizedNumber:lines[Number(li)]})});
+    lines.length=0;info.innerHTML='<div class="message success">✓ Automatischer Namens- und Nummernabgleich positiv dokumentiert. Es wurde kein Foto gespeichert.</div>';
+   }catch(error){notice(el('scanMsg-'+id),error.message);}
+  };
+ }catch(error){notice(info,error.message||'Erkennung fehlgeschlagen. Bitte Wehrleitung kontaktieren.');}
+ finally{bitmap?.close?.();fileInput.value='';}
+}
+async function dashboard(){
+ if(!rights('fire.qualifications.read'))return;
+ try{
+  const result=await api(BASE+'/dashboard');if(!result)return; // only assigned WEHRLEITER
+  const grid=document.getElementById('dashboardWidgetGrid');if(!grid)return;
+  const node=document.createElement('div');node.className='panel wehr-dashboard';
+  node.innerHTML='<h3>🚒 Wehrleitung · Prüfungen</h3><p>'+result.overdue+' überfällig · '+result.due+' bald fällig</p>'+
+   '<button class="btn secondary" type="button" id="wehrDashboardOpen">Qualifikationen prüfen</button>';
+  grid.prepend(node);el('wehrDashboardOpen').onclick=()=>page();
+ }catch(error){console.warn('Wehrleiter-Fälligkeiten konnten nicht geladen werden',error);}
+}
+window.WehrleiterUI={page,configPage,drivingPage,myDrivingPage,dashboard};
+})();
