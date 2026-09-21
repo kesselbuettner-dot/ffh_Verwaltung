@@ -6,7 +6,7 @@ const html = fs.readFileSync('src/main/resources/static/index.html', 'utf8');
 const required=['vehicles','device-inspection-plans','training-documents','admin-settings','dashboard'];
 for (const id of required) assert(html.includes("id:'"+id+"'"),'Original 577e741 menu route missing: '+id);
 assert(html.includes('function renderOriginalNavigation()'),'Original navigation fallback must remain');
-assert(html.includes('/api/settings/menu-layout'),'Menu must save via dedicated endpoint');
+assert(source.includes('/api/settings/menu-layout'),'Menu must save via dedicated endpoint');
 const host={innerHTML:'',querySelector:()=>null,querySelectorAll:()=>[]};
 const sidebar={dataset:{},style:{}};
 const document={getElementById:(id)=>id==='navContainer'?host:id==='sidebar'?sidebar:null,
