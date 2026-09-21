@@ -1,0 +1,13 @@
+# FW-Cockpit — verbindliche Projektarbeitsanweisung
+
+Vor jeder Änderung an Oberfläche, Menü, Stammdaten, Berechtigungen oder Feuerwehrmodulen:
+
+1. `docs/DESIGN_SYSTEM.md`, `docs/UI_KOMPONENTEN.md` und bei Mitgliedern/Wehrleitung `docs/MITGLIEDER_WEHRLEITUNG.md` lesen. Diese Dateien sind die vereinbarte, versionierte Quelle für Layouts (Tabellen, Formulare, Buttons, Themes und mobile Darstellung). Nicht anhand alter Chat-Screenshots oder eigener Ad-hoc-Layouts abweichen.
+2. Neue Seiten benutzen die bestehenden gemeinsamen CSS-Variablen/Klassen; Änderungen an Buttons, Farben, Tabellen oder Themes zuerst als wiederverwendbares Element umsetzen. Keine seitenweise kopierten Styles oder Inline-Farbwerte, wenn eine gemeinsame Komponente existiert.
+3. Ein fachlicher Datensatz hat genau eine führende Bearbeitungsstelle. Mitgliederstammdaten ausschließlich in Administration > Mitgliederstammdaten; Benutzerkonten in Administration > Konten; Berechtigungsdefinitionen/Zuweisungen in Administration > Rollen & Rechte. Feuerwehrqualifikationen werden getrennt im Wehrleiterbereich verwaltet, nicht als zweiter Mitgliedsstamm.
+4. Rollen- und Rechteprüfung **serverseitig** an jedem API-Endpunkt, UI-Sichtbarkeit nur zusätzlich. Neue Rollen, insbesondere WEHRLEITER, nur nach Prüfung von Backend, Token, Menükatalog und Migration einführen. Keine automatische Neuvergabe widerrufener Rechte beim Neustart.
+5. Vor Änderungen Ausgangsbranch und HEAD festhalten; auf einem neuen Feature-Branch arbeiten. Keine bestehenden Dateien/Module durch Stände aus älteren Branches überschreiben; `main` nicht ohne ausdrückliche Freigabe ändern. Bestehende Stammdaten, Geräteprüfungen, Serien, Icon und PWA beibehalten.
+6. Bei sensiblen Qualifikationen/Prüfungen: nur notwendige Status-/Termindaten speichern, keine Rohfotos oder vollständige Führerscheinnummer in Protokollen, Logs, Push-Nachrichten oder Exporten. OCR-Ergebnisse allein sind keine abschließende Identitätsprüfung.
+7. Vor Installationsanweisung CI: Java-Build/Tests, JS-Syntax, Berechtigungsfälle für ADMIN/WEHRLEITER/MITGLIED sowie PC/Tablet/Handy und Bestandsdaten-Migration prüfen. Fehlende Tests ausdrücklich nennen; keine ungeprüfte Version als fertig ausgeben.
+
+Änderungen am Designsystem und am Rollenmodell nur zusammen mit deren Dokumentation und den betroffenen Tests committen.
