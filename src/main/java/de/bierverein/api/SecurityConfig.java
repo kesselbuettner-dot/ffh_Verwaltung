@@ -53,6 +53,8 @@ public class SecurityConfig {
                     "/menu-designer.js",
                     "/menu-designer.css",
                     "/ui-theme.css",
+                    "/wehrleiter.js",
+                    "/wehrleiter.css",
                     "/favicon.ico",
                     "/icons/**",
                     "/css/**",
