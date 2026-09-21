@@ -29,7 +29,10 @@ services:
       retries: 10
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        APP_GIT_COMMIT: ${APP_GIT_COMMIT:-unknown}
     container_name: ffh_verwaltung-app
     restart: unless-stopped
     environment:
@@ -87,7 +90,10 @@ services:
       - "127.0.0.1:8091:8091"
 
   worker:
-    build: .
+    build:
+      context: .
+      args:
+        APP_GIT_COMMIT: ${APP_GIT_COMMIT:-unknown}
     container_name: ffh_verwaltung-worker
     restart: unless-stopped
     environment:
