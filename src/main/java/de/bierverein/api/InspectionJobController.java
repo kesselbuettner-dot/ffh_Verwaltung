@@ -31,7 +31,7 @@ public class InspectionJobController {
  public record JobDto(Long id,String title,String assigneeName,String assignedBy,OffsetDateTime createdAt,OffsetDateTime completedAt,String signer,String signature,List<ItemDto> items){}
  public record ItemDto(Long id,Long deviceId,String deviceName,String inventoryNumber,String location,String result,String notes,OffsetDateTime checkedAt,String checkedBy){}
  private JobDto dto(InspectionJob j){return new JobDto(j.id,j.title,j.assigneeName,j.assignedBy,j.createdAt,j.completedAt,j.signer,j.signature,items.findByJobIdOrderByIdAsc(j.id).stream().map(i->new ItemDto(i.id,i.device.getId(),i.deviceName,i.inventoryNumber,i.location,i.result,i.notes,i.checkedAt,i.checkedBy)).toList());}
- @GetMapping("/assignees")
+ @Transactional(readOnly=true) @GetMapping("/assignees")
  public List<Map<String,Object>> assignees(Authentication auth){if(!manager(auth))throw new ResponseStatusException(HttpStatus.FORBIDDEN);return users.findAll().stream().filter(u->u.isEnabled()&&u.isRegistrationApproved()&&u.getMember()!=null&&u.getMember().isActive()).map(u->Map.<String,Object>of("id",u.getId(),"name",u.getMember().getName(),"username",u.getUsername())).toList();}
  @PostMapping @Transactional
  public JobDto create(@RequestBody Create request,Authentication auth){
@@ -44,10 +44,10 @@ public class InspectionJobController {
   for(Long id:unique){Device d=devices.findById(id).orElseThrow(()->bad("Gerät nicht gefunden"));if(!d.isActive())throw bad("Inaktives Gerät ausgewählt");InspectionJobItem item=new InspectionJobItem();item.job=job;item.device=d;item.deviceName=d.getName();item.inventoryNumber=d.getInventoryNumber();item.location=d.getLocation();items.save(item);}
   return dto(job);
  }
- @GetMapping
+ @Transactional(readOnly=true) @GetMapping
  public List<JobDto> list(Authentication auth){return (manager(auth)?jobs.findAllByOrderByCreatedAtDesc():jobs.findByAssigneeIdOrderByCreatedAtDesc(userId(auth))).stream().map(this::dto).toList();}
- @GetMapping("/mine") public List<JobDto> mine(Authentication auth){return jobs.findByAssigneeIdOrderByCreatedAtDesc(userId(auth)).stream().map(this::dto).toList();}
- @GetMapping("/{id}") public JobDto detail(@PathVariable Long id,Authentication auth){return dto(visible(id,auth));}
+ @Transactional(readOnly=true) @GetMapping("/mine") public List<JobDto> mine(Authentication auth){return jobs.findByAssigneeIdOrderByCreatedAtDesc(userId(auth)).stream().map(this::dto).toList();}
+ @Transactional(readOnly=true) @GetMapping("/{id}") public JobDto detail(@PathVariable Long id,Authentication auth){return dto(visible(id,auth));}
  @PutMapping("/{id}/items/{itemId}") @Transactional
  public JobDto result(@PathVariable Long id,@PathVariable Long itemId,@RequestBody Result request,Authentication auth){
   InspectionJob job=visible(id,auth);if(!job.assigneeId.equals(userId(auth)))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
