@@ -63,7 +63,7 @@ public class FireQualificationController {
    return ResponseEntity.noContent().build();
   LocalDate now=LocalDate.now();long due=0,overdue=0;
   for(FireMemberQualification q:records.findAll()){
-   if(!q.active||!q.type.tracked)continue;
+   if(!q.active||!q.type.tracked||(q.type.sensitive&&!canSensitive(auth)))continue;
    LocalDate date=due(q);if(date==null)continue;
    if(date.isBefore(now))overdue++;else if(!date.isAfter(now.plusDays(q.type.warningDays)))due++;
   }
