@@ -354,17 +354,35 @@ async function adminUsersSettingsPage(){
 }
 function adminRolesSettingsPage(){
  if(role!=='ADMIN')return;
- settingsContent.innerHTML='<div class="panel" id="managedRolesPanel"><h2>🛡️ Rollen & Rechte</h2><p class="sub">Rollen definieren, Berechtigungen setzen und Benutzern zuweisen. Mitgliederstammdaten werden hier nicht bearbeitet.</p><div id="managedRolesMessage"></div><div id="managedRolesContent">Rollen werden geladen …</div></div>';
- loadManagedRolesPanel();
+ settingsContent.innerHTML='<div class="panel" id="managedRolesPanel"><h2>🛡️ Rollen</h2><p class="sub">Rollen anlegen, ändern und die Berechtigungsdefinition pro Rolle pflegen. Individuelle Zuweisungen liegen unter „Rechte & Zuweisungen“.</p><div id="managedRolesMessage"></div><div id="managedRolesContent">Rollen werden geladen …</div></div>';
+ loadManagedRolesPanel('roles');
 }
-async function loadManagedRolesPanel(){
+function adminPermissionsSettingsPage(){
+ if(role!=='ADMIN')return;
+ settingsContent.innerHTML='<div class="panel" id="managedRolesPanel"><h2>🔑 Rechte & Zuweisungen</h2><p class="sub">Die angelegten Rollen einzelnen Konten zuweisen und die effektiven Rechte prüfen. Die Mitgliedsstammdaten werden hier nicht verändert.</p><div id="managedRolesMessage"></div><div id="managedRolesContent">Zuweisungen werden geladen …</div></div>';
+ loadManagedRolesPanel('rights');
+}
+async function loadManagedRolesPanel(mode){
  const host=document.getElementById('managedRolesContent');if(!host)return;
+ const section=mode||(document.getElementById('stab-rights')?.classList.contains('active')?'rights':'roles');
  try{
   const [catalog,rolesData,usersData]=await Promise.all([api('/api/admin/managed-roles/catalog'),api('/api/admin/managed-roles'),api('/api/admin/users')]);
-  window.adminUsers=usersData;
-  window.managedRoleCatalog=catalog;window.managedRolesData=rolesData;
-  host.innerHTML='<div class="field"><label>Rollenkennung (A–Z, Ziffern, _)</label><input id="newManagedRoleCode" maxlength="64" placeholder="JUGENDWART"></div><div class="field"><label>Rollenname</label><input id="newManagedRoleName" maxlength="120" placeholder="Jugendwart"></div><button class="btn primary" onclick="editManagedRole(null)">Neue Rolle anlegen</button><div class="table-wrap"><table class="table"><thead><tr><th>Rolle</th><th>Berechtigungen</th><th>Aktion</th></tr></thead><tbody>'+rolesData.map(r=>'<tr><td>'+esc(r.name)+' <small>('+esc(r.code)+')</small></td><td>'+r.permissions.length+' Berechtigungen'+(r.systemRole?' · Systemrolle':'')+'</td><td><button class="btn small secondary" onclick="editManagedRole('+r.id+')">Bearbeiten</button> '+(r.systemRole?'<span class="badge">nicht löschbar</span>':'<button class="btn small danger" onclick="deleteManagedRole('+r.id+')">Löschen</button>')+'</td></tr>').join('')+'</tbody></table></div><div class="field"><label>Zusätzliche Rollen eines Benutzers bearbeiten</label><select id="managedRoleUser">'+(window.adminUsers||[]).map(u=>'<option value="'+u.id+'">'+esc(u.username)+'</option>').join('')+'</select></div><button class="btn secondary" onclick="editManagedUserRoles()">Rollenzuweisungen öffnen</button> <button class="btn secondary" onclick="auditManagedUserRoles()">Rechte prüfen</button>';
- }catch(e){host.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}
+  window.adminUsers=usersData;window.managedRoleCatalog=catalog;window.managedRolesData=rolesData;
+  if(section==='rights'){
+   host.innerHTML='<div class="field"><label for="managedRoleUser">Mitglied / Benutzerkonto</label><select id="managedRoleUser">'+usersData.map(u=>'<option value="'+u.id+'">'+esc(u.memberName||u.username)+' · '+esc(u.username)+'</option>').join('')+'</select></div>'+
+   '<div class="quick"><button class="btn primary" onclick="editManagedUserRoles()">Rollenzuweisungen öffnen</button><button class="btn secondary" onclick="auditManagedUserRoles()">Wirksame Rechte prüfen</button></div>'+
+   '<p class="sub">Die Zuordnung ändert keine Stammdaten. Neue Berechtigungsarten werden auf der Seite „Rollen“ definiert.</p>';
+   return;
+  }
+  host.innerHTML='<div class="field"><label>Rollenkennung (A–Z, Ziffern, _)</label><input id="newManagedRoleCode" maxlength="64" placeholder="JUGENDWART"></div>'+
+   '<div class="field"><label>Rollenname</label><input id="newManagedRoleName" maxlength="120" placeholder="Jugendwart"></div>'+
+   '<button class="btn primary" onclick="editManagedRole(null)">Neue Rolle anlegen</button>'+
+   '<div class="table-wrap"><table class="table"><thead><tr><th>Rolle</th><th>Berechtigungen</th><th>Aktion</th></tr></thead><tbody>'+
+   rolesData.map(r=>'<tr><td>'+esc(r.name)+' <small>('+esc(r.code)+')</small></td><td>'+r.permissions.length+' Berechtigungen'+(r.systemRole?' · Systemrolle':'')+'</td><td>'+
+    '<button class="btn small secondary" onclick="editManagedRole('+r.id+')">Bearbeiten</button> '+
+    (r.systemRole?'<span class="badge">nicht löschbar</span>':'<button class="btn small danger" onclick="deleteManagedRole('+r.id+')">Löschen</button>')+'</td></tr>').join('')+
+   '</tbody></table></div>';
+ }catch(e){host.innerHTML='<div class="message error">'+esc(e.message)+'</div>';}
 }
 function managedRoleChecks(selected){
  const selectedKeys=new Set(selected||[]);
@@ -429,7 +447,8 @@ async function adminSettingsPage(section='members'){if(section==='users')section
  <div class="settings-tabs">
   <button class="settings-tab" id="stab-members" onclick="adminSettingsPage('members')">👥 Mitgliederstammdaten</button>
   <button class="settings-tab" id="stab-accounts" onclick="adminSettingsPage('accounts')">🔐 Konten</button>
-  <button class="settings-tab" id="stab-roles" onclick="adminSettingsPage('roles')">🛡️ Rollen & Rechte</button>
+  <button class="settings-tab" id="stab-roles" onclick="adminSettingsPage('roles')">🛡️ Rollen</button>
+  <button class="settings-tab" id="stab-rights" onclick="adminSettingsPage('rights')">🔑 Rechte & Zuweisungen</button>
   <button class="settings-tab" id="stab-menu" onclick="adminSettingsPage('menu')">☰ Menü</button>
   <button class="settings-tab" id="stab-dashboard" onclick="adminSettingsPage('dashboard')">📊 Dashboard</button>
   <button class="settings-tab" id="stab-master" onclick="adminSettingsPage('master')">🏢 Stammdaten & Impressum</button>
@@ -441,6 +460,7 @@ async function adminSettingsPage(section='members'){if(section==='users')section
  if(section==='members') return adminMembersSettingsPage();
  if(section==='accounts') return adminUsersSettingsPage();
  if(section==='roles') return adminRolesSettingsPage();
+ if(section==='rights') return adminPermissionsSettingsPage();
  if(section==='menu') return adminMenuSettingsPage();
  if(section==='dashboard') return adminDashboardSettingsPage();
  if(section==='master') return adminMasterSettingsPage();
