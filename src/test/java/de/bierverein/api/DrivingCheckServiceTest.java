@@ -22,6 +22,7 @@ class DrivingCheckServiceTest {
   var q=new FireMemberQualification(owner,type);
   ReflectionTestUtils.setField(q,"id",id);
   q.licenseNumberMac=service.fingerprint("L123456789");
+  q.nextDueOn=java.time.LocalDate.now(java.time.ZoneId.of("Europe/Berlin"));
   return q;
  }
  private AppUser user(Long id,Member member){
@@ -74,7 +75,7 @@ class DrivingCheckServiceTest {
   when(checks.save(any(FireQualificationCheck.class))).thenAnswer(i->i.getArgument(0));
   assertEquals("MANUAL",service.manual(7L,new DrivingCheckService.ManualInput(true),auth).method());
  }
- @Test void photoBytesAreNeverAcceptedInTheScanInput(){
+ @Test void clientSuppliedOcrTextCannotAuthorizeAutomaticCompletion(){
   var components=DrivingCheckService.ScanInput.class.getRecordComponents();
   assertEquals(1,components.length);
   assertEquals("imageData",components[0].getName());
