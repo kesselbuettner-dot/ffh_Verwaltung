@@ -1,0 +1,15 @@
+/* Wehrleitung pages follow docs/DESIGN_SYSTEM.md and docs/UI_KOMPONENTEN.md. */
+.wehr-member-row{display:grid;grid-template-columns:minmax(145px,220px) minmax(0,1fr);gap:12px;padding:14px 0;border-bottom:1px solid var(--ui-border,var(--line))}
+.wehr-member-title{font-weight:750;font-size:16px;overflow-wrap:anywhere}
+.wehr-card-list{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.wehr-card{display:grid;align-content:start;gap:8px;min-width:185px;max-width:290px;flex:1 1 205px;background:var(--ui-surface,var(--panel));color:var(--ui-text,var(--ink));border:1px solid var(--ui-border,var(--line));border-radius:12px;padding:12px}
+.wehr-card-heading{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.wehr-card-data{font-size:12px;color:var(--ui-subtle,var(--muted))}
+.wehr-card .btn{justify-self:start}
+.wehr-my-check{max-width:680px;padding:14px 0;display:grid;gap:12px}
+.wehr-my-check input[type=file]{display:block;max-width:100%;margin-top:8px}
+.wehr-dashboard{border-left:4px solid var(--ui-warning,var(--warn));}
+.wehr-dashboard .btn{margin-top:8px}
+.wehr-member-row .badge,.wehr-card .badge{white-space:nowrap}
+@media(max-width:700px){.wehr-member-row{display:block}.wehr-card-list{margin-top:12px}.wehr-card{max-width:none;min-width:0;flex:1 1 100%}}
+@media print{.sidebar,.topbar,.mobile-nav,.wehr-card .btn,#drivingExport,#drivingPrint{display:none!important}.main{margin:0!important}.wehr-card{break-inside:avoid}body{background:white!important}}
