@@ -76,6 +76,7 @@ public class MenuIconController {
     }
 
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void remove(@PathVariable Long id) {
