@@ -47,3 +47,18 @@
 
 /* Built-in SVG icons adapt to dark navigation; uploaded icons keep original colors. */
 .sidebar .menu-icon-image[src^="/icons/menu/"]{filter:brightness(0) invert(1)}
+
+/* The 577e741 shell uses .collapsed; the designer uses explicit .expanded.
+   Scope rules to the new toggles so the original navigation is unaffected on fallback. */
+#navContainer .nav-group:has(> .nav-group-toggle):not(.expanded) > .nav-group-items{display:none}
+#navContainer .nav-group:has(> .nav-group-toggle).expanded > .nav-group-items{display:block}
+#navContainer .nav-group-toggle{background:#ffffff0b;border:0;border-radius:10px;padding:10px 12px;
+ color:var(--menu-ink,#dce7ee);width:100%;display:flex;align-items:center;text-align:left;cursor:pointer}
+#navContainer .nav-group.expanded > .nav-group-toggle .chevron{transform:rotate(90deg)}
+#navContainer .nav-group-items .nav-group-toggle{margin-top:4px}
+#navContainer .nav-group-inner{overflow:hidden}
+#navContainer .nav-group-toggle .menu-icon-image,#navContainer .nav-group-toggle .menu-icon-glyph{flex:none}
+#navContainer .nav-item{white-space:normal;line-height:1.3}
+#navContainer .nav-item .menu-icon-image,#navContainer .nav-item .menu-icon-glyph{flex:none}
+#navContainer .nav-item.nav-child{padding-left:18px}
+@media(max-width:700px){#navContainer .nav-item{min-height:48px} .sidebar{width:min(var(--menu-width,250px),88vw)}}
