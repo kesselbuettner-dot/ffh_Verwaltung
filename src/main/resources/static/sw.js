@@ -1,7 +1,9 @@
-const CACHE_NAME = "ffh-verwaltung-v31";
+const CACHE_NAME = "ffh-verwaltung-menu577-v33";
 const APP_SHELL = [
   "/",
   "/manifest.json",
+  "/menu-designer.js?v=577e741-v2",
+  "/menu-designer.css?v=577e741-v2",
   "/icons/wache48-logo.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
