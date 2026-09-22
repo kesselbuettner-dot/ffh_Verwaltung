@@ -7,6 +7,7 @@ public class FireQualificationType {
  @Column(nullable=false,length=120) public String title;
  @Column(length=20) public String icon="📋";
  @Column(length=10) public String shortLabel;
+ @Column(length=32) public String category;
  public boolean tracked=false;
  public boolean sensitive=false;
  public int warningDays=30;
