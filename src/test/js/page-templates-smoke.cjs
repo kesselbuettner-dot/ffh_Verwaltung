@@ -61,7 +61,7 @@ for(const asset of ['"/page-templates.js"','"/page-templates.css"'])
  assert(security.includes(asset),'Static asset not public: '+asset);
 assert(sw.includes('ffh-verwaltung-page-templates-v41'));
 assert(html.includes("adminSettingsPage('templates')"),'Template gallery menu missing');
-assert(html.includes("FWPageTemplates.preview(selectedPageTemplate)"),'Interactive gallery preview missing');
+assert(html.includes("lib.preview(selectedPageTemplate)")&&html.includes("const lib=window.FWPageTemplates"),'Interactive gallery preview missing');
 assert(docs.includes('FWPageTemplates.render'),'Binding page layout docs missing');
 assert(!code.includes('/api/'),'Page templates must contain no direct backend access');
 console.log('PASS six pages, real DOM and callbacks, accessible settings, safe text, responsive CSS, gallery, PWA cache, permissions and docs');
