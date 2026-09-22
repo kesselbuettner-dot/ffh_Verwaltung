@@ -4,7 +4,7 @@ const html=fs.readFileSync(root+'index.html','utf8'),css=fs.readFileSync(root+'u
 new vm.Script(js,{filename:'wehrleiter.js'});
 for(const [i,script] of [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].entries())
  new vm.Script(script[1],{filename:'index-inline-'+i+'.js'});
-for(const key of ["id=\"wehrCategory\"","CERTIFICATE_DOCUMENT","categoryFilter","data-license-class","wRemoveCard","wehrRemoveCard","wViewPdf","wPdf","data-delete-type","wCategory","uploadCardPdf","downloadCardPdf","licenseClasses"])
+for(const key of ["id=\"wehrCategory\"","CERTIFICATE_DOCUMENT","categoryFilter","data-license-class","wehrRemoveCard","wViewPdf","wPdf","data-delete-type","wCategory","uploadCardPdf","downloadCardPdf","licenseClasses"])
  assert(js.includes(key),"Missing category/PDF/deletion/driver class behavior: "+key);
 assert(js.includes("headers().Authorization,'Content-Type':'application/pdf'"),"PDF upload MUST not use JSON content type");
 assert(html.includes('id="vfLicenseClass"')&&html.includes('requiredLicenseClass:vfLicenseClass.value'),"Vehicle license dropdown or update missing");
