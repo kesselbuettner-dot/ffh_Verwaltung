@@ -1,0 +1,14 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync('src/main/resources/static/index.html','utf8');
+const css=fs.readFileSync('src/main/resources/static/menu-designer.css','utf8');
+const sw=fs.readFileSync('src/main/resources/static/sw.js','utf8');
+for(const [i,s] of [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].entries())new vm.Script(s[1],{filename:'inline-'+i});
+const footer=html.match(/<div class="sidebar-footer"[\s\S]*?<\/div><\/aside>/)?.[0];assert(footer,'Sidebar footer missing');
+for(const action of ['openImprint()','installPwa()','toggleDarkMode()','logout()'])assert(footer.includes(action),'Missing active footer action '+action);
+assert.equal((footer.match(/class="sidebar-action/g)||[]).length,4,'Four compact icon buttons required');
+assert.equal((footer.match(/aria-label="/g)||[]).length,5,'All icon actions must have an accessible label');
+assert(footer.includes('pwa-install-action'),'PWA install visibility class missing');
+assert(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))'),'Footer does not put four actions on one row');
+assert(css.includes('.sidebar .sidebar-footer .sidebar-action.hidden{display:none!important}'),'PWA install hidden state must be preserved');
+assert(html.includes('/menu-designer.css?v=sidebar-icons-1')&&sw.includes('/menu-designer.css?v=sidebar-icons-1'),'Cache bust missing');
+console.log('PASS: four accessible compact sidebar actions, PWA hide state, CSS row and cache update');
