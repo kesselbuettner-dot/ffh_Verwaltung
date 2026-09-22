@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-design-system-v40";
+const CACHE_NAME = "ffh-verwaltung-page-templates-v41";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -9,6 +9,8 @@ const APP_SHELL = [
   "/ui-theme.css?v=2",
   "/design-system.css?v=1",
   "/design-system.js?v=1",
+  "/page-templates.css?v=1",
+  "/page-templates.js?v=1",
   "/icons/fw-cockpit-brand.svg",
   "/icons/fw-cockpit-icon-192.png",
   "/icons/fw-cockpit-icon-512.png",
