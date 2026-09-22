@@ -122,6 +122,19 @@ public class DeviceController {
         return inspections.findByDeviceIdOrderByInspectionDateDesc(id).stream().map(this::inspection).toList();
     }
 
+    @GetMapping("/{id}/inspections/{inspectionId}/protocol")
+    @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'read')")
+    public InspectionProtocol protocol(@PathVariable Long id,@PathVariable Long inspectionId){
+        Device d=find(id);
+        DeviceInspection i=inspections.findById(inspectionId)
+          .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Prüfprotokoll nicht gefunden"));
+        if(!i.getDevice().getId().equals(d.getId()))
+          throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Prüfprotokoll gehört nicht zu diesem Gerät");
+        return new InspectionProtocol(i.getId(),i.getDeviceNameSnapshot()==null?d.getName():i.getDeviceNameSnapshot(),
+          i.getLocationSnapshot(),i.getInspectionDate(),i.getResult(),i.getDefects(),i.getMeasures(),i.getNotes(),
+          i.getInspector(),i.getNextInspectionDate(),i.getSignedAt(),i.getSignatureData(),i.getSessionReportId());
+    }
+
     private void apply(Device d,DeviceRequest r,boolean creating){
         if(r==null || r.name()==null || r.name().isBlank())
             throw bad("Gerätebezeichnung ist erforderlich");
@@ -206,6 +219,9 @@ public class DeviceController {
         String operationalStatus,java.time.Instant operationalStatusAt,String operationalStatusNote,Long compartmentId,Long vehicleId,String vehicleName,String compartmentName,
         boolean inspectionRequired,int placementX,int placementY,int placementWidth,int placementHeight,int placementRotation,int placementLayer,String placementGroupId,Long compartmentElementId){}
     public record DeviceDetailDto(DeviceDto device,List<InspectionDto> inspections){}
+    public record InspectionProtocol(Long id,String deviceName,String location,LocalDate inspectionDate,String result,
+      String defects,String measures,String notes,String inspector,LocalDate nextInspectionDate,Instant signedAt,
+      String signatureData,Long sessionReportId){}
     public record InspectionRequiredRequest(Boolean required){}
     public record ConditionRequest(String status,String note){}
     public record InspectionRequest(LocalDate inspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String inspectionType,String result,String inspector,String defects,String measures,String notes,String signatureData){}
