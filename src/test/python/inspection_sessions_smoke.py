@@ -31,7 +31,7 @@ def sql(statement):
          "-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1",
          "-U", "ci", "-d", "ci", "-c", statement], text=True
     )
-    matches = re.findall(r"(?m)^\\s*(\\d+)\\s*$", output)
+    matches = re.findall(r"(?m)^\s*(\d+)\s*$", output)
     if not matches:
         raise AssertionError(f"No inserted ID returned: {output}")
     return int(matches[0])
