@@ -2,8 +2,8 @@
 :root{
  --ds-template-columns:3;
  --ds-template-row-gap:var(--ds-space-4,16px);
- --ds-template-panel-gap:var(--ds-space-4,16px);
- --ds-template-filter-gap:var(--ds-space-3,12px);
+ --ds-template-panel-gap:var(--ds-template-row-gap);
+ --ds-template-filter-gap:var(--ds-template-row-gap);
  --ds-template-heading-space:var(--ds-space-3,12px);
  --ds-template-metric-min:190px;
 }
