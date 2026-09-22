@@ -96,7 +96,8 @@
  // Admin may adjust tokens with validated values. No generated style rules, selectors or CSS imports.
  const allowedTokens={
   space:'--ds-space-4',radius:'--ds-radius-lg',controlHeight:'--ds-control-height',
-  pageWidth:'--ds-max-page',textSize:'--ds-text-base',shadow:'--ds-shadow'
+  pageWidth:'--ds-max-page',textSize:'--ds-text-base',shadow:'--ds-shadow',
+  templateColumns:'--ds-template-columns',templateGap:'--ds-template-row-gap'
  };
  const tokenValidators={
   space:v=>/^(?:[4-9]|[1-3]\d|40)px$/.test(v),
@@ -104,7 +105,9 @@
   controlHeight:v=>/^(?:4[4-9]|[5-6]\d)px$/.test(v),
   pageWidth:v=>/^(?:9\d\d|1[0-6]\d\d)px$/.test(v),
   textSize:v=>/^(?:1[4-9]|20)px$/.test(v),
-  shadow:v=>v==='none'||v==='0 4px 20px #00000015'||v==='0 8px 28px #00000030'
+  shadow:v=>v==='none'||v==='0 4px 20px #00000015'||v==='0 8px 28px #00000030',
+  templateColumns:v=>/^[234]$/.test(v),
+  templateGap:v=>/^(?:8|12|16|20|24|32)px$/.test(v)
  };
  function applyTokens(values={}){
   const applied={};
