@@ -31,7 +31,7 @@ body.dark{--ds-shadow:0 5px 22px #0007}
 .u-text-muted{color:var(--ds-muted)}.u-text-sm{font-size:var(--ds-text-sm)}.u-font-semibold{font-weight:650}
 .u-shadow{box-shadow:var(--ds-shadow)}
 /* Reusable central COMPONENT templates. Edit here once to change all pages that use ds-* components. */
-.ds-page{box-sizing:border-box;width:100%;max-width:var(--ds-max-page);margin-inline:auto;display:grid;gap:var(--ds-space-4);color:var(--ds-text)}
+.ds-page{box-sizing:border-box;width:100%;max-width:var(--ds-max-page);margin-inline:auto;display:grid;gap:var(--ds-space-4);color:var(--ds-text);font-size:var(--ds-text-base)}
 .ds-page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:var(--ds-space-3)}
 .ds-page-heading{min-width:0;flex:1 1 260px}.ds-page-title{margin:0;font-size:var(--ds-text-xl);font-weight:750;line-height:1.2}
 .ds-page-description{margin:var(--ds-space-2) 0 0;color:var(--ds-muted);font-size:var(--ds-text-sm)}
