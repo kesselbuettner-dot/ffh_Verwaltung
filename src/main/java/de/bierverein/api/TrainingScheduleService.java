@@ -121,6 +121,20 @@ public class TrainingScheduleService {
         events.delete(event);
     }
 
+    /** Cancel only one occurrence; signed inspection evidence is stored independently of the event. */
+    @Transactional
+    public void deleteOccurrence(String username, Long eventId, LocalDate date) {
+        AppUser actor=user(username);
+        TrainingScheduleEvent event=find(eventId);
+        require(actor,event.getType(),"delete");
+        if(date==null || !occursOn(event,date)) throw bad("Prüftermin ist nicht Teil dieser Terminserie.");
+        if(!event.isRecurring()) { delete(username,eventId); return; }
+        // detached_event_id is not nullable in existing production schemas: zero marks a cancelled occurrence.
+        seriesExceptions.save(new TrainingSeriesException(eventId,date,0L));
+        for(DeviceInspectionTask task:inspectionTasks.findByEventIdAndOccurrenceDateOrderByDeviceNameAsc(eventId,date))
+            inspectionTasks.delete(task);
+    }
+
     /** Separate one occurrence from its series and preserve all registrations and inspection work. */
     @Transactional
     public EventView updateOccurrence(String username, Long seriesId, LocalDate originalDate, EventRequest request) {
