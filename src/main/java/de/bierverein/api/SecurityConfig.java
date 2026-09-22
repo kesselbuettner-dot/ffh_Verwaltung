@@ -55,6 +55,8 @@ public class SecurityConfig {
                     "/ui-theme.css",
                     "/design-system.css",
                     "/design-system.js",
+                    "/page-templates.js",
+                    "/page-templates.css",
                     "/wehrleiter.js",
                     "/wehrleiter.css",
                     "/favicon.ico",
