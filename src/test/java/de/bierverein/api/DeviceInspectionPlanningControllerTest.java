@@ -82,6 +82,41 @@ class DeviceInspectionPlanningControllerTest {
         assertNull(result.get(0).reportId());
     }
 
+    @Test void legacyCycleDeviceAppearsInBothOverviewAndDetail() {
+        LocalDate today = LocalDate.now();
+        TrainingScheduleEvent event = appointment(today);
+        when(events.findByActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(any(), any()))
+            .thenReturn(List.of(event));
+        when(events.findById(23L)).thenReturn(Optional.of(event));
+        when(exceptions.findBySeriesEventId(23L)).thenReturn(List.of());
+        when(exceptions.existsBySeriesEventIdAndOccurrenceDate(23L, today)).thenReturn(false);
+
+        Device device = new Device();
+        ReflectionTestUtils.setField(device, "id", 14L);
+        device.setName("Altgerät mit Prüfintervall");
+        device.setActive(true);
+        device.setInspectionRequired(false);
+        device.setInspectionIntervalMonths(12);
+        device.setLocation("LF 20");
+        device.setCategory("Strahlrohr");
+        device.setLastInspectionDate(today.minusYears(1));
+        device.setNextInspectionDate(today);
+
+        DeviceInspectionTask task = position(device, today, "PENDING");
+        ReflectionTestUtils.setField(task, "id", 55L);
+        when(tasks.findByEventIdAndOccurrenceDateOrderByDeviceNameAsc(23L, today))
+            .thenReturn(List.of(task));
+        when(devices.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(device));
+        when(reports.findByEventIdAndOccurrenceDate(23L, today)).thenReturn(Optional.empty());
+
+        var overview = controller.sessions();
+        assertEquals(1, overview.size());
+        assertEquals(1, overview.get(0).total());
+        var detail = controller.session(23L, today);
+        assertEquals(1, detail.tasks().size(), "Cycle-based legacy device must not disappear from detail view");
+        assertEquals(14L, detail.tasks().get(0).deviceId());
+    }
+
     @Test void archivedDeviceDoesNotBreakAppointmentOverview() {
         LocalDate today = LocalDate.now();
         TrainingScheduleEvent event = appointment(today);
