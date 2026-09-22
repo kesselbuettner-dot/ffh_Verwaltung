@@ -1,11 +1,11 @@
-const CACHE_NAME = "ffh-verwaltung-wehrleiter-documents-v38";
+const CACHE_NAME = "ffh-verwaltung-wehrleiter-three-columns-print-v39";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/menu-designer.js?v=577e741-v2",
   "/menu-designer.css?v=577e741-v2",
-  "/wehrleiter.js?v=3",
-  "/wehrleiter.css?v=3",
+  "/wehrleiter.js?v=4",
+  "/wehrleiter.css?v=4",
   "/ui-theme.css?v=2",
   "/icons/fw-cockpit-brand.svg",
   "/icons/fw-cockpit-icon-192.png",
