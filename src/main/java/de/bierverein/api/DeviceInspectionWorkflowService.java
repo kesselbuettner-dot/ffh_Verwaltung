@@ -48,7 +48,7 @@ public class DeviceInspectionWorkflowService {
   DeviceInspection inspection=new DeviceInspection();
   inspection.setDevice(device);
   inspection.setInspectionDate(today);
-  inspection.setInspectionType(type);
+  inspection.setInspectionType(type==null?"Geräteprüfung":type.length()>120?type.substring(0,120):type);
   inspection.setResult(result);
   inspection.setInspector(inspector);
   inspection.setNotes(comment.isEmpty()?null:comment);
@@ -89,7 +89,7 @@ public class DeviceInspectionWorkflowService {
   }
   // An individual proof can satisfy a matching appointment without a second inspection.
   LocalDate upper="BESTANDEN".equals(result)?device.getNextInspectionDate():today.plusDays(30);
-  for(DeviceInspectionTask pending:sessionTasks.findByDeviceIdAndStatus(device.getId(),"PENDING")){
+  for(DeviceInspectionTask pending:sessionTasks.findByDeviceIdAndInspectionIdIsNull(device.getId())){
    if(!pending.getOccurrenceDate().isBefore(today)&&pending.getOccurrenceDate().isBefore(upper)){
     pending.setInspectionId(saved.getId());
     pending.setStatus("BESTANDEN".equals(result)?"INSPECTED":
