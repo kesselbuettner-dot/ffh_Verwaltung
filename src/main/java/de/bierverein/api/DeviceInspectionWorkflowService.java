@@ -36,7 +36,7 @@ public class DeviceInspectionWorkflowService {
  public DeviceInspection record(Device device,String result,String note,String inspector,String signature,
    String type,Long cycleTaskId,Long sessionTaskId,Long reportId){
   if(device==null||!device.isActive())throw new ResponseStatusException(HttpStatus.CONFLICT,"Gerät ist archiviert.");
-  if(!Set.of("BESTANDEN","MIT_MANGEL","NICHT_BESTANDEN","NICHT_PRUEFBAR").contains(result))
+  if(result==null||!Set.of("BESTANDEN","MIT_MANGEL","NICHT_BESTANDEN","NICHT_PRUEFBAR").contains(result))
    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Ungültiges Prüfergebnis.");
   String comment=note==null?"":note.trim();
   if(comment.length()>1000||(!"BESTANDEN".equals(result)&&comment.isBlank()))
