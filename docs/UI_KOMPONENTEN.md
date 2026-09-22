@@ -48,6 +48,14 @@ Bei künftiger Refaktorierung UI-Tokens aus `DESIGN_SYSTEM.md` auf die vorhanden
 - Mitgliedsavatar ausschließlich bei Administration > Mitgliederstammdaten anlegen/bearbeiten; kleines, komprimiertes Foto nur für Berechtigte ausgeben. Ohne Avatar Initialen aus dem Mitgliedernamen anzeigen. Das Logo der Anwendung ist kein Mitgliederavatar.
 - Dieselbe Filterzeile und das responsive Verhalten sind für künftig neue Tabellen und Listen verbindlich; kein neues modulspezifisches Layout ohne begründete Ergänzung dieser Datei und der gemeinsamen CSS-Klassen.
 
+## Standard: drei Kategorien und druckbare Mitgliederübersicht
+
+- Die Wehrleiter-Mitgliederübersicht zeigt in einer Tabelle **Mitglied | Qualifikationen | Zertifikate / Dokumente | Tauglichkeiten**. Jede der drei fachlichen Spalten enthält unabhängig voneinander nebeneinanderliegende, kompakte Kacheln mit Kürzel, typbezogener Farbe und Statusmuster. Leere Spalten bleiben leer; Mitgliedsnamen und andere Kategorien werden nicht verschoben.
+- Im Baukasten ist jeder Kacheltyp explizit einer der drei Kategorien `QUALIFICATION`, `CERTIFICATE_DOCUMENT` oder `SUITABILITY` zugeordnet. Für bereits bestehende Typen `MEDICAL_DUE` und `DRIVERS_LICENSE` greifen bis zur späteren bewussten Umstellung die passenden bisherigen Bedeutungen Tauglichkeit bzw. Dokument; zugewiesene Mitglieds- und Prüfdaten werden nicht verändert.
+- Der **Druckbericht** verwendet dieselben Daten, Filter, Sortierung und serverseitigen Berechtigungen wie die gerade angezeigte Tabelle. Er hat alle vier Spalten, die farbigen Kürzel-Kacheln, Schraffur für bald fällig, graue abgelaufene Kacheln und eine textliche Farb-/Statuslegende. A4 quer, wiederholte Tabellenüberschriften, möglichst kein Zeilenumbruch innerhalb eines Mitglieds.
+- Beim Drucken im Browser für farbige Flächen gegebenenfalls „Hintergrundgrafiken drucken“ aktivieren. Der Druckdialog erlaubt „Als PDF speichern“; es wird keine ungeschützte PDF-Datei auf dem Server erzeugt. Gesundheitsbezogene Tauglichkeiten erscheinen ausschließlich für Mitglieder mit der vorhandenen Berechtigung für sensible Qualifikationen.
+- Diese dreispaltige Tabelle ist die verbindliche UI-Vorlage für diese Mitgliederübersicht. Andere Module übernehmen nur passende wiederverwendbare Tabellen-, Filter-, Druck- und Berechtigungsregeln, nicht automatisch diese Fachkategorien.
+
 ## Qualifikationskacheln (bestehendes Modul)
 
 Jede Kachel beschreibt einen **Typ**, pro Mitglied eine **Zuordnung**: Titel, Icon, optionale Ausstellungs-/Gültigkeitsdaten, Ergebnis/Prüfstatus, Fälligkeitsdatum, Vorwarnzeit, Prüfintervall und Berechtigung für Ansicht/Bearbeitung. Wehrleiter wählen aus einem Baukasten die Typen für ihre Übersicht; obere Filter nach Qualifikation/Fälligkeit/Status, hinter jedem Mitglied kompakte Statuskacheln. Persönlichkeits-/Gesundheitsdaten nur für eng definierte berechtigte Personen; keine sensiblen Detaildiagnosen in globalen Dashboards oder Push-Nachrichten.
