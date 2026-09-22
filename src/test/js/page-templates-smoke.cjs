@@ -7,7 +7,7 @@ const security=fs.readFileSync('src/main/java/de/bierverein/api/SecurityConfig.j
 const sw=fs.readFileSync('src/main/resources/static/sw.js','utf8');
 const docs=fs.readFileSync('docs/UI_KOMPONENTEN.md','utf8');
 class FakeNode {
- constructor(tag){this.tagName=tag;this.children=[];this.events={};this.style={};this.textContent='';this.className='';this.attributes={};this.disabled=false;}
+ constructor(tag){this.tagName=tag;this.children=[];this.events={};this.style={};this.textContent='';this.className='';this.attributes={};this.disabled=false;this.classList={add:name=>{this.className+=(this.className?' ':'')+name;}};}
  appendChild(node){this.children.push(node);return node;}
  replaceChildren(...nodes){this.children=nodes;}
  addEventListener(type,callback){this.events[type]=callback;}
