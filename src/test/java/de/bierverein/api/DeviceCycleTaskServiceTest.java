@@ -92,6 +92,8 @@ class DeviceCycleTaskServiceTest {
   DeviceCycleTask task=job(8L,device);
   task.assign(2L,"geraetewart");
   AppUser member=account(2L,Role.MEMBER);
+  Member profile=new Member();profile.setName("Aktives Mitglied");profile.setActive(true);
+  member.setMember(profile);
   when(users.findById(2L)).thenReturn(Optional.of(member));
   when(tasks.findLocked(8L)).thenReturn(Optional.of(task));
   when(tasks.save(task)).thenAnswer(inv->inv.getArgument(0));
@@ -105,6 +107,19 @@ class DeviceCycleTaskServiceTest {
   assertThrows(ResponseStatusException.class,()->service.finish(8L,
     new DeviceCycleTaskService.FinishInput("BESTANDEN",""),auth(2L)));
   verify(inspections,times(1)).save(any(DeviceInspection.class));
+ }
+ @Test void deactivatedMemberCannotFinishPreviouslyDelegatedInspection(){
+  AppUser member=account(2L,Role.MEMBER);
+  Member profile=new Member();profile.setName("Inaktives Mitglied");profile.setActive(false);
+  member.setMember(profile);
+  DeviceCycleTask task=job(8L,device(3L,LocalDate.now()));
+  task.assign(2L,"geraetewart");
+  when(users.findById(2L)).thenReturn(Optional.of(member));
+  when(tasks.findLocked(8L)).thenReturn(Optional.of(task));
+  assertThrows(ResponseStatusException.class,()->service.finish(8L,
+    new DeviceCycleTaskService.FinishInput("BESTANDEN",""),auth(2L)));
+  verifyNoInteractions(inspections);
+  verify(tasks,never()).save(any());
  }
  @Test void defectsRequireNotesAndKeepExistingDueDateAndMarkDeviceDefective(){
   LocalDate now=LocalDate.now(ZoneId.of("Europe/Berlin"));
