@@ -1,9 +1,9 @@
-const CACHE_NAME = "ffh-verwaltung-wehrleiter-three-columns-print-v39";
+const CACHE_NAME = "ffh-verwaltung-sidebar-icons-v40";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/menu-designer.js?v=577e741-v2",
-  "/menu-designer.css?v=577e741-v2",
+  "/menu-designer.css?v=sidebar-icons-1",
   "/wehrleiter.js?v=4",
   "/wehrleiter.css?v=4",
   "/ui-theme.css?v=2",
