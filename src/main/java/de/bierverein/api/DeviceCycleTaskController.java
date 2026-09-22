@@ -13,6 +13,8 @@ public class DeviceCycleTaskController {
  @GetMapping
  public List<DeviceCycleTaskService.TaskView> list(@RequestParam(defaultValue="false") boolean includeDone,
      Authentication auth){return service.list(auth,includeDone);}
+ @GetMapping("/{id}/protocol")
+ public DeviceCycleTaskService.InspectionProof protocol(@PathVariable Long id,Authentication auth){return service.proof(id,auth);}
  @GetMapping("/assignees")
  public List<DeviceCycleTaskService.PersonView> eligible(Authentication auth){return service.members(auth);}
  @PutMapping("/{id}/assignee")
