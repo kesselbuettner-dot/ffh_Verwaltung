@@ -2,6 +2,8 @@ name: Wehrleiter Compact UI and Avatars
 on:
   push:
     branches: [feature/wehrleiter-compact-avatars]
+  pull_request:
+    branches: [feature/wehrleiter-qualifications-v1]
   workflow_dispatch:
 jobs:
   verify:
