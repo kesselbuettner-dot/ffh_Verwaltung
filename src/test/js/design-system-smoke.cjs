@@ -16,7 +16,7 @@ assert(sw.includes('ffh-verwaltung-design-system-v40'),'PWA cache not invalidate
 assert(sw.includes('/design-system.css?v=1')&&sw.includes('/design-system.js?v=1'),'New design assets not offline-cacheable');
 assert(html.includes("adminSettingsPage('design')"),'Central design admin tab missing');
 assert(html.includes("'/api/settings/design-system'"),'Central design save/load API not used');
-assert(doc.includes('FWComponents.page')&&agents.includes('FWComponents'),'Design documentation not enforceable');
+assert(doc.includes('window.FWComponents')&&agents.includes('FWComponents'),'Design documentation not enforceable');
 
 class FakeNode{
  constructor(tag){this.tagName=tag;this.children=[];this.events={};this.style={};this.textContent='';this.className='';this.disabled=false;}
