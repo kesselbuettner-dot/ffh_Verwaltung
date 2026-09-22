@@ -92,6 +92,8 @@ body.dark .vehicle-loading-shell{background:linear-gradient(180deg,#10202e,#0b18
 </style>
 <link rel="stylesheet" href="/menu-designer.css?v=577e741-v2">
 <link rel="stylesheet" href="/ui-theme.css?v=2">
+<link rel="stylesheet" href="/design-system.css?v=1">
+<script defer src="/design-system.js?v=1"></script>
 <script defer src="/menu-designer.js?v=577e741-v2"></script>
 <link rel="stylesheet" href="/wehrleiter.css?v=4">
 <script defer src="/wehrleiter.js?v=4"></script>
@@ -234,6 +236,7 @@ function applyAppSettings(){
 }
 async function loadAppSettings(){
  try{appSettings=await api('/api/settings');applyAppSettings();renderNavigation()}catch(e){appSettings=null;renderNavigation()}
+ try{const design=await api('/api/settings/design-system');window.FWComponents?.applyTokens(design.tokens||{});}catch(error){console.warn('Designsystem-Standardwerte aktiv:',error.message)}
 }
 async function loadMyPermissions(){try{myPermissions=await api('/api/permissions/me')}catch(e){myPermissions=[]}}
 async function showApp(){loginView.classList.add('hidden');appView.classList.remove('hidden');const label=roleLabels[role]||role,avatar=initials(username);sidebarUsername.textContent=username;sidebarRole.textContent=label;sidebarAvatar.textContent=avatar;profileUsername.textContent=username;profileRole.textContent=label;profileButton.textContent=avatar;updateConnectionStatus();await Promise.all([loadAppSettings(),loadMyPermissions()]);renderNavigation();navigate(new URLSearchParams(window.location.search).has('driver-check')?'my-driving':role==='THEKE'?'theke':'dashboard');refreshMessageBadge();setTimeout(maybeOfferPushOnboarding,1200);if(!window.messagePoll)window.messagePoll=setInterval(refreshMessageBadge,60000)}
@@ -582,6 +585,7 @@ async function adminSettingsPage(section='members'){if(section==='users')section
   <button class="settings-tab" id="stab-dashboard" onclick="adminSettingsPage('dashboard')">📊 Dashboard</button>
   <button class="settings-tab" id="stab-master" onclick="adminSettingsPage('master')">🏢 Stammdaten & Impressum</button>
   <button class="settings-tab" id="stab-appearance" onclick="adminSettingsPage('appearance')">🎨 Erscheinungsbild</button>
+  <button class="settings-tab" id="stab-design" onclick="adminSettingsPage('design')">🧩 Designsystem</button>
   <button class="settings-tab" id="stab-update" onclick="adminSettingsPage('update')">⬆️ Update</button>
  </div>
  <div id="settingsContent"></div>`;
@@ -594,6 +598,7 @@ async function adminSettingsPage(section='members'){if(section==='users')section
  if(section==='dashboard') return adminDashboardSettingsPage();
  if(section==='master') return adminMasterSettingsPage();
  if(section==='update') return adminUpdateSettingsPage();
+ if(section==='design') return adminDesignSystemPage();
  return adminAppearanceSettingsPage();
 }
 async function adminAppearanceSettingsPage(){settingsContent.innerHTML='<div class="grid2"><div class="panel"><h3>🎨 Farben</h3><div class="form-grid"><div class="field"><label>Primärfarbe</label><input id="setPrimary" type="color"></div><div class="field"><label>Menüfarbe</label><input id="setNav" type="color"></div><div class="field"><label>Akzentfarbe</label><input id="setAccent" type="color"></div><div class="field"><label>App-Name</label><input id="setAppName"></div></div><button class="btn primary" onclick="saveAppearanceSettings()">Speichern</button><div id="appearanceMsg"></div></div><div class="panel"><h3>🖼️ Logo</h3><div class="quick" style="align-items:center"><img id="settingsLogoPreview" class="logo-preview" src="/icons/fw-cockpit-brand.svg" alt="Logo"><div><input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><p class="sub">PNG, JPG, WEBP oder SVG, maximal 2 MB.</p><button class="btn primary small" onclick="uploadSettingsLogo()">Logo hochladen</button><button class="btn danger small" onclick="removeSettingsLogo()">Logo zurücksetzen</button></div></div></div></div>';setPrimary.value=appSettings?.primaryColor||'#c51f2d';setNav.value=appSettings?.navColor||'#071827';setAccent.value=appSettings?.accentColor||'#1479e9';setAppName.value=appSettings?.appName||'FFH Verwaltung';setLogoImage(settingsLogoPreview,appSettings?.logoAvailable);const syncPreview=()=>{settingsLogoPreview.style.borderColor=setPrimary.value};setPrimary.oninput=syncPreview;renderThemePresets();}
@@ -618,6 +623,79 @@ function renderThemePresets(){
   title.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
   document.getElementById('appearanceMsg').textContent='Vorschlag „'+t.label+'“ ausgewählt. Mit „Speichern“ für alle Nutzer übernehmen.';
  });
+}
+const DS_OPTIONS={
+ space:['8px','12px','16px','20px','24px','32px'],
+ radius:['6px','8px','10px','12px','14px','16px','20px','24px'],
+ controlHeight:['44px','46px','48px','52px','56px','60px'],
+ pageWidth:['960px','1100px','1200px','1280px','1440px','1600px'],
+ textSize:['14px','15px','16px','17px','18px','20px'],
+ shadow:['none','0 4px 20px #00000015','0 8px 28px #00000030']
+};
+const DS_DEFAULTS={space:'16px',radius:'14px',controlHeight:'44px',pageWidth:'1440px',textSize:'16px',shadow:'0 4px 20px #00000015'};
+const DS_LABELS={space:'Standardabstand',radius:'Karten-Rundung',controlHeight:'Button-/Eingabefeldhöhe',pageWidth:'Maximale Seitenbreite',textSize:'Grundschriftgröße',shadow:'Karten-Schatten'};
+let designDraft={};
+async function adminDesignSystemPage(){
+ if(role!=='ADMIN')return;
+ settingsContent.innerHTML='<div class="panel"><h2>🧩 Designsystem & Komponenten</h2><p class="sub">Die Einstellungen gelten zentral für alle Seiten, die die neuen FW-Cockpit-Designkomponenten verwenden. Bestehende Seiten werden nicht unkontrolliert umgestaltet.</p><p>Designwerte werden geladen …</p></div>';
+ try{
+  const result=await api('/api/settings/design-system');
+  designDraft={...DS_DEFAULTS,...(result.tokens||{})};
+  drawDesignSystemPage();
+ }catch(error){settingsContent.innerHTML='<div class="message error">'+esc(error.message)+'</div>';}
+}
+function drawDesignSystemPage(){
+ const selectors=Object.entries(DS_OPTIONS).map(([key,choices])=>
+  '<div class="ds-field"><label for="ds-token-'+key+'">'+esc(DS_LABELS[key])+'</label>'+
+  '<select class="ds-select" id="ds-token-'+key+'" data-ds-token="'+key+'">'+choices.map(value=>
+    '<option value="'+esc(value)+'"'+(designDraft[key]===value?' selected':'')+'>'+esc(value==='none'?'Ohne Schatten':value)+'</option>').join('')+
+  '</select></div>').join('');
+ settingsContent.innerHTML='<section class="ds-page"><header class="ds-page-header"><div class="ds-page-heading"><h2 class="ds-page-title">🧩 Zentrales Designsystem</h2><p class="ds-page-description">Abstände, Rundungen, Schriften, Buttons, Tabellen und Kacheln zentral gestalten. Farbthemen bleiben unter „Erscheinungsbild“.</p></div></header>'+
+ '<section class="ds-card"><h3 class="ds-card-title">Gemeinsame Komponenten-Einstellungen</h3><div class="u-grid u-grid-3 u-gap-3">'+selectors+'</div>'+
+ '<div class="ds-page-actions u-mt-4"><button type="button" class="ds-btn ds-btn-primary" id="ds-save">Designsystem speichern</button>'+
+ '<button type="button" class="ds-btn ds-btn-secondary" id="ds-reset">Standardwerte wiederherstellen</button></div><div id="ds-message" role="status" aria-live="polite"></div></section>'+
+ '<section class="ds-template-preview" id="ds-preview"><h3 class="ds-card-title">Live-Vorschau: zentrale Komponenten</h3></section></section>';
+ settingsContent.querySelectorAll('[data-ds-token]').forEach(select=>select.onchange=()=>{
+  designDraft[select.dataset.dsToken]=select.value;
+  window.FWComponents?.applyTokens(designDraft);
+  renderDesignPreview();
+ });
+ document.getElementById('ds-save').onclick=saveDesignSystem;
+ document.getElementById('ds-reset').onclick=()=>{
+  designDraft={...DS_DEFAULTS};
+  window.FWComponents?.applyTokens(designDraft);
+  drawDesignSystemPage();
+  document.getElementById('ds-message').textContent='Standardwerte in der Vorschau ausgewählt. Zum Übernehmen bitte speichern.';
+ };
+ renderDesignPreview();
+}
+function renderDesignPreview(){
+ const ui=window.FWComponents,host=document.getElementById('ds-preview');
+ if(!ui||!host)return;
+ host.querySelector('.ds-preview-content')?.remove();
+ const preview=document.createElement('div');preview.className='ds-preview-content u-grid u-gap-4';
+ const action=ui.button({label:'Neue Qualifikation',variant:'primary'});
+ const neutral=ui.button({label:'Bearbeiten',variant:'secondary'});
+ const dangerous=ui.button({label:'Löschen',variant:'danger'});
+ const sample=ui.table({columns:[{key:'name',label:'Mitglied'},{key:'status',label:'Status',render:item=>ui.badge({label:item.status,variant:item.variant})},{key:'date',label:'Nächste Prüfung'}],
+  rows:[{name:'Max Muster',status:'Gültig',variant:'success',date:'12.10.2026'},{name:'Erika Beispiel',status:'Bald fällig',variant:'warning',date:'30.09.2026'}]});
+ const controls=document.createElement('div');controls.className='u-grid u-grid-2 u-gap-3';
+ controls.append(ui.field({label:'Suche',type:'search',placeholder:'Mitglied suchen'}),ui.field({label:'Status',options:[{label:'Alle',value:''},{label:'Fällig',value:'due'}]}));
+ preview.append(ui.card({title:'Standardkarte und Buttons',content:controls,actions:[action,neutral,dangerous]}),ui.card({title:'Standardtabelle',content:sample}));
+ host.appendChild(preview);
+}
+async function saveDesignSystem(){
+ if(role!=='ADMIN')return;
+ const message=document.getElementById('ds-message'),button=document.getElementById('ds-save');
+ if(!message||!button)return;
+ button.disabled=true;
+ try{
+  const result=await api('/api/settings/design-system',{method:'PUT',body:JSON.stringify({tokens:designDraft})});
+  designDraft={...DS_DEFAULTS,...result.tokens};
+  window.FWComponents?.applyTokens(designDraft);
+  message.textContent='✓ Designsystem zentral gespeichert. Alle Anwender erhalten die Einstellungen beim nächsten Laden.';
+ }catch(error){message.textContent='Speichern fehlgeschlagen: '+error.message;}
+ finally{button.disabled=false;}
 }
 async function saveAppearanceSettings(){try{appSettings=await api('/api/settings',{method:'PUT',body:JSON.stringify({appName:setAppName.value.trim(),primaryColor:setPrimary.value,navColor:setNav.value,accentColor:setAccent.value,menuOrder:appSettings?.menuOrder||[],hiddenMenuItems:appSettings?.hiddenMenuItems||[]})});applyAppSettings();renderNavigation();appearanceMsg.innerHTML='<div class="message success">✓ Erscheinungsbild gespeichert.</div>'}catch(e){appearanceMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
 async function uploadSettingsLogo(){const file=settingsLogoFile.files?.[0];if(!file){appearanceMsg.innerHTML='<div class="message error">Bitte zuerst eine Bilddatei auswählen.</div>';return}const fd=new FormData();fd.append('file',file);try{const r=await fetch('/api/settings/logo',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});let x={};try{x=await r.json()}catch{}if(!r.ok)throw new Error(x.message||x.detail||'Logo konnte nicht gespeichert werden');appSettings=x;applyAppSettings();appearanceMsg.innerHTML='<div class="message success">✓ Logo gespeichert.</div>';setLogoImage(settingsLogoPreview,true)}catch(e){appearanceMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
