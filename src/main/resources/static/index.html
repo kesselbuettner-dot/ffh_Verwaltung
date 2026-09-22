@@ -634,10 +634,11 @@ const DS_OPTIONS={
  controlHeight:['44px','46px','48px','52px','56px','60px'],
  pageWidth:['960px','1100px','1200px','1280px','1440px','1600px'],
  textSize:['14px','15px','16px','17px','18px','20px'],
- shadow:['none','0 4px 20px #00000015','0 8px 28px #00000030']
+ shadow:['none','0 4px 20px #00000015','0 8px 28px #00000030'],
+ templateColumns:['2','3','4'],templateGap:['8px','12px','16px','20px','24px','32px']
 };
-const DS_DEFAULTS={space:'16px',radius:'14px',controlHeight:'44px',pageWidth:'1440px',textSize:'16px',shadow:'0 4px 20px #00000015'};
-const DS_LABELS={space:'Standardabstand',radius:'Karten-Rundung',controlHeight:'Button-/Eingabefeldhöhe',pageWidth:'Maximale Seitenbreite',textSize:'Grundschriftgröße',shadow:'Karten-Schatten'};
+const DS_DEFAULTS={space:'16px',radius:'14px',controlHeight:'44px',pageWidth:'1440px',textSize:'16px',shadow:'0 4px 20px #00000015',templateColumns:'3',templateGap:'16px'};
+const DS_LABELS={space:'Standardabstand',radius:'Karten-Rundung',controlHeight:'Button-/Eingabefeldhöhe',pageWidth:'Maximale Seitenbreite',textSize:'Grundschriftgröße',shadow:'Karten-Schatten',templateColumns:'Spaltenzahl in Dashboard und Kachelrastern',templateGap:'Abstand zwischen Seitenabschnitten'};
 let designDraft={};
 async function adminDesignSystemPage(){
  if(role!=='ADMIN')return;
