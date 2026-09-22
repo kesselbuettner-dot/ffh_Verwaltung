@@ -112,7 +112,7 @@
   put(layout,navigation,host);
   if(sections.length)render(0);else put(host,ui().empty({message:'Keine Einstellungsbereiche'}));
   const content=[layout];
-  if(opts.onSave)put(content,put(elem('div','ds-modal-actions'),ui().button({label:opts.saveLabel||'Einstellungen speichern',variant:'primary',onClick:opts.onSave})));
+  if(opts.onSave)content.push(put(elem('div','ds-modal-actions'),ui().button({label:opts.saveLabel||'Einstellungen speichern',variant:'primary',onClick:opts.onSave})));
   return ui().page({title:opts.title||'Einstellungen',description:opts.description||'',children:content,className:'ds-template-settings'});
  }
  const RENDER=Object.freeze({overview,management,detail,form,tasks,settings});
