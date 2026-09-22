@@ -56,6 +56,7 @@ public class SecurityConfig {
                     "/design-system.css",
                     "/design-system.js",
                     "/page-templates.js",
+                    "/device-cycle-tasks.js",
                     "/page-templates.css",
                     "/wehrleiter.js",
                     "/wehrleiter.css",
