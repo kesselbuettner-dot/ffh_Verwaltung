@@ -1,7 +1,7 @@
 name: FW-Cockpit Designsystem and Components
 on:
   push:
-    branches: [feature/design-system-utilities-20260922]
+    branches: [feature/design-system-utilities-20260922, feature/page-templates-20260922]
   pull_request:
     branches: [release/2026-09-22-wehrleiter-3spalten]
   workflow_dispatch:
@@ -21,6 +21,8 @@ jobs:
       - name: Check component scripts and design regressions
         run: |
           node --check src/main/resources/static/design-system.js
+          node --check src/main/resources/static/page-templates.js
+          node src/test/js/page-templates-smoke.cjs
           node src/test/js/design-system-smoke.cjs
           node src/test/js/menu-designer-smoke.cjs
           node src/test/js/admin-layout-smoke.cjs
