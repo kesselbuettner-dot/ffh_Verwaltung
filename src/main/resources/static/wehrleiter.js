@@ -172,25 +172,33 @@ function drawConfig(){
  '<button class="btn secondary" id="backWehr">Zur Mitgliederverwaltung</button>')+
  '<div class="panel"><div class="quick"><button class="btn secondary" id="defaultWehr">Standardkacheln hinzufügen</button><button class="btn primary" id="newWehrType">＋ Eigene Kachel</button></div>'+
  '<div class="table-wrap"><table class="table"><thead><tr><th>Kachel</th><th>Überwachung</th><th>Vorwarnzeit</th><th>Prüfintervall</th><th>Aktion</th></tr></thead><tbody>'+
- types.map(t=>'<tr><td>'+safe(t.icon+' '+t.title)+'</td><td>'+(t.tracked?'Ja':'Nein')+(t.sensitive?' · vertraulich':'')+'</td><td>'+t.warningDays+' Tage</td><td>'+t.intervalMonths+' Monate</td><td><button class="btn small secondary" data-type-id="'+t.id+'">Bearbeiten</button></td></tr>').join('')+
+ types.slice().sort((a,b)=>(a.category==='QUALIFICATION'?0:1)-(b.category==='QUALIFICATION'?0:1)||a.title.localeCompare(b.title,'de')).map(t=>'<tr><td>'+safe(t.icon+' '+t.title)+'</td><td>'+safe(t.category==='CERTIFICATE_DOCUMENT'?'Zertifikat / Dokument':'Qualifikation')+' · '+(t.tracked?'Ja':'Nein')+(t.sensitive?' · vertraulich':'')+'</td><td>'+t.warningDays+' Tage</td><td>'+t.intervalMonths+' Monate</td><td><button class="btn small secondary" data-type-id="'+t.id+'">Bearbeiten</button> <button class="btn small danger" data-delete-type="'+t.id+'">Löschen</button></td></tr>').join('')+
  '</tbody></table></div><div id="wehrConfigMsg"></div></div>';
  el('backWehr').onclick=()=>page();el('defaultWehr').onclick=async()=>{try{await api(BASE+'/types/defaults',{method:'POST'});types=await api(BASE+'/types');drawConfig();}catch(e){notice(el('wehrConfigMsg'),e.message);}};
  el('newWehrType').onclick=()=>editType(null);
  document.querySelectorAll('[data-type-id]').forEach(b=>b.onclick=()=>editType(Number(b.dataset.typeId)));
+ document.querySelectorAll('[data-delete-type]').forEach(b=>b.onclick=async()=>{
+  const type=types.find(t=>t.id===Number(b.dataset.deleteType));if(!type)return;
+  if(!confirm('Kacheltyp „'+type.title+'“ dauerhaft löschen? Dies ist nur möglich, wenn er keinem Mitglied zugeordnet ist.'))return;
+  try{await api(BASE+'/types/'+type.id,{method:'DELETE'});types=await api(BASE+'/types');drawConfig();}
+  catch(error){notice(el('wehrConfigMsg'),error.message);}
+ });
 }
 function editType(id){
  const t=types.find(x=>x.id===id);
  modalTitle.textContent=t?'Kachel konfigurieren':'Eigene Kachel anlegen';
  modalBody.innerHTML='<div id="wehrTypeMsg"></div>'+
  (t?'<p><strong>'+safe(t.code)+'</strong></p>':inputField('Technische Kennung (A–Z, 0–9, _)','wCode'))+
+ '<div class="field"><label>Kategorie</label><select id="wCategory"><option value="QUALIFICATION">Qualifikation</option><option value="CERTIFICATE_DOCUMENT">Zertifikat / Dokument</option></select></div>'+ 
  inputField('Name','wTitle',t?.title)+inputField('Kürzel (maximal 10 Zeichen)','wShort',t?.shortLabel||'','','Nur dieses Kürzel erscheint in der kleinen Kachel.')+inputField('Symbol','wIcon',t?.icon||'📋')+
  '<div class="field"><label><input id="wTracked" type="checkbox" '+(t?.tracked?'checked':'')+'> Überwachungspflichtig</label></div>'+
  '<div class="field"><label><input id="wSensitive" type="checkbox" '+(t?.sensitive?'checked':'')+'> Vertraulich (gesonderte Berechtigung)</label></div>'+
  inputField('Vorwarnzeit in Tagen (0–365)','wWarn',t?.warningDays??30,'number')+
  inputField('Wiederholung in Monaten (0–120)','wMonths',t?.intervalMonths??0,'number')+
  '<div class="quick"><button class="btn secondary" id="wehrTypeCancel">Abbrechen</button><button class="btn primary" id="wehrTypeSave">Speichern</button></div>';
+ el('wCategory').value=t?.category||'QUALIFICATION';
  el('wehrTypeCancel').onclick=closeModal;el('wehrTypeSave').onclick=async()=>{
-  const payload={code:t?.code||el('wCode').value.trim().toUpperCase(),title:el('wTitle').value,shortLabel:el('wShort').value.trim(),icon:el('wIcon').value,
+  const payload={code:t?.code||el('wCode').value.trim().toUpperCase(),title:el('wTitle').value,shortLabel:el('wShort').value.trim(),icon:el('wIcon').value,category:el('wCategory').value,
    tracked:el('wTracked').checked,sensitive:el('wSensitive').checked,warningDays:Number(el('wWarn').value),intervalMonths:Number(el('wMonths').value)};
   try{await api(BASE+'/types'+(t?'/'+t.id:''),{method:t?'PUT':'POST',body:JSON.stringify(payload)});
    closeModal();types=await api(BASE+'/types');drawConfig();
