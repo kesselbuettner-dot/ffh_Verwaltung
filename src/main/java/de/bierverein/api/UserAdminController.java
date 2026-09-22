@@ -2,6 +2,9 @@ package de.bierverein.api;
 import org.springframework.web.bind.annotation.*; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.security.crypto.password.PasswordEncoder; import org.springframework.http.HttpStatus; import org.springframework.web.server.ResponseStatusException; import java.util.*; import org.springframework.transaction.annotation.Transactional;
 @RestController @RequestMapping("/api/admin/users") @PreAuthorize("hasRole('ADMIN')") public class UserAdminController {
  private final AppUserRepository users; private final MemberRepository members; private final PasswordEncoder encoder; private final PrimaryRoleSyncService primaryRoles; private final ManagedUserRoleRepository managedAssignments;
+ @org.springframework.beans.factory.annotation.Autowired private DeviceCycleTaskRepository cycleTasks;
+ @org.springframework.beans.factory.annotation.Autowired private PushSubscriptionRepository pushSubscriptions;
+ @org.springframework.beans.factory.annotation.Autowired private CalendarSubscriptionRepository calendarSubscriptions;
  public UserAdminController(AppUserRepository u,MemberRepository m,PasswordEncoder e,PrimaryRoleSyncService primaryRoles, ManagedUserRoleRepository managedAssignments){users=u;members=m;encoder=e;this.primaryRoles=primaryRoles;this.managedAssignments=managedAssignments;}
  @GetMapping @Transactional(readOnly = true) public List<UserDto> all(){return users.findAll().stream().map(this::dto).toList();}
  @PostMapping("/{id}/approve") @Transactional public UserDto approve(@PathVariable Long id){ AppUser u=users.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Benutzer nicht gefunden")); if(u.isRegistrationApproved())throw new ResponseStatusException(HttpStatus.CONFLICT,"Benutzer ist bereits freigeschaltet."); Role prior=u.getRole(); u.setRegistrationApproved(true); u.setEnabled(true); u.setRole(Role.MEMBER); if(u.getMember()!=null){u.getMember().setActive(true); members.save(u.getMember());} users.save(u); primaryRoles.sync(u,prior); return dto(u); }
@@ -30,6 +33,9 @@ import org.springframework.web.bind.annotation.*; import org.springframework.sec
   if(auth!=null && user.getUsername().equalsIgnoreCase(auth.getName()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Das eigene Administratorkonto kann nicht gelöscht werden.");
   if(user.getRole()==Role.ADMIN&&user.isEnabled()&&managedAssignments.countByRoleCodeAndUserEnabled("ADMIN",true)<=1)
    throw new ResponseStatusException(HttpStatus.CONFLICT,"Der letzte aktive Administrator darf nicht gelöscht werden.");
+  cycleTasks.releaseAssignments(id); // delegated open checks return to the Gerätewart inbox.
+  pushSubscriptions.deleteAll(pushSubscriptions.findByUsername(user.getUsername()));
+  calendarSubscriptions.findByUsername(user.getUsername()).ifPresent(calendarSubscriptions::delete);
   managedAssignments.deleteAll(managedAssignments.findByUserId(id));
   managedAssignments.flush();
   if(user.getMember()!=null)user.getMember().setUser(null);
