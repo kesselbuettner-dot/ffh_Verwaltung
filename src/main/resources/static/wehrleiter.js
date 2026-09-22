@@ -25,12 +25,12 @@ function avatarHtml(person){
   '<img src="'+safe(person.avatar)+'" alt="" loading="lazy">':safe(initials||'?');
  return '<span class="member-avatar" aria-hidden="true">'+picture+'</span>';
 }
-function cardHtml(card){
+function cardHtml(card,forPrint=false){
  const abbr=String(card.shortLabel||card.code||'Q').slice(0,10);
  const label=card.title+' – '+(statusMap[card.status]||card.status)+', ausgestellt '+date(card.issuedOn)+', nächster Termin '+date(card.nextDueOn);
  const content='<span class="q-short">'+safe(abbr)+'</span>';
  const css='wehr-tile '+cardTone(card)+' is-'+safe(card.status||'VALID');
- return rights('fire.qualifications.write')?
+ return !forPrint&&rights('fire.qualifications.write')?
  '<button type="button" class="'+css+'" data-edit-card="'+Number(card.id)+'" title="'+safe(label)+'" aria-label="'+safe(label)+'">'+content+'</button>':
  '<span class="'+css+'" role="img" title="'+safe(label)+'" aria-label="'+safe(label)+'">'+content+'</span>';
 }
@@ -72,13 +72,13 @@ function wehrLegend(){
  '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-UNSCHEDULED"></i> Ohne Prüftermin – gepunktet</span></div>';
 }
 function groupedMemberTable(rows,print=false){
- const visible=print?rows:rows;
+ const visible=rows;
  const head='<thead><tr><th scope="col">Mitglied</th>'+WEHR_COLUMNS.map(c=>
   '<th scope="col">'+safe(c.title)+'</th>').join('')+'</tr></thead>';
  const body=visible.map(({p,list})=>'<tr><th scope="row" class="wehr-name-cell">'+
   (print?'':avatarHtml(p))+'<strong>'+safe(p.name)+'</strong></th>'+
   WEHR_COLUMNS.map(column=>'<td data-label="'+safe(column.title)+'"><div class="wehr-card-list">'+
-   list.filter(c=>c.category===column.code).map(cardHtml).join('')+
+   list.filter(c=>c.category===column.code).map(c=>cardHtml(c,print)).join('')+
    '</div></td>').join('')+'</tr>').join('');
  return '<table class="wehr-overview-table">'+head+'<tbody>'+body+'</tbody></table>';
 }
