@@ -64,11 +64,11 @@ const due=api.tasks({rows:[{name:'Prüfung A',due:'2026-10-01',assignee:'Geräte
 assert(textOf(due).includes('Fällig'));
 for(const cls of ['ds-metric-grid','ds-template-toolbar','ds-detail-grid','ds-form-grid','ds-settings-layout','ds-template-gallery','@media(max-width:700px)'])
  assert(css.includes(cls),'Central template style missing: '+cls);
-for(const asset of ['page-templates.css?v=1','page-templates.js?v=1'])
+for(const asset of ['page-templates.css?v=1','page-templates.js?v=2'])
  assert(html.includes(asset)&&sw.includes('/'+asset),'Page template asset missing from page or PWA cache: '+asset);
 for(const asset of ['"/page-templates.js"','"/page-templates.css"'])
  assert(security.includes(asset),'Static asset not public: '+asset);
-assert(sw.includes('ffh-verwaltung-page-templates-v41'));
+assert(sw.includes('ffh-verwaltung-admin-cycle-tasks-v44'));
 assert(html.includes("adminSettingsPage('templates')"),'Template gallery menu missing');
 assert(html.includes("lib.preview(selectedPageTemplate)")&&html.includes("const lib=window.FWPageTemplates"),'Interactive gallery preview missing');
 assert(docs.includes('FWPageTemplates.render'),'Binding page layout docs missing');
