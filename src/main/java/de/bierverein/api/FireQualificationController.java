@@ -31,11 +31,15 @@ public class FireQualificationController {
  private TypeView view(FireQualificationType t){return new TypeView(t.id,t.code,t.title,t.icon,abbreviation(t),category(t),t.tracked,t.sensitive,t.warningDays,t.intervalMonths);}
  private static final Set<String> LICENSE_CLASSES=Set.of("AM","A1","A2","A","B","BE","B96","C1","C1E","C","CE","D1","D1E","D","DE","L","T");
  private String category(FireQualificationType t){
-  return t.category!=null&&t.category.equals("CERTIFICATE_DOCUMENT")||t.code.equals("DRIVERS_LICENSE")?"CERTIFICATE_DOCUMENT":"QUALIFICATION";
+  // Existing medical examination types are displayed under suitability without altering saved member records.
+  if("MEDICAL_DUE".equals(t.code))return "SUITABILITY";
+  if("DRIVERS_LICENSE".equals(t.code))return "CERTIFICATE_DOCUMENT";
+  if(t.category!=null&&Set.of("QUALIFICATION","CERTIFICATE_DOCUMENT","SUITABILITY").contains(t.category))return t.category;
+  return "QUALIFICATION";
  }
  private String validCategory(String category){
   if(category==null||category.isBlank())return "QUALIFICATION";
-  if(!Set.of("QUALIFICATION","CERTIFICATE_DOCUMENT").contains(category))throw bad("Ungültige Kachelkategorie");
+  if(!Set.of("QUALIFICATION","CERTIFICATE_DOCUMENT","SUITABILITY").contains(category))throw bad("Ungültige Kachelkategorie");
   return category;
  }
  private String classes(List<String> selected){
