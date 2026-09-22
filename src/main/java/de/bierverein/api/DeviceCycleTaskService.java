@@ -122,6 +122,8 @@ public class DeviceCycleTaskService {
  public TaskView finish(Long id,FinishInput input,Authentication auth){
   AppUser user=actor(auth);
   DeviceCycleTask task=tasks.findLocked(id).orElseThrow(()->error(HttpStatus.NOT_FOUND,"Prüfaufgabe nicht gefunden"));
+  if(!manager(user)&&(user.getMember()==null||!user.getMember().isActive()))
+   throw error(HttpStatus.FORBIDDEN,"Nur aktive Mitglieder dürfen zugewiesene Prüfungen abschließen");
   if(!manager(user)&&!Objects.equals(task.getAssignedUserId(),user.getId()))
    throw error(HttpStatus.FORBIDDEN,"Diese Prüfaufgabe ist nicht dir zugewiesen");
   if(!"OPEN".equals(task.getStatus())||!task.getDevice().isActive())
