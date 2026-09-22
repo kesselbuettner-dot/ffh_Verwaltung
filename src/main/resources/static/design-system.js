@@ -46,7 +46,7 @@
   if(actions.length)append(head,append(node('div','ds-page-actions'),actions));
   append(host,head,children);return host;
  }
- function field({label,value='',type='text',name='',placeholder='',required=false,options=null,onChange}={}){
+ function field({label,value='',type='text',name='',placeholder='',required=false,options=null,onChange,onInput}={}){
   const wrapper=node('div','ds-field'),identifier='ds-'+Math.random().toString(36).slice(2);
   const lbl=node('label','',label||'Feld');lbl.htmlFor=identifier;
   const input=Array.isArray(options)?node('select','ds-select'):node('input','ds-input');
@@ -61,6 +61,7 @@
   }
   input.required=!!required;
   if(typeof onChange==='function')input.addEventListener('change',()=>onChange(input.value));
+  if(typeof onInput==='function')input.addEventListener('input',()=>onInput(input.value));
   append(wrapper,lbl,input);return wrapper;
  }
  function table({columns=[],rows=[],emptyMessage='Keine Einträge vorhanden',onRowClick}={}){
