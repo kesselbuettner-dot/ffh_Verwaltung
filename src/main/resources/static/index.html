@@ -332,7 +332,7 @@ function openMemberForm(id){
  if(role!=='ADMIN')return;
  const m=id==null?null:members.find(x=>Number(x.id)===Number(id));if(id!=null&&!m)return;
  modalTitle.textContent=m?'Mitgliederstammdaten bearbeiten':'Mitglied anlegen';
- modalBody.innerHTML='<div id="memberFormMsg"></div><div class="field"><label for="memberFormName">Name *</label><input id="memberFormName" maxlength="160" value="'+esc(m?.name||'')+'" required></div>'+
+ modalBody.innerHTML='<div id="memberFormMsg"></div><div class="field member-avatar-input"><label for="memberAvatarFile">Mitglieder-Avatar (optional)</label><div class="member-avatar-input-row"><span class="member-avatar member-avatar-preview" id="memberAvatarPreview" aria-hidden="true">'+esc((m?.name||'?').split(/\\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase())+'</span><input id="memberAvatarFile" type="file" accept="image/jpeg,image/png,image/webp"></div><small class="sub">Wird auf ca. 128 × 128 Pixel verkleinert, maximal 100 KB; nur in berechtigten Mitgliederansichten angezeigt.</small></div><div class="field"><label for="memberFormName">Name *</label><input id="memberFormName" maxlength="160" value="'+esc(m?.name||'')+'" required></div>'+
  '<div class="field"><label for="memberFormEmail">E-Mail</label><input id="memberFormEmail" type="email" maxlength="320" value="'+esc(m?.email||'')+'"></div>'+
  '<div class="field"><label for="memberFormPhone">Telefon</label><input id="memberFormPhone" maxlength="80" value="'+esc(m?.phone||'')+'"></div>'+
  '<div class="field"><label for="memberFormAddress">Anschrift</label><textarea id="memberFormAddress" maxlength="500">'+esc(m?.address||'')+'</textarea></div>'+
@@ -340,7 +340,39 @@ function openMemberForm(id){
  '<section id="memberExtraFields"><p class="sub">Weitere Stammdaten werden geladen …</p></section>'+ 
  '<p class="sub">Benutzerkonto, Passwort und Berechtigungen bitte ausschließlich unter „Konten“ und „Rollen & Rechte“ bearbeiten. Das Deaktivieren eines Mitglieds ist keine automatische Kontosperrung.</p>'+
  '<div class="quick"><button class="btn secondary" onclick="closeModal()">Abbrechen</button><button class="btn primary" onclick="saveMemberMaster('+(m?Number(m.id):'null')+')">Stammdaten speichern</button></div>';
- modal.classList.remove('hidden');loadMemberExtraFields(id);
+ modal.classList.remove('hidden');loadMemberExtraFields(id);loadMemberAvatar(id);
+}
+
+async function loadMemberAvatar(id){
+ const preview=document.getElementById('memberAvatarPreview'),file=document.getElementById('memberAvatarFile');
+ if(!preview||!file)return;
+ file.onchange=async()=>{
+  const source=file.files?.[0];if(!source)return;
+  try{const image=await compressMemberAvatar(source);preview.replaceChildren();
+   const photo=new Image();photo.src=image;photo.alt='';preview.append(photo);
+  }catch(error){file.value='';document.getElementById('memberFormMsg').textContent=error.message;}
+ };
+ if(id==null)return;
+ try{
+  const avatar=await api('/api/admin/member-profiles/'+Number(id)+'/avatar');
+  if(document.getElementById('memberAvatarPreview')!==preview||!avatar.imageData)return;
+  preview.replaceChildren();const photo=new Image();photo.src=avatar.imageData;photo.alt='';preview.append(photo);
+ }catch(error){document.getElementById('memberFormMsg').textContent='Avatar konnte nicht geladen werden: '+error.message;}
+}
+async function compressMemberAvatar(file){
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>6_000_000)throw Error('Bitte ein JPEG-, PNG- oder WEBP-Foto bis 6 MB auswählen.');
+ const bitmap=await createImageBitmap(file);
+ try{
+  const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;
+  const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw Error('Bild kann nicht verarbeitet werden.');
+  ctx.fillStyle='#eef2f6';ctx.fillRect(0,0,128,128);
+  const side=Math.min(bitmap.width,bitmap.height),sx=(bitmap.width-side)/2,sy=(bitmap.height-side)/2;
+  ctx.drawImage(bitmap,sx,sy,side,side,0,0,128,128);
+  const encoded=canvas.toDataURL('image/jpeg',.77);
+  canvas.width=0;canvas.height=0;
+  if(encoded.length>135000)throw Error('Avatar ist trotz Verkleinerung zu groß.');
+  return encoded;
+ }finally{bitmap.close();}
 }
 async function loadMemberExtraFields(id){
  const root=document.getElementById('memberExtraFields');if(!root)return;
@@ -423,6 +455,13 @@ async function saveMemberMaster(id){
       joinedOn:document.getElementById('memberJoinedOn').value||null,custom};
    try{await api('/api/admin/member-profiles/'+saved.id,{method:'PUT',body:JSON.stringify(additional)});}
    catch(error){document.getElementById('memberFormMsg').textContent='Mitglied gespeichert, zusätzliche Stammdaten konnten nicht gespeichert werden: '+error.message+'. Bitte dieses Mitglied erneut öffnen.';return;}
+  }
+  const imageFile=document.getElementById('memberAvatarFile')?.files?.[0];
+  if(imageFile){
+   try{
+    const imageData=await compressMemberAvatar(imageFile);
+    await api('/api/admin/member-profiles/'+Number(saved.id)+'/avatar',{method:'PUT',body:JSON.stringify({imageData})});
+   }catch(error){document.getElementById('memberFormMsg').textContent='Stammdaten gespeichert, aber Avatar konnte nicht gespeichert werden: '+error.message+'. Bitte Mitglied erneut öffnen.';return;}
   }
   closeModal();await adminSettingsPage('members');
  }catch(e){document.getElementById('memberFormMsg').textContent=e.message||'Speichern fehlgeschlagen.';}
