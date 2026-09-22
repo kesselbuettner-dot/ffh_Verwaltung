@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [release/2026-09-22-wehrleiter-3spalten, feature/design-system-utilities-20260922, feature/page-templates-20260922]
   workflow_dispatch:
+concurrency:
+  group: unified-inspections-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
