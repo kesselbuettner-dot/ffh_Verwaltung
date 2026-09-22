@@ -16,18 +16,36 @@ public class FireQualificationController {
  private final DrivingCheckService driving;
  private final ManagedUserRoleRepository managedRoles;
  private final MemberExtraRepository memberExtras;
+ private final FireQualificationAttachmentRepository attachments;
  public FireQualificationController(FireQualificationTypeRepository types,FireMemberQualificationRepository records,
-     MemberRepository members,FireQualificationPermissions permission,DrivingCheckService driving,ManagedUserRoleRepository managedRoles,MemberExtraRepository memberExtras){
-  this.types=types;this.records=records;this.members=members;this.permission=permission;this.driving=driving;this.managedRoles=managedRoles;this.memberExtras=memberExtras;
+     MemberRepository members,FireQualificationPermissions permission,DrivingCheckService driving,ManagedUserRoleRepository managedRoles,MemberExtraRepository memberExtras,FireQualificationAttachmentRepository attachments){
+  this.types=types;this.records=records;this.members=members;this.permission=permission;this.driving=driving;this.managedRoles=managedRoles;this.memberExtras=memberExtras;this.attachments=attachments;
  }
- public record TypeView(Long id,String code,String title,String icon,String shortLabel,boolean tracked,boolean sensitive,int warningDays,int intervalMonths){}
- public record TypeInput(String code,String title,String icon,String shortLabel,Boolean tracked,Boolean sensitive,Integer warningDays,Integer intervalMonths){}
+ public record TypeView(Long id,String code,String title,String icon,String shortLabel,String category,boolean tracked,boolean sensitive,int warningDays,int intervalMonths){}
+ public record TypeInput(String code,String title,String icon,String shortLabel,String category,Boolean tracked,Boolean sensitive,Integer warningDays,Integer intervalMonths){}
  public record AssignmentInput(Long typeId,LocalDate issuedOn,LocalDate expiresOn,LocalDate nextDueOn,
-   Boolean active,String licenseNumber){}
- public record Card(Long id,Long memberId,String memberName,String code,String title,String icon,String shortLabel,
+   Boolean active,String licenseNumber,List<String> licenseClasses){}
+ public record Card(Long id,Long memberId,String memberName,String code,String title,String icon,String shortLabel,String category,List<String> licenseClasses,boolean documentAttached,
    LocalDate issuedOn,LocalDate expiresOn,LocalDate lastCheckedOn,LocalDate nextDueOn,String status,boolean referencePresent){}
  private ResponseStatusException bad(String message){return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);}
- private TypeView view(FireQualificationType t){return new TypeView(t.id,t.code,t.title,t.icon,abbreviation(t),t.tracked,t.sensitive,t.warningDays,t.intervalMonths);}
+ private TypeView view(FireQualificationType t){return new TypeView(t.id,t.code,t.title,t.icon,abbreviation(t),category(t),t.tracked,t.sensitive,t.warningDays,t.intervalMonths);}
+ private static final Set<String> LICENSE_CLASSES=Set.of("AM","A1","A2","A","B","BE","B96","C1","C1E","C","CE","D1","D1E","D","DE","L","T");
+ private String category(FireQualificationType t){
+  return t.category!=null&&t.category.equals("CERTIFICATE_DOCUMENT")||t.code.equals("DRIVERS_LICENSE")?"CERTIFICATE_DOCUMENT":"QUALIFICATION";
+ }
+ private String validCategory(String category){
+  if(category==null||category.isBlank())return "QUALIFICATION";
+  if(!Set.of("QUALIFICATION","CERTIFICATE_DOCUMENT").contains(category))throw bad("Ungültige Kachelkategorie");
+  return category;
+ }
+ private String classes(List<String> selected){
+  if(selected==null)return null;
+  var normalized=new TreeSet<String>();
+  for(String raw:selected){if(raw==null)throw bad("Führerscheinklasse fehlt");String v=raw.trim().toUpperCase(Locale.ROOT);
+    if(!LICENSE_CLASSES.contains(v))throw bad("Ungültige Führerscheinklasse: "+v);normalized.add(v);}
+  return String.join(",",normalized);
+ }
+ private List<String> classList(String saved){return saved==null||saved.isBlank()?List.of():List.of(saved.split(","));}
  private String abbreviation(FireQualificationType t){
   if(t.shortLabel!=null&&!t.shortLabel.isBlank())return t.shortLabel;
   return switch(t.code){
@@ -60,7 +78,7 @@ public class FireQualificationController {
   LocalDate due=due(q),now=LocalDate.now();
   String state=!q.active?"INACTIVE":due==null?(q.type.tracked?"UNSCHEDULED":"VALID"):
     due.isBefore(now)?"OVERDUE":!due.isAfter(now.plusDays(q.type.warningDays))?"DUE":"VALID";
-  return new Card(q.id,q.memberId,m.getName(),q.type.code,q.type.title,q.type.icon,abbreviation(q.type),
+  return new Card(q.id,q.memberId,m.getName(),q.type.code,q.type.title,q.type.icon,abbreviation(q.type),category(q.type),classList(q.licenseClasses),attachments.existsByQualificationId(q.id),
    q.issuedOn,q.expiresOn,q.lastCheckedOn,due,state,q.licenseNumberMac!=null);
  }
  private LocalDate due(FireMemberQualification q){
@@ -114,7 +132,8 @@ public class FireQualificationController {
   return types();
  }
  private void defaultType(String code,String title,String icon,boolean tracked,boolean sensitive,int warn,int months){
-  if(types.findByCode(code).isEmpty())types.save(new FireQualificationType(code,title,icon,tracked,sensitive,warn,months));
+  if(types.findByCode(code).isEmpty()){FireQualificationType type=new FireQualificationType(code,title,icon,tracked,sensitive,warn,months);
+   type.category=code.equals("DRIVERS_LICENSE")?"CERTIFICATE_DOCUMENT":"QUALIFICATION";types.save(type);}
  }
  @PostMapping("/types")
  @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.qualifications.write')")
@@ -127,6 +146,7 @@ public class FireQualificationController {
       input.icon()==null?"📋":input.icon(),Boolean.TRUE.equals(input.tracked()),
       Boolean.TRUE.equals(input.sensitive()),range(input.warningDays(),365,30),range(input.intervalMonths(),120,0));
   t.shortLabel=checkedShortLabel(input.shortLabel());
+  t.category=validCategory(input.category());
   return view(types.save(t));
  }
  @PutMapping("/types/{id}")
@@ -137,6 +157,7 @@ public class FireQualificationController {
   FireQualificationType t=types.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
   t.title=required(input.title(),120);if(input.icon()!=null&&input.icon().length()<=20)t.icon=input.icon();
   t.shortLabel=checkedShortLabel(input.shortLabel());
+  t.category=validCategory(input.category());
   t.tracked=Boolean.TRUE.equals(input.tracked());t.sensitive=Boolean.TRUE.equals(input.sensitive());
   t.warningDays=range(input.warningDays(),365,t.warningDays);t.intervalMonths=range(input.intervalMonths(),120,t.intervalMonths);
   return view(types.save(t));
@@ -146,7 +167,7 @@ public class FireQualificationController {
  @Transactional(readOnly=true)
  public List<Card> cards(Authentication auth,@RequestParam(required=false) Long memberId){
   return (memberId==null?records.findAll():records.findByMemberId(memberId)).stream()
-   .filter(q->!q.type.sensitive||canSensitive(auth)).map(this::card)
+   .filter(q->q.active).filter(q->!q.type.sensitive||canSensitive(auth)).map(this::card)
    .sorted(Comparator.comparing(Card::memberName).thenComparing(Card::title)).toList();
  }
  @PostMapping("/members/{memberId}")
@@ -157,8 +178,11 @@ public class FireQualificationController {
   if(members.findById(memberId).isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Mitglied nicht gefunden");
   FireQualificationType type=types.findById(input.typeId()).orElseThrow(()->bad("Qualifikationstyp unbekannt"));
   if(type.sensitive&&!canSensitive(auth))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-  if(records.findByMemberIdAndTypeCode(memberId,type.code).isPresent())
-   throw new ResponseStatusException(HttpStatus.CONFLICT,"Qualifikation bereits zugewiesen");
+  var previous=records.findByMemberIdAndTypeCode(memberId,type.code);
+  if(previous.isPresent()){
+   if(previous.get().active)throw new ResponseStatusException(HttpStatus.CONFLICT,"Kachel bereits zugewiesen");
+   FireMemberQualification restored=previous.get();restored.active=true;fill(restored,input,false);return card(records.save(restored));
+  }
   FireMemberQualification q=new FireMemberQualification(memberId,type);fill(q,input,true);
   return card(records.save(q));
  }
@@ -177,10 +201,30 @@ public class FireQualificationController {
   if(in.active()!=null)q.active=in.active();
   if(creation)q.nextDueOn=in.nextDueOn()!=null?in.nextDueOn():(q.type.tracked?LocalDate.now():in.expiresOn());
   else if(in.nextDueOn()!=null)q.nextDueOn=in.nextDueOn();
+  if(in.licenseClasses()!=null){if(!"DRIVERS_LICENSE".equals(q.type.code))throw bad("Führerscheinklassen nur bei Führerschein");q.licenseClasses=classes(in.licenseClasses());}
   if(in.licenseNumber()!=null&&!in.licenseNumber().isBlank()){
    if(!"DRIVERS_LICENSE".equals(q.type.code))throw bad("Führerscheinnummer darf nur bei Führerschein hinterlegt werden");
    q.licenseNumberMac=driving.fingerprint(in.licenseNumber());
   }
+ }
+ @DeleteMapping("/cards/{id}")
+ @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.qualifications.write')")
+ @Transactional
+ public ResponseEntity<Void> removeCard(@PathVariable Long id,Authentication auth){
+  FireMemberQualification q=record(id);
+  if(q.type.sensitive&&!canSensitive(auth))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+  // Archiving preserves historical checks and attachments and allows later restoration.
+  q.active=false;records.save(q);return ResponseEntity.noContent().build();
+ }
+ @DeleteMapping("/types/{id}")
+ @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.qualifications.write')")
+ @Transactional
+ public ResponseEntity<Void> removeType(@PathVariable Long id,Authentication auth){
+  FireQualificationType t=types.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
+  if(t.sensitive&&!canSensitive(auth))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+  if(records.findAll().stream().anyMatch(q->q.type.id.equals(id)))
+   throw new ResponseStatusException(HttpStatus.CONFLICT,"Kacheltyp ist Mitgliedern zugeordnet bzw. archiviert. Bitte die Zuordnungen zunächst klären; bestehende Prüfhistorie bleibt erhalten.");
+  types.delete(t);return ResponseEntity.noContent().build();
  }
  @GetMapping("/driving")
  @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.drivingcheck.read')")
