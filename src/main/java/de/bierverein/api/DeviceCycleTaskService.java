@@ -53,7 +53,9 @@ public class DeviceCycleTaskService {
  }
  public record TaskView(Long id,Long deviceId,String deviceName,String inventoryNumber,String location,
     LocalDate dueOn,Integer intervalMonths,String status,Long assignedUserId,String assignedName,
-    String result,String note,Instant completedAt,String completedBy){}
+    String result,String note,Instant completedAt,String completedBy,Long inspectionId){}
+ public record InspectionProof(Long id,String deviceName,String location,LocalDate inspectionDate,
+  String result,String note,String inspector,LocalDate nextInspectionDate,Instant signedAt,String signatureData){}
  public record PersonView(Long id,String name){}
  public record AssignInput(Long userId){}
  public record FinishInput(String result,String note,String signatureData){
@@ -67,7 +69,7 @@ public class DeviceCycleTaskService {
   Device d=task.getDevice();
   return new TaskView(task.getId(),d.getId(),d.getName(),d.getInventoryNumber(),d.getLocation(),
    task.getDueOn(),d.getInspectionIntervalMonths(),task.getStatus(),task.getAssignedUserId(),
-   assignedName(task.getAssignedUserId()),task.getResult(),task.getNote(),task.getCompletedAt(),task.getCompletedBy());
+   assignedName(task.getAssignedUserId()),task.getResult(),task.getNote(),task.getCompletedAt(),task.getCompletedBy(),task.getInspectionId());
  }
  private LocalDate due(Device device,LocalDate today){
   Integer interval=device.getInspectionIntervalMonths();
@@ -127,6 +129,19 @@ public class DeviceCycleTaskService {
    task.assign(candidate.getId(),manager.getUsername());
   }
   return view(tasks.save(task));
+ }
+ @Transactional(readOnly=true)
+ public InspectionProof proof(Long id,Authentication auth){
+  AppUser user=actor(auth);
+  DeviceCycleTask task=tasks.findById(id).orElseThrow(()->error(HttpStatus.NOT_FOUND,"Prüfaufgabe nicht gefunden"));
+  if(!manager(user)&&!Objects.equals(task.getAssignedUserId(),user.getId()))
+   throw error(HttpStatus.FORBIDDEN,"Prüfung ist nicht dir zugewiesen");
+  if(!"DONE".equals(task.getStatus())||task.getInspectionId()==null)
+   throw error(HttpStatus.NOT_FOUND,"Für diese Aufgabe liegt noch kein unterschriebenes Protokoll vor");
+  DeviceInspection i=inspections.findById(task.getInspectionId())
+   .orElseThrow(()->error(HttpStatus.NOT_FOUND,"Prüfprotokoll fehlt"));
+  return new InspectionProof(i.getId(),i.getDeviceNameSnapshot(),i.getLocationSnapshot(),i.getInspectionDate(),
+   i.getResult(),i.getNotes(),i.getInspector(),i.getNextInspectionDate(),i.getSignedAt(),i.getSignatureData());
  }
  @Transactional
  public TaskView finish(Long id,FinishInput input,Authentication auth){
