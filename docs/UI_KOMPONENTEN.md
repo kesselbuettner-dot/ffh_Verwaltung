@@ -121,3 +121,18 @@ content.replaceChildren(screen);
 **Zentrale Anpassung:** Die `--ds-*`-Tokens und alle strukturellen Klassen für Seiten-Templates stehen in den beiden gemeinsamen CSS-Dateien. Administration → Designsystem verändert die validierten globalen Tokenwerte. Administration → Seiten-Templates zeigt sechs auswählbare, interaktive Demo-Vorschauen. Änderungen an gemeinsamen Klassen wirken auf **jede neue Seite, die das Template verwendet**. Die Galerie speichert keine separaten modulspezifischen Layoutkopien; so können Module nicht unbemerkt auseinanderdriften.
 
 **Bestandschutz:** Die bisherigen Seiten werden nicht automatisch ersetzt. Insbesondere die Wehrleiter-Mitgliedertabelle mit ihren drei Fachspalten, Berechtigungen, Filter-/Druckfunktionen und gespeicherten Daten bleibt bis zu einer gesondert getesteten Migration unverändert.
+
+## Administration als einheitliches Einstellungs-Template
+
+**Adminbereich:** `adminSettingsPage(section)` rendert den gemeinsamen `FWPageTemplates.settings`-Rahmen mit responsive linker Seitennavigation und aktivem Abschnitt. Darin bleiben die bestehenden Module `members/accounts/roles/rights/menu/dashboard/master/appearance/design/templates/update` mit genau ihren bisherigen Daten, Rollen und Speicher-APIs erhalten. Neue Administrationsmodule müssen ihren Inhalt nur noch in `settingsContent` rendern und die zentrale Navigation ergänzen. Bestandsmodule verwenden die gemeinsamen `.ds-admin-module`-Tokens, statt separate Tab-/Seitenkopf-Layouts zu definieren.
+
+## Vorlage „Meine Aufgaben → Geräteprüfung“
+
+Neue Seite `DeviceCycleTasks.page()` verwendet `FWPageTemplates.tasks` und die gemeinsamen Komponenten für Status, Tabelle, Filter, Zuweisung und Prüfabschluss.
+
+- Ein aktives Gerät mit gesetztem Prüfzyklus (`inspectionIntervalMonths`) und Kennzeichnung „Prüfung erforderlich“ bekommt **einmalig pro Geräte-ID und Fälligkeitsdatum** eine Aufgabe, sobald es binnen 30 Tagen fällig wird. Fehlt das erste Prüfdatum, wird die initiale Fälligkeit einmalig auf das heutige Datum gesetzt. Die tägliche Generierung läuft nur im Worker; die Gerätewartansicht generiert zusätzlich beim Öffnen. Keine unbegrenzte Erzeugung von Altzyklen.
+- Offene, noch nicht zugewiesene Aufgaben liegen im **gemeinsamen Postfach der Rolle GERATEWART** (ADMIN sieht sie ebenfalls). Nur Gerätewart/ADMIN kann in jeder Gerätezeile mittels „Weitergeben“ ein aktives Mitglied mit freigegebenem Benutzerkonto wählen oder die Aufgabe ins Rollenpostfach zurückgeben.
+- Zugewiesene Mitglieder sehen in „Meine Aufgaben → Geräteprüfung“ ausschließlich ihre eigenen Aufgaben; andere Geräte, Mitgliederdaten und die Zuweisungsliste sind nicht abrufbar. Ein Mitglied kann das Gerät als „Bestanden“, „Mit Mangel“ oder „Nicht bestanden“ abschließen. Mängel benötigen eine Bemerkung. Jeder Abschluss erfasst Benutzer/Datum und einen `DeviceInspection`-Historieneintrag; bei „Bestanden“ wird der nächste Termin aus dem Prüfzyklus berechnet. Bei Mangel wird die Fälligkeit nicht als bestanden vorgetragen und der Gerätestatus auf „DEFECTIVE“ gesetzt.
+- Die neuen zyklischen Einzelaufgaben ergänzen die bestehende dienst-/terminbasierte Geräteprüfung; deren Event-/Serientermine und Prüflisten werden nicht gelöscht oder verändert. Zentralisierte UI-Templates ändern **keine** API-Berechtigungen: der Server validiert Rollen und Besitzer bei jeder Aktion.
+
+Vor Produktivfreigabe: Mitglied mit GERATEWART/ADMIN, freigeschaltetes Mitglied, unfreigeschaltetes Mitglied und fremde Benutzer-IDs prüfen. Auch den Grenzfall „erstes Prüfdatum fehlt“, doppelte Tagesausführung, Mangel, Wiederholungsintervall, Browser-PWA-Cache und die bestehenden Geräteprüfprotokolle testen.
