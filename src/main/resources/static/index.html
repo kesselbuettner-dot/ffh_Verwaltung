@@ -575,34 +575,34 @@ async function saveManagedUserRoles(userId){
 
 function editAdminUser(id){const u=adminUsers.find(x=>x.id===id);modalTitle.textContent='Benutzer bearbeiten';modalBody.innerHTML=`<div id="adminMsg"></div><div class="field"><label>Benutzername *</label><input id="uUsername" value="${esc(u.username)}"></div><div class="field"><label>Rolle</label><select id="uRole">${roles.map(r=>`<option value="${r}" ${r===u.role?'selected':''}>${esc(roleLabels[r]||r)}</option>`).join('')}</select></div><div class="field"><label>Status</label><select id="uEnabled"><option value="true" ${u.enabled?'selected':''}>Aktiv</option><option value="false" ${!u.enabled?'selected':''}>Deaktiviert</option></select></div><div class="field"><label>Neues Passwort (optional)</label><input id="uPassword" type="password" autocomplete="new-password"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn secondary" onclick="closeModal()">Abbrechen</button><button class="btn primary" onclick="saveAdminUser(${id})">Speichern</button></div>`;modal.classList.remove('hidden')}
 async function saveAdminUser(id){try{await api(`/api/admin/users/${id}`,{method:'PUT',body:JSON.stringify({username:uUsername.value.trim(),password:uPassword.value||null,role:uRole.value,enabled:uEnabled.value==='true'})});closeModal();adminSettingsPage('accounts')}catch(e){adminMsg.innerHTML=`<div class="message error">${esc(e.message)}</div>`}}
-async function adminSettingsPage(section='members'){if(section==='users')section='accounts';
- if(role!=='ADMIN'){content.innerHTML='<div class="panel"><h2>Keine Berechtigung</h2></div>';return}
- content.innerHTML=`<div class="title-row"><div><h1>Einstellungen</h1><span class="sub">Zentrale Konfiguration der FFH Verwaltung</span></div></div>
- <div class="settings-tabs">
-  <button class="settings-tab" id="stab-members" onclick="adminSettingsPage('members')">👥 Mitgliederstammdaten</button>
-  <button class="settings-tab" id="stab-accounts" onclick="adminSettingsPage('accounts')">🔐 Konten</button>
-  <button class="settings-tab" id="stab-roles" onclick="adminSettingsPage('roles')">🛡️ Rollen</button>
-  <button class="settings-tab" id="stab-rights" onclick="adminSettingsPage('rights')">🔑 Rechte & Zuweisungen</button>
-  <button class="settings-tab" id="stab-menu" onclick="adminSettingsPage('menu')">☰ Menü</button>
-  <button class="settings-tab" id="stab-dashboard" onclick="adminSettingsPage('dashboard')">📊 Dashboard</button>
-  <button class="settings-tab" id="stab-master" onclick="adminSettingsPage('master')">🏢 Stammdaten & Impressum</button>
-  <button class="settings-tab" id="stab-appearance" onclick="adminSettingsPage('appearance')">🎨 Erscheinungsbild</button>
-  <button class="settings-tab" id="stab-design" onclick="adminSettingsPage('design')">🧩 Designsystem</button>
-  <button class="settings-tab" id="stab-templates" onclick="adminSettingsPage('templates')">📐 Seiten-Templates</button>
-  <button class="settings-tab" id="stab-update" onclick="adminSettingsPage('update')">⬆️ Update</button>
- </div>
- <div id="settingsContent"></div>`;
- document.getElementById('stab-'+section)?.classList.add('active');
- if(section==='members') return adminMembersSettingsPage();
- if(section==='accounts') return adminUsersSettingsPage();
- if(section==='roles') return adminRolesSettingsPage();
- if(section==='rights') return adminPermissionsSettingsPage();
- if(section==='menu') return adminMenuSettingsPage();
- if(section==='dashboard') return adminDashboardSettingsPage();
- if(section==='master') return adminMasterSettingsPage();
- if(section==='update') return adminUpdateSettingsPage();
- if(section==='design') return adminDesignSystemPage();
- if(section==='templates') return adminPageTemplatesPage();
+async function adminSettingsPage(section='members'){
+ if(section==='users')section='accounts';
+ if(role!=='ADMIN'){content.textContent='Keine Berechtigung';return;}
+ if(!window.FWPageTemplates){content.textContent='Seiten-Templates konnten nicht geladen werden.';return;}
+ setActive('admin-settings');
+ const sections=[
+  ['members','👥 Mitgliederstammdaten'],['accounts','🔐 Konten'],['roles','🛡️ Rollen'],
+  ['rights','🔑 Rechte & Zuweisungen'],['menu','☰ Menü'],['dashboard','📊 Dashboard'],
+  ['master','🏢 Stammdaten & Impressum'],['appearance','🎨 Erscheinungsbild'],
+  ['design','🧩 Designsystem'],['templates','📐 Seiten-Templates'],['update','⬆️ Update']
+ ];
+ const host=document.createElement('div');host.id='settingsContent';host.className='ds-admin-module';
+ const frame=window.FWPageTemplates.settings({
+  title:'Administration',description:'Zentrale Stammdaten, Rollen, Funktionen und Darstellung',
+  sections:sections.map(([id,title])=>({id,title,content:id===section?host:null})),
+  activeId:section,rawContent:true,onSelect:key=>adminSettingsPage(key)
+ });
+ content.replaceChildren(frame);
+ if(section==='members')return adminMembersSettingsPage();
+ if(section==='accounts')return adminUsersSettingsPage();
+ if(section==='roles')return adminRolesSettingsPage();
+ if(section==='rights')return adminPermissionsSettingsPage();
+ if(section==='menu')return adminMenuSettingsPage();
+ if(section==='dashboard')return adminDashboardSettingsPage();
+ if(section==='master')return adminMasterSettingsPage();
+ if(section==='update')return adminUpdateSettingsPage();
+ if(section==='design')return adminDesignSystemPage();
+ if(section==='templates')return adminPageTemplatesPage();
  return adminAppearanceSettingsPage();
 }
 async function adminAppearanceSettingsPage(){settingsContent.innerHTML='<div class="grid2"><div class="panel"><h3>🎨 Farben</h3><div class="form-grid"><div class="field"><label>Primärfarbe</label><input id="setPrimary" type="color"></div><div class="field"><label>Menüfarbe</label><input id="setNav" type="color"></div><div class="field"><label>Akzentfarbe</label><input id="setAccent" type="color"></div><div class="field"><label>App-Name</label><input id="setAppName"></div></div><button class="btn primary" onclick="saveAppearanceSettings()">Speichern</button><div id="appearanceMsg"></div></div><div class="panel"><h3>🖼️ Logo</h3><div class="quick" style="align-items:center"><img id="settingsLogoPreview" class="logo-preview" src="/icons/fw-cockpit-brand.svg" alt="Logo"><div><input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><p class="sub">PNG, JPG, WEBP oder SVG, maximal 2 MB.</p><button class="btn primary small" onclick="uploadSettingsLogo()">Logo hochladen</button><button class="btn danger small" onclick="removeSettingsLogo()">Logo zurücksetzen</button></div></div></div></div>';setPrimary.value=appSettings?.primaryColor||'#c51f2d';setNav.value=appSettings?.navColor||'#071827';setAccent.value=appSettings?.accentColor||'#1479e9';setAppName.value=appSettings?.appName||'FFH Verwaltung';setLogoImage(settingsLogoPreview,appSettings?.logoAvailable);const syncPreview=()=>{settingsLogoPreview.style.borderColor=setPrimary.value};setPrimary.oninput=syncPreview;renderThemePresets();}
