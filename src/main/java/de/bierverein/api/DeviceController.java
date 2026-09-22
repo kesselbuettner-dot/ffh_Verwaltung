@@ -15,6 +15,7 @@ public class DeviceController {
     private final DeviceRepository devices;
     private final DeviceInspectionRepository inspections;
     private final VehicleCompartmentRepository compartments;
+    @org.springframework.beans.factory.annotation.Autowired private DeviceInspectionWorkflowService workflow;
 
     public DeviceController(DeviceRepository devices, DeviceInspectionRepository inspections,VehicleCompartmentRepository compartments){
         this.devices=devices; this.inspections=inspections;this.compartments=compartments;
@@ -96,33 +97,22 @@ public class DeviceController {
     @PostMapping("/{id}/inspections")
     @Transactional
     @PreAuthorize("@devicePermissionGuard.allowed(authentication, 'write')")
-    public InspectionDto inspect(@PathVariable Long id,@RequestBody InspectionRequest r){
+    public InspectionDto inspect(@PathVariable Long id,@RequestBody InspectionRequest r,
+        org.springframework.security.core.Authentication auth){
         Device d=find(id);
         validateInspection(r);
-
-        LocalDate next = r.nextInspectionDate();
-        Integer intervalMonths = r.inspectionIntervalMonths()!=null
-            ? r.inspectionIntervalMonths()
-            : d.getInspectionIntervalMonths();
-        if(next==null && intervalMonths!=null){
-            next = calculateNextInspection(r.inspectionDate(), intervalMonths);
-        }
-
-        DeviceInspection i=new DeviceInspection();
-        i.setDevice(d);
-        i.setInspectionDate(r.inspectionDate());
-        i.setNextInspectionDate(next);
-        i.setInspectionType(clean(r.inspectionType()));
-        i.setResult(clean(r.result()));
-        i.setInspector(clean(r.inspector()));
-        i.setDefects(clean(r.defects()));
-        i.setMeasures(clean(r.measures()));
-        i.setNotes(clean(r.notes()));
-
-        if(next!=null) d.setNextInspectionDate(next);
-        d.setLastInspectionDate(r.inspectionDate());
-        devices.save(d);
-        return inspection(inspections.save(i));
+        if(!r.inspectionDate().equals(LocalDate.now(java.time.ZoneId.of("Europe/Berlin"))))
+            throw bad("Eine neue Geräteprüfung kann nur mit dem heutigen Prüfdatum abgeschlossen werden.");
+        if(r.inspectionIntervalMonths()!=null&&!r.inspectionIntervalMonths().equals(d.getInspectionIntervalMonths()))
+            throw bad("Prüfintervall zuerst im Gerätestamm ändern.");
+        String note=String.join("; ",java.util.stream.Stream.of(r.defects(),r.measures(),r.notes())
+            .filter(x->x!=null&&!x.isBlank()).map(String::trim).toList());
+        String type=clean(r.inspectionType());
+        if(type==null)type="Einzelprüfung";
+        if(type.length()>120)throw bad("Prüfart ist zu lang.");
+        DeviceInspection signed=workflow.record(d,r.result(),note,auth.getName(),r.signatureData(),type,
+            null,null,null);
+        return inspection(signed);
     }
 
     @GetMapping("/{id}/inspections")
@@ -149,13 +139,13 @@ public class DeviceController {
         d.setCategory(clean(r.category()));
         d.setLocation(clean(r.location()));
         d.setPurchaseDate(r.purchaseDate());
-        d.setNextInspectionDate(r.nextInspectionDate());
+        if(creating || r.nextInspectionDate()!=null)d.setNextInspectionDate(r.nextInspectionDate());
         d.setInspectionIntervalMonths(r.inspectionIntervalMonths());
         d.setResponsibleUsername(clean(r.responsibleUsername()));
         d.setNotes(clean(r.notes()));
         if(r.compartmentId()!=null)d.setCompartment(compartments.findById(r.compartmentId()).orElseThrow(()->bad("Fahrzeugfach nicht gefunden")));
         else if(!creating)d.setCompartment(null);
-        d.setInspectionRequired(Boolean.TRUE.equals(r.inspectionRequired()));
+        if(creating || r.inspectionRequired()!=null)d.setInspectionRequired(Boolean.TRUE.equals(r.inspectionRequired()));
         if(creating) d.setActive(r.active()==null || r.active());
         else if(r.active()!=null) d.setActive(r.active());
     }
@@ -191,7 +181,7 @@ public class DeviceController {
             d.isInspectionRequired(),d.getPlacementX(),d.getPlacementY(),d.getPlacementWidth(),d.getPlacementHeight(),d.getPlacementRotation(),d.getPlacementLayer(),d.getPlacementGroupId(),d.getCompartmentElementId());
     }
     private InspectionDto inspection(DeviceInspection i){
-        return new InspectionDto(i.getId(),i.getInspectionDate(),i.getNextInspectionDate(),i.getInspectionType(),i.getResult(),i.getInspector(),i.getDefects(),i.getMeasures(),i.getNotes());
+        return new InspectionDto(i.getId(),i.getInspectionDate(),i.getNextInspectionDate(),i.getInspectionType(),i.getResult(),i.getInspector(),i.getDefects(),i.getMeasures(),i.getNotes(),i.getSignedAt()!=null,i.getSessionReportId());
     }
     private String status(Device d){
         if(d.getNextInspectionDate()==null)return "UNBEKANNT";
@@ -218,6 +208,6 @@ public class DeviceController {
     public record DeviceDetailDto(DeviceDto device,List<InspectionDto> inspections){}
     public record InspectionRequiredRequest(Boolean required){}
     public record ConditionRequest(String status,String note){}
-    public record InspectionRequest(LocalDate inspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String inspectionType,String result,String inspector,String defects,String measures,String notes){}
-    public record InspectionDto(Long id,LocalDate inspectionDate,LocalDate nextInspectionDate,String inspectionType,String result,String inspector,String defects,String measures,String notes){}
+    public record InspectionRequest(LocalDate inspectionDate,LocalDate nextInspectionDate,Integer inspectionIntervalMonths,String inspectionType,String result,String inspector,String defects,String measures,String notes,String signatureData){}
+    public record InspectionDto(Long id,LocalDate inspectionDate,LocalDate nextInspectionDate,String inspectionType,String result,String inspector,String defects,String measures,String notes,boolean signed,Long reportId){}
 }
