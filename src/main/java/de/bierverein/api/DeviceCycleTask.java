@@ -20,9 +20,11 @@ public class DeviceCycleTask {
  @Column(length=24) private String result;
  @Column(length=120) private String completedBy;
  private Instant completedAt;
+ private Long inspectionId;
  @Column(nullable=false) private Instant createdAt=Instant.now();
  protected DeviceCycleTask(){}
  public DeviceCycleTask(Device device,LocalDate dueOn){this.device=device;this.dueOn=dueOn;}
+ public Long getInspectionId(){return inspectionId;} public void setInspectionId(Long v){inspectionId=v;}
  public Long getId(){return id;}public Device getDevice(){return device;}
  public LocalDate getDueOn(){return dueOn;}public String getStatus(){return status;}
  public void setStatus(String value){status=value;}
