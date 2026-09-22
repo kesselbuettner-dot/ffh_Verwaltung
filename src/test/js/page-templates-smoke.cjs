@@ -63,5 +63,13 @@ assert(sw.includes('ffh-verwaltung-page-templates-v41'));
 assert(html.includes("adminSettingsPage('templates')"),'Template gallery menu missing');
 assert(html.includes("lib.preview(selectedPageTemplate)")&&html.includes("const lib=window.FWPageTemplates"),'Interactive gallery preview missing');
 assert(docs.includes('FWPageTemplates.render'),'Binding page layout docs missing');
+assert(html.includes("if(section==='templates') return adminPageTemplatesPage()"),'Admin settings routing for the gallery missing');
+assert(html.includes("selectedPageTemplate=entry.id"),'Template gallery selection must update live preview');
+assert(html.includes("adminSettingsPage('design')"),'Common layout editor must be reachable from the template gallery');
+for(const token of ['templateColumns','templateGap']){
+ const setting=fs.readFileSync('src/main/java/de/bierverein/api/DesignSystemController.java','utf8');
+ const core=fs.readFileSync('src/main/resources/static/design-system.js','utf8');
+ assert(setting.includes('"'+token+'"')&&core.includes(token),'Global layout token must be validated server-side and used client-side: '+token);
+}
 assert(!code.includes('/api/'),'Page templates must contain no direct backend access');
 console.log('PASS six pages, real DOM and callbacks, accessible settings, safe text, responsive CSS, gallery, PWA cache, permissions and docs');
