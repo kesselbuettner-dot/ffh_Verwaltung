@@ -59,11 +59,11 @@ RETURNING id
 event_id = sql("""
 INSERT INTO training_schedule_events(
     type, title, start_date, end_date, recurring, all_day, registration_required,
-    active, created_by, created_at, updated_at, device_inspection, device_locations,
+    active, audience_type, created_by, created_at, updated_at, device_inspection, device_locations,
     device_categories
 )
 VALUES ('SERVICE', 'CI-Geräteprüfung', CURRENT_DATE, CURRENT_DATE,
-        false, true, false, true, 'ci', now(), now(), true, 'CI-LF20', 'Strahlrohr')
+        false, true, false, true, 'ALL', 'ci', now(), now(), true, 'CI-LF20', 'Strahlrohr')
 RETURNING id
 """)
 task_id = sql(f"""
