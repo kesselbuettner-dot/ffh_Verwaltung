@@ -10,6 +10,10 @@ public interface DeviceCycleTaskRepository extends JpaRepository<DeviceCycleTask
  @Query(value="insert into device_cycle_tasks(device_id,due_on,status,created_at) values(:deviceId,:dueOn,'OPEN',CURRENT_TIMESTAMP) on conflict (device_id,due_on) do nothing",nativeQuery=true)
  int insertIfAbsent(@Param("deviceId") Long deviceId,@Param("dueOn") LocalDate dueOn);
 
+ List<DeviceCycleTask> findByDeviceIdAndStatusOrderByDueOnAsc(Long deviceId,String status);
+ @Modifying
+ @Query("update DeviceCycleTask t set t.assignedUserId=null where t.assignedUserId=:userId and t.status='OPEN'")
+ int releaseAssignments(@Param("userId") Long userId);
  List<DeviceCycleTask> findByStatusInOrderByDueOnAsc(Collection<String> statuses);
  List<DeviceCycleTask> findByAssignedUserIdAndStatusInOrderByDueOnAsc(Long userId,Collection<String> statuses);
  @Lock(LockModeType.PESSIMISTIC_WRITE)
