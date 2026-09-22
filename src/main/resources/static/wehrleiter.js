@@ -132,8 +132,8 @@ function editCard(id){
  inputField('Nächster Termin (optional)','wDue',inputDate(c?.nextDueOn),'date')+
  inputField('Führerscheinnummer nur bei Führerschein: Referenz hinterlegen/ersetzen','wLicense','','text','Die Nummer wird lediglich als geschützter Vergleichswert gespeichert und nie wieder angezeigt.')+
  '<div class="field" id="wClassSection"><label>Führerscheinklassen</label><div class="wehr-license-classes">'+LICENSE_CLASSES.map(k=>'<label><input type="checkbox" data-license-class="'+k+'" '+(c?.licenseClasses?.includes(k)?'checked':'')+'> '+k+'</label>').join('')+'</div></div>'+
- (c?'<div class="field"><label for="wPdf">PDF-Nachweis (optional, maximal 5 MB)</label><input id="wPdf" type="file" accept="application/pdf,.pdf"></div>'+
- '<div class="quick"><button type="button" id="wViewPdf" class="btn secondary" '+(c.documentAttached?'':'disabled')+'>📄 PDF herunterladen</button><button type="button" id="wDeletePdf" class="btn secondary" '+(c.documentAttached?'':'disabled')+'>PDF entfernen</button></div>':'<p class="sub">Nach dem Anlegen der Kachel kann ein PDF-Nachweis hochgeladen werden.</p>')+
+ '<div class="field"><label for="wPdf">PDF-Nachweis (optional, maximal 5 MB)</label><input id="wPdf" type="file" accept="application/pdf,.pdf"></div>'+ 
+ (c?'<div class="quick"><button type="button" id="wViewPdf" class="btn secondary" '+(c.documentAttached?'':'disabled')+'>📄 PDF herunterladen</button><button type="button" id="wDeletePdf" class="btn secondary" '+(c.documentAttached?'':'disabled')+'>PDF entfernen</button></div>':'')+
  '<div class="quick"><button class="btn secondary" id="wehrCancel">Abbrechen</button>'+
  (c?'<button class="btn danger" id="wehrRemoveCard" type="button">Kachel löschen</button>':'')+
  '<button class="btn primary" id="wehrSave">Speichern</button></div>';
@@ -160,8 +160,10 @@ function editCard(id){
   try{
    const assigned=await api(id==null?BASE+'/members/'+Number(el('wMember').value):BASE+'/cards/'+id,
     {method:id==null?'POST':'PUT',body:JSON.stringify(payload)});
-   const file=el('wPdf')?.files?.[0];if(file)await uploadCardPdf(assigned.id,file);
+   const file=el('wPdf')?.files?.[0];let pdfError=null;
+   if(file){try{await uploadCardPdf(assigned.id,file);}catch(e){pdfError=e.message;}}
    el('wLicense').value='';closeModal();await page();
+   if(pdfError)alert('Kachel gespeichert, aber der PDF-Nachweis konnte nicht hochgeladen werden: '+pdfError+'. Bitte die Kachel erneut öffnen und PDF hinzufügen.');
   }catch(error){el('wLicense').value='';notice(el('wehrDialogMsg'),error.message);}
  };
  modal.classList.remove('hidden');
