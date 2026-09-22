@@ -50,6 +50,10 @@ public class AppSettings {
     @Column(columnDefinition = "TEXT")
     private String menuLayout;
 
+    /** Strictly validated, shared design tokens. Existing settings are untouched. */
+    @Column(columnDefinition = "TEXT")
+    private String designTokens = "{}";
+
     @Lob
     @Basic(fetch = FetchType.LAZY)
     private byte[] logoData;
@@ -66,6 +70,8 @@ public class AppSettings {
     @Column(length = 60) private String contactPhone;
     @Column(length = 160) private String legalRepresentative;
 
+    public String getDesignTokens() { return designTokens; }
+    public void setDesignTokens(String designTokens) { this.designTokens = designTokens; }
     public String getMenuLayout() { return menuLayout; }
     public void setMenuLayout(String menuLayout) { this.menuLayout = menuLayout; }
     public Long getId() { return id; }
