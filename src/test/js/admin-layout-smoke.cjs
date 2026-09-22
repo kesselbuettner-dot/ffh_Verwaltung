@@ -8,10 +8,12 @@ for(const doc of ['docs/DESIGN_SYSTEM.md','docs/UI_KOMPONENTEN.md','docs/MITGLIE
 }
 const scripts=[...index.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
 for(const [n,script] of scripts.entries())new vm.Script(script[1],{filename:'inline-'+n+'.js'});
-assert(index.includes('adminSettingsPage(\'members\')'),'Admin member master tab missing');
-assert(index.includes('adminSettingsPage(\'accounts\')'),'Dedicated accounts tab missing');
-assert(index.includes('adminSettingsPage(\'roles\')'),'Dedicated roles tab missing');
-assert(index.includes('adminSettingsPage(\'rights\')'),'Dedicated rights tab missing');
+for(const id of ['members','accounts','roles','rights']){
+ assert(index.includes("['"+id+"','"),'Dedicated administrator section missing: '+id);
+ assert(index.includes("if(section==='"+id+"')return "),'Administration must route to the dedicated section: '+id);
+}
+assert(index.includes('window.FWPageTemplates.settings({')&&index.includes('onSelect:key=>adminSettingsPage(key)'),
+ 'Admin navigation must use shared page template and preserve per-section routing');
 assert(index.includes('adminMembersSettingsPage()'),'Admin-only member master view missing');
 assert(index.includes('saveMemberMaster('),'Member master update callback missing');
 assert(index.includes('loginEnabled:null'),'Member editing must not modify login status');
