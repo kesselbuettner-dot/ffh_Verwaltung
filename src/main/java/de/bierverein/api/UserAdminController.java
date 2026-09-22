@@ -24,6 +24,18 @@ import org.springframework.web.bind.annotation.*; import org.springframework.sec
   if(r.role()!=null && r.role()!=previous) primaryRoles.sync(u,previous);
   return dto(u);
  }
+ @DeleteMapping("/{id}") @Transactional @ResponseStatus(HttpStatus.NO_CONTENT)
+ public void delete(@PathVariable Long id,org.springframework.security.core.Authentication auth){
+  AppUser user=users.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Benutzer nicht gefunden"));
+  if(auth!=null && user.getUsername().equalsIgnoreCase(auth.getName()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Das eigene Administratorkonto kann nicht gelöscht werden.");
+  if(user.getRole()==Role.ADMIN&&user.isEnabled()&&managedAssignments.countByRoleCodeAndUserEnabled("ADMIN",true)<=1)
+   throw new ResponseStatusException(HttpStatus.CONFLICT,"Der letzte aktive Administrator darf nicht gelöscht werden.");
+  managedAssignments.deleteAll(managedAssignments.findByUserId(id));
+  managedAssignments.flush();
+  if(user.getMember()!=null)user.getMember().setUser(null);
+  users.delete(user);
+  users.flush();
+ }
  private UserDto dto(AppUser u){return new UserDto(u.getId(),u.getUsername(),u.getRole(),u.isEnabled(),u.isRegistrationApproved(),u.getMember()==null?null:u.getMember().getId(),u.getMember()==null?null:u.getMember().getName(),u.getMember()==null?null:u.getMember().getEmail());}
  public record UserDto(Long id,String username,Role role,boolean enabled,boolean registrationApproved,Long memberId,String memberName,String email){}
  public record UserUpdate(String username,String password,Role role,Boolean enabled,Long memberId){}
