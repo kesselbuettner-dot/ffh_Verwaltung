@@ -22,8 +22,11 @@ assert(service.includes('Role.GERATEWART')&&service.includes('"GERATEWART"'),'Ma
 assert(service.includes('Objects.equals(task.getAssignedUserId(),user.getId())'),'Member must be limited to own assigned tasks');
 assert(service.includes('tasks.insertIfAbsent('),'Concurrent task creation requires atomic idempotency');
 assert(security.includes('"/device-cycle-tasks.js"'),'Browser cannot load task asset without login header');
-assert(html.includes('/device-cycle-tasks.js?v=1')&&sw.includes('/device-cycle-tasks.js?v=1'),'New task asset must be versioned in PWA shell');
-assert(sw.includes('ffh-verwaltung-admin-cycle-tasks-v44'),'Old PWA menu could hide new task page');
+assert(html.includes('/device-cycle-tasks.js?v=2')&&sw.includes('/device-cycle-tasks.js?v=2'),'New task asset must be versioned in PWA shell');
+assert(sw.includes('ffh-verwaltung-unified-inspections-v45'),'Old PWA menu could hide new task page');
+assert(html.includes('inspection-signature.js?v=1')&&html.includes('inspection-management.js?v=1'),'Both inspection assets must load');
+assert(sw.includes('/inspection-signature.js?v=1')&&sw.includes('/inspection-management.js?v=1'),'Both inspection assets must be precached');
+assert(scripts.includes('signatureData:signature.signature()'),'Delegated inspections must be signed');
 assert(!scripts.includes('.innerHTML='),'Untrusted member or device data must use safe DOM text nodes');
 new vm.Script(scripts);
 for(const block of [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)])
