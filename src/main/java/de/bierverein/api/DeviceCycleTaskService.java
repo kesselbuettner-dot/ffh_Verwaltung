@@ -72,7 +72,7 @@ public class DeviceCycleTaskService {
   LocalDate today=LocalDate.now(zone);
   for(Device device:devices.findByActiveTrueOrderByNameAsc()){
    Integer interval=device.getInspectionIntervalMonths();
-   if(interval==null||interval<1||!device.isInspectionRequired())continue;
+   if(interval==null||interval<1)continue; // A configured cycle is sufficient, including legacy records without inspectionRequired.
    LocalDate date=due(device,today);
    if(date==null||date.isAfter(today.plusDays(WARNING_DAYS)))continue;
    if(device.getLastInspectionDate()==null&&device.getNextInspectionDate()==null){
