@@ -19,6 +19,7 @@ jobs:
       - name: Test HTTP endpoint against disposable PostgreSQL
         run: |
           set -euo pipefail
+          trap 'docker logs --tail 160 fw-cockpit-cycle-app 2>/dev/null || true' ERR
           docker network create fw-cockpit-cycle-ci
           docker run -d --name fw-cockpit-cycle-db --network fw-cockpit-cycle-ci \
             -e POSTGRES_USER=ci -e POSTGRES_DB=ci -e POSTGRES_PASSWORD=ci_only \
