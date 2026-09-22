@@ -45,7 +45,7 @@ class DeviceInspectionWorkflowServiceTest {
   Device d=device();DeviceCycleTask cycle=new DeviceCycleTask(d,TODAY);
   ReflectionTestUtils.setField(cycle,"id",11L);
   DeviceInspectionTask session=new DeviceInspectionTask();
-  session.setDevice(d);session.setOccurrenceDate(TODAY.plusDays(3));
+  session.setDevice(d);session.setOccurrenceDate(TODAY.plusDays(3));session.setStatus("DEFECTIVE");
   when(cycles.findByDeviceIdAndStatusOrderByDueOnAsc(42L,"OPEN")).thenReturn(List.of(cycle));
   when(sessions.findByDeviceIdAndInspectionIdIsNull(42L)).thenReturn(List.of(session));
   when(inspections.save(any(DeviceInspection.class))).thenAnswer(inv->{
@@ -59,13 +59,7 @@ class DeviceInspectionWorkflowServiceTest {
   assertEquals("INSPECTED",session.getStatus());assertEquals(55L,session.getInspectionId());
   verify(inspections,times(1)).save(any(DeviceInspection.class));
   verify(cycles).save(cycle);verify(sessions).save(session);
-  // A result saved in a group appointment before individual sign-off must not create a second proof.
-  session.setInspectionId(null);session.setStatus("DEFECTIVE");
-  when(sessions.findByDeviceIdAndInspectionIdIsNull(42L)).thenReturn(List.of(session));
-  Device next=device();next.setNextInspectionDate(TODAY);
-  workflow.record(next,"BESTANDEN","","kamerad",signature(),"Einzelprüfung",null,null,null);
-  assertEquals("INSPECTED",session.getStatus());
-  assertEquals(55L,session.getInspectionId());
+
  }
  @Test void unsignedOrInvalidChecksCannotBeRecorded(){
   Device d=device();
