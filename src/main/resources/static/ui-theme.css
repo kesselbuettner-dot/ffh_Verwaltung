@@ -39,3 +39,15 @@ body.dark{
 .ui-theme-preset .swatch{width:18px;height:18px;border-radius:50%;background:var(--swatch);border:1px solid #8884}
 .ui-theme-preset:focus-visible{outline:3px solid var(--ui-focus);outline-offset:2px}
 .ui-theme-preset[aria-pressed=true]{border:2px solid var(--ui-focus)}
+
+/* Shared filter/sort toolbar for all future tables, lists and member tile overviews.
+   See docs/UI_KOMPONENTEN.md. Existing module toolbars can opt in to ui-filterbar. */
+.ui-filterbar{display:grid;grid-template-columns:minmax(190px,1.5fr) repeat(3,minmax(145px,1fr)) auto;align-items:end;gap:10px;margin:0 0 12px}
+.ui-filterfield{display:grid;gap:5px;min-width:0;font-size:12px;font-weight:650;color:var(--ui-subtle,var(--muted))}
+.ui-filterfield > input,.ui-filterfield > select{box-sizing:border-box;display:block;width:100%;max-width:100%;min-width:0;min-height:42px;
+ border:1px solid var(--ui-border,var(--line));border-radius:9px;background:var(--ui-surface,var(--panel));color:var(--ui-text,var(--ink));padding:8px 10px;font:inherit;font-size:14px}
+.ui-filterfield > input:focus-visible,.ui-filterfield > select:focus-visible{outline:2px solid var(--ui-focus,#1479e9);outline-offset:2px}
+.ui-filter-actions{display:flex;flex-wrap:wrap;align-items:end;gap:7px;min-width:0}
+.ui-filter-actions .btn{min-height:42px;white-space:normal}
+@media(max-width:1250px){.ui-filterbar{grid-template-columns:repeat(2,minmax(0,1fr))}.ui-filter-actions{grid-column:1/-1}}
+@media(max-width:600px){.ui-filterbar{grid-template-columns:1fr 1fr;gap:9px}.ui-filter-search,.ui-filter-actions{grid-column:1/-1}.ui-filter-actions .btn{flex:1 1 auto}}
