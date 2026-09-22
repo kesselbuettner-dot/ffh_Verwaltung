@@ -24,7 +24,7 @@ class DeviceInspectionPlanningControllerTest {
     private final DeviceInspectionPlanningController controller =
         new DeviceInspectionPlanningController(devices, locations, events, tasks, exceptions);
 
-    private DeviceInspectionPlanningControllerTest() {
+    DeviceInspectionPlanningControllerTest() {
         ReflectionTestUtils.setField(controller, "reports", reports);
     }
 
