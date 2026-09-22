@@ -72,7 +72,7 @@ assert(sw.includes('ffh-verwaltung-admin-cycle-tasks-v44'));
 assert(html.includes("['templates','📐 Seiten-Templates']")&&html.includes('onSelect:key=>adminSettingsPage(key)'),'Template gallery entry in shared admin settings must route correctly');
 assert(html.includes("lib.preview(selectedPageTemplate)")&&html.includes("const lib=window.FWPageTemplates"),'Interactive gallery preview missing');
 assert(docs.includes('FWPageTemplates.render'),'Binding page layout docs missing');
-assert(html.includes("if(section==='templates') return adminPageTemplatesPage()"),'Admin settings routing for the gallery missing');
+assert(/if\s*\(section==='templates'\)\s*return\s+adminPageTemplatesPage\(\)/.test(html),'Admin settings routing for the gallery missing');
 assert(html.includes("selectedPageTemplate=entry.id"),'Template gallery selection must update live preview');
 assert(html.includes("adminSettingsPage('design')"),'Common layout editor must be reachable from the template gallery');
 for(const token of ['templateColumns','templateGap']){
