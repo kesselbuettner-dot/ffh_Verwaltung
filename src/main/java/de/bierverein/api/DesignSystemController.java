@@ -22,7 +22,9 @@ public class DesignSystemController {
   "controlHeight",Pattern.compile("^(?:4[4-9]|[5-6][0-9])px$"),
   "pageWidth",Pattern.compile("^(?:9[0-9][0-9]|1[0-6][0-9][0-9])px$"),
   "textSize",Pattern.compile("^(?:1[4-9]|20)px$"),
-  "shadow",Pattern.compile("^(?:none|0 4px 20px #00000015|0 8px 28px #00000030)$")
+  "shadow",Pattern.compile("^(?:none|0 4px 20px #00000015|0 8px 28px #00000030)$"),
+  "templateColumns",Pattern.compile("^[234]$"),
+  "templateGap",Pattern.compile("^(?:8|12|16|20|24|32)px$")
  );
  public record DesignTokens(Map<String,String> tokens){}
  public DesignSystemController(AppSettingsRepository repository,ObjectMapper json){
