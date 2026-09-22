@@ -134,6 +134,8 @@ public class DeviceCycleTaskService {
    throw error(HttpStatus.BAD_REQUEST,"Bei einem Mangel ist eine Bemerkung erforderlich");
   LocalDate date=LocalDate.now(zone);
   Device device=task.getDevice();
+  if("BESTANDEN".equals(input.result())&&(device.getInspectionIntervalMonths()==null||device.getInspectionIntervalMonths()<1))
+   throw error(HttpStatus.CONFLICT,"Prüfzyklus fehlt. Gerätewart muss zuerst ein gültiges Prüfintervall hinterlegen.");
   DeviceInspection inspection=new DeviceInspection();
   inspection.setDevice(device);
   inspection.setInspectionDate(date);
