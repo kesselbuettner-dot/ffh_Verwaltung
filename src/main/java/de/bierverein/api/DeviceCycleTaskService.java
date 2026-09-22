@@ -20,11 +20,19 @@ public class DeviceCycleTaskService {
  private final AppUserRepository users;
  private final ManagedUserRoleRepository assignments;
  private final DeviceInspectionRepository inspections;
+ private final DeviceInspectionWorkflowService workflow;
  private final ZoneId zone=ZoneId.of("Europe/Berlin");
  static final int WARNING_DAYS=30;
+ @org.springframework.beans.factory.annotation.Autowired
  public DeviceCycleTaskService(DeviceRepository devices,DeviceCycleTaskRepository tasks,
+  AppUserRepository users,ManagedUserRoleRepository assignments,DeviceInspectionRepository inspections,
+  DeviceInspectionWorkflowService workflow){
+  this.devices=devices;this.tasks=tasks;this.users=users;this.assignments=assignments;this.inspections=inspections;this.workflow=workflow;
+ }
+ // Kept for isolated legacy unit tests; production always uses the injected unified workflow.
+ DeviceCycleTaskService(DeviceRepository devices,DeviceCycleTaskRepository tasks,
   AppUserRepository users,ManagedUserRoleRepository assignments,DeviceInspectionRepository inspections){
-  this.devices=devices;this.tasks=tasks;this.users=users;this.assignments=assignments;this.inspections=inspections;
+  this(devices,tasks,users,assignments,inspections,null);
  }
  private ResponseStatusException error(HttpStatus status,String message){return new ResponseStatusException(status,message);}
  public AppUser actor(Authentication authentication){
@@ -48,7 +56,9 @@ public class DeviceCycleTaskService {
     String result,String note,Instant completedAt,String completedBy){}
  public record PersonView(Long id,String name){}
  public record AssignInput(Long userId){}
- public record FinishInput(String result,String note){}
+ public record FinishInput(String result,String note,String signatureData){
+  public FinishInput(String result,String note){this(result,note,null);}
+ }
  private String assignedName(Long id){
   if(id==null)return "Gerätewart (Rollenpostfach)";
   return users.findById(id).map(u->u.getMember()!=null?u.getMember().getName():u.getUsername()).orElse("Benutzer nicht mehr vorhanden");
@@ -138,6 +148,13 @@ public class DeviceCycleTaskService {
   Device device=task.getDevice();
   if("BESTANDEN".equals(input.result())&&(device.getInspectionIntervalMonths()==null||device.getInspectionIntervalMonths()<1))
    throw error(HttpStatus.CONFLICT,"Prüfzyklus fehlt. Gerätewart muss zuerst ein gültiges Prüfintervall hinterlegen.");
+  if(workflow!=null){
+   DeviceInspection signed=workflow.record(device,input.result(),note,user.getUsername(),input.signatureData(),
+    "Zyklische Geräteprüfung · Aufgabe #"+task.getId(),task.getId(),null,null);
+   if(!"DONE".equals(task.getStatus()))task.complete(input.result(),note.isBlank()?null:note,user.getUsername());
+   task.setInspectionId(signed.getId());
+   return view(tasks.save(task));
+  }
   DeviceInspection inspection=new DeviceInspection();
   inspection.setDevice(device);
   inspection.setInspectionDate(date);
