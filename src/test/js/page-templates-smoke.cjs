@@ -69,7 +69,7 @@ for(const asset of ['page-templates.css?v=1','page-templates.js?v=2'])
 for(const asset of ['"/page-templates.js"','"/page-templates.css"'])
  assert(security.includes(asset),'Static asset not public: '+asset);
 assert(sw.includes('ffh-verwaltung-admin-cycle-tasks-v44'));
-assert(html.includes("adminSettingsPage('templates')"),'Template gallery menu missing');
+assert(html.includes("['templates','📐 Seiten-Templates']")&&html.includes('onSelect:key=>adminSettingsPage(key)'),'Template gallery entry in shared admin settings must route correctly');
 assert(html.includes("lib.preview(selectedPageTemplate)")&&html.includes("const lib=window.FWPageTemplates"),'Interactive gallery preview missing');
 assert(docs.includes('FWPageTemplates.render'),'Binding page layout docs missing');
 assert(html.includes("if(section==='templates') return adminPageTemplatesPage()"),'Admin settings routing for the gallery missing');
