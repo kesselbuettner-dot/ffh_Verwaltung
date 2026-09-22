@@ -52,6 +52,14 @@ class DeviceCycleTaskServiceTest {
   verify(tasks,times(2)).insertIfAbsent(2L,today.plusDays(14));
   verify(tasks,never()).insertIfAbsent(eq(3L),any());
  }
+ @Test void activeLegacyDeviceWithCycleGeneratesTaskWithoutSeparateInspectionRequiredFlag(){
+  LocalDate today=LocalDate.now(ZoneId.of("Europe/Berlin"));
+  Device legacy=device(25L,today.plusDays(3));legacy.setInspectionRequired(false);
+  when(devices.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(legacy));
+  when(tasks.insertIfAbsent(25L,today.plusDays(3))).thenReturn(1);
+  assertEquals(1,service.generateDue());
+  verify(tasks).insertIfAbsent(25L,today.plusDays(3));
+ }
  @Test void firstInspectionDateIsStableWhenNoHistoryExists(){
   Device first=device(2L,null);
   when(devices.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(first));
