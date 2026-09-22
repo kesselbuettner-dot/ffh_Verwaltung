@@ -94,6 +94,8 @@ body.dark .vehicle-loading-shell{background:linear-gradient(180deg,#10202e,#0b18
 <link rel="stylesheet" href="/ui-theme.css?v=2">
 <link rel="stylesheet" href="/design-system.css?v=1">
 <script defer src="/design-system.js?v=1"></script>
+<link rel="stylesheet" href="/page-templates.css?v=1">
+<script defer src="/page-templates.js?v=1"></script>
 <script defer src="/menu-designer.js?v=577e741-v2"></script>
 <link rel="stylesheet" href="/wehrleiter.css?v=4">
 <script defer src="/wehrleiter.js?v=4"></script>
@@ -586,6 +588,7 @@ async function adminSettingsPage(section='members'){if(section==='users')section
   <button class="settings-tab" id="stab-master" onclick="adminSettingsPage('master')">🏢 Stammdaten & Impressum</button>
   <button class="settings-tab" id="stab-appearance" onclick="adminSettingsPage('appearance')">🎨 Erscheinungsbild</button>
   <button class="settings-tab" id="stab-design" onclick="adminSettingsPage('design')">🧩 Designsystem</button>
+  <button class="settings-tab" id="stab-templates" onclick="adminSettingsPage('templates')">📐 Seiten-Templates</button>
   <button class="settings-tab" id="stab-update" onclick="adminSettingsPage('update')">⬆️ Update</button>
  </div>
  <div id="settingsContent"></div>`;
@@ -599,6 +602,7 @@ async function adminSettingsPage(section='members'){if(section==='users')section
  if(section==='master') return adminMasterSettingsPage();
  if(section==='update') return adminUpdateSettingsPage();
  if(section==='design') return adminDesignSystemPage();
+ if(section==='templates') return adminPageTemplatesPage();
  return adminAppearanceSettingsPage();
 }
 async function adminAppearanceSettingsPage(){settingsContent.innerHTML='<div class="grid2"><div class="panel"><h3>🎨 Farben</h3><div class="form-grid"><div class="field"><label>Primärfarbe</label><input id="setPrimary" type="color"></div><div class="field"><label>Menüfarbe</label><input id="setNav" type="color"></div><div class="field"><label>Akzentfarbe</label><input id="setAccent" type="color"></div><div class="field"><label>App-Name</label><input id="setAppName"></div></div><button class="btn primary" onclick="saveAppearanceSettings()">Speichern</button><div id="appearanceMsg"></div></div><div class="panel"><h3>🖼️ Logo</h3><div class="quick" style="align-items:center"><img id="settingsLogoPreview" class="logo-preview" src="/icons/fw-cockpit-brand.svg" alt="Logo"><div><input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><p class="sub">PNG, JPG, WEBP oder SVG, maximal 2 MB.</p><button class="btn primary small" onclick="uploadSettingsLogo()">Logo hochladen</button><button class="btn danger small" onclick="removeSettingsLogo()">Logo zurücksetzen</button></div></div></div></div>';setPrimary.value=appSettings?.primaryColor||'#c51f2d';setNav.value=appSettings?.navColor||'#071827';setAccent.value=appSettings?.accentColor||'#1479e9';setAppName.value=appSettings?.appName||'FFH Verwaltung';setLogoImage(settingsLogoPreview,appSettings?.logoAvailable);const syncPreview=()=>{settingsLogoPreview.style.borderColor=setPrimary.value};setPrimary.oninput=syncPreview;renderThemePresets();}
@@ -668,6 +672,51 @@ function drawDesignSystemPage(){
   document.getElementById('ds-message').textContent='Standardwerte in der Vorschau ausgewählt. Zum Übernehmen bitte speichern.';
  };
  renderDesignPreview();
+}
+let selectedPageTemplate='overview';
+function adminPageTemplatesPage(){
+ if(role!=='ADMIN')return;
+ const lib=window.FWPageTemplates;
+ if(!lib){settingsContent.textContent='Seiten-Templates konnten nicht geladen werden.';return;}
+ settingsContent.innerHTML='';
+ const root=document.createElement('section');root.className='ds-page';
+ const title=document.createElement('header');title.className='ds-page-header';
+ const heading=document.createElement('div');heading.className='ds-page-heading';
+ const h=document.createElement('h2');h.className='ds-page-title';h.textContent='📐 Seiten-Templates';
+ const intro=document.createElement('p');intro.className='ds-page-description';
+ intro.textContent='Einheitliche Seitenvorlagen. Alle sechs Templates nutzen dieselben zentralen Farben, Abstände, Rundungen und Komponenten. Die Vorschau enthält ausschließlich Beispieldaten.';
+ heading.append(h,intro);title.appendChild(heading);root.appendChild(title);
+ const gallery=document.createElement('div');gallery.className='ds-template-gallery';
+ lib.list().forEach(entry=>{
+  const button=document.createElement('button');button.type='button';button.className='ds-template-choice';
+  button.dataset.pageTemplate=entry.id;button.setAttribute('aria-pressed',String(entry.id===selectedPageTemplate));
+  const strong=document.createElement('strong');strong.textContent=entry.title;
+  const small=document.createElement('small');small.textContent=entry.description;button.append(strong,small);
+  button.onclick=()=>{
+   selectedPageTemplate=entry.id;
+   gallery.querySelectorAll('[data-page-template]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+   renderPageTemplatePreview();
+  };gallery.appendChild(button);
+ });
+ root.appendChild(gallery);
+ const preview=document.createElement('section');preview.className='ds-card ds-template-gallery-preview';
+ const label=document.createElement('h3');label.className='ds-card-title';label.textContent='Live-Vorschau des Seiten-Templates';
+ const sample=document.createElement('div');sample.id='pageTemplatePreview';sample.className='ds-template-preview-shell';
+ preview.append(label,sample);
+ const note=document.createElement('p');note.className='ds-page-description';
+ note.textContent='Die Darstellung ist eine Vorschau: Sie legt keine Mitglieder, Prüfungen oder Benutzer an. Neue Seiten verwenden FWPageTemplates.render(id, daten).';
+ preview.appendChild(note);root.appendChild(preview);
+ const action=document.createElement('div');action.className='ds-page-actions';
+ const central=document.createElement('button');central.type='button';central.className='ds-btn ds-btn-secondary';
+ central.textContent='Gemeinsame Abstände, Schriften und Farben einstellen';central.onclick=()=>adminSettingsPage('design');
+ action.appendChild(central);root.appendChild(action);settingsContent.appendChild(root);
+ renderPageTemplatePreview();
+}
+function renderPageTemplatePreview(){
+ const target=document.getElementById('pageTemplatePreview'),lib=window.FWPageTemplates;
+ if(!target||!lib)return;
+ try{target.replaceChildren(lib.preview(selectedPageTemplate));}
+ catch(error){target.textContent='Vorschau konnte nicht erstellt werden: '+error.message;}
 }
 function renderDesignPreview(){
  const ui=window.FWComponents,host=document.getElementById('ds-preview');
