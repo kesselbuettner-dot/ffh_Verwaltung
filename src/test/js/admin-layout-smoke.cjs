@@ -22,7 +22,7 @@ assert(index.includes("loadManagedRolesPanel('roles')"),'Role page not scoped to
 assert(index.includes("implemented:false}"),'Legacy menu entries not disabled');
 for(const purpose of ['--ui-primary','--ui-secondary','--ui-danger','--ui-warning','--ui-success','--ui-focus'])
  assert(theme.includes(purpose),'Missing semantic UI color token '+purpose);
-assert(index.includes('/ui-theme.css?v=1'),'Shared theme stylesheet not loaded');
+assert(/\/ui-theme\.css\?v=\d+/.test(index),'Shared theme stylesheet not loaded');
 assert(index.includes('renderThemePresets()'),'Theme selection missing');
 assert(index.includes('UI_THEME_PRESETS'),'Theme presets missing');
 console.log('PASS shared design docs, separated member/accounts/roles/rights pages, preserved logins and theme tokens; checked '+scripts.length+' inline scripts');
