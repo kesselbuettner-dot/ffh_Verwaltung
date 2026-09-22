@@ -20,6 +20,47 @@ public class AdminMemberExtraController {
  public record Profile(Long memberId,LocalDate birthDate,LocalDate joinedOn,Map<String,String> custom){}
  public record Input(LocalDate birthDate,LocalDate joinedOn,Map<String,String> custom){}
  public record FieldInput(String code,String title,String type){}
+ public record AvatarInput(String imageData){}
+ public record AvatarView(String imageData){}
+ @GetMapping("/{id}/avatar")
+ @Transactional(readOnly=true)
+ public AvatarView avatar(@PathVariable Long id){
+  member(id);
+  MemberExtra profile=extras.findById(id).orElse(null);
+  if(profile==null||profile.avatarData==null||profile.avatarMime==null)return new AvatarView(null);
+  return new AvatarView("data:"+profile.avatarMime+";base64,"+
+      Base64.getEncoder().encodeToString(profile.avatarData));
+ }
+ @PutMapping("/{id}/avatar")
+ @Transactional
+ public AvatarView saveAvatar(@PathVariable Long id,@RequestBody AvatarInput input){
+  member(id);
+  if(input==null)throw bad("Avatar fehlt");
+  MemberExtra profile=extras.findById(id).orElseGet(()->new MemberExtra(id));
+  if(input.imageData()==null||input.imageData().isBlank()){
+   profile.avatarData=null;profile.avatarMime=null;extras.save(profile);return new AvatarView(null);
+  }
+  String text=input.imageData();
+  if(text.length()>140000)throw bad("Avatar zu groß (maximal 100 KB)");
+  int comma=text.indexOf(',');
+  if(comma<0)throw bad("Avatarformat ungültig");
+  String mime=text.substring(0,comma);
+  if(!mime.equals("data:image/jpeg;base64")&&!mime.equals("data:image/png;base64")&&!mime.equals("data:image/webp;base64"))
+    throw bad("Nur JPEG, PNG oder WEBP erlaubt");
+  byte[] data;
+  try{data=Base64.getDecoder().decode(text.substring(comma+1));}
+  catch(IllegalArgumentException ex){throw bad("Ungültige Bilddaten");}
+  if(data.length<32||data.length>100000)throw bad("Avatargröße ungültig");
+  boolean jpeg=data[0]==(byte)0xff&&data[1]==(byte)0xd8&&data[2]==(byte)0xff;
+  boolean png=data[0]==(byte)0x89&&data[1]==0x50&&data[2]==0x4e&&data[3]==0x47;
+  boolean webp=data.length>12&&new String(data,0,4,java.nio.charset.StandardCharsets.US_ASCII).equals("RIFF")&&
+    new String(data,8,4,java.nio.charset.StandardCharsets.US_ASCII).equals("WEBP");
+  if(!(mime.startsWith("data:image/jpeg")&&jpeg||mime.startsWith("data:image/png")&&png||
+       mime.startsWith("data:image/webp")&&webp))throw bad("Dateityp und Bilddaten stimmen nicht überein");
+  profile.avatarData=data;profile.avatarMime=mime.substring(5,mime.indexOf(';'));extras.save(profile);
+  return new AvatarView("data:"+profile.avatarMime+";base64,"+Base64.getEncoder().encodeToString(data));
+ }
+
  private ResponseStatusException bad(String text){return new ResponseStatusException(HttpStatus.BAD_REQUEST,text);}
  private void member(Long id){if(members.findById(id).isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Mitglied nicht gefunden");}
  private Map<String,String> parse(String json){
