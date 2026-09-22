@@ -33,7 +33,11 @@
  }
  function actions(entry){
   const box=n('div','ds-row-actions');
-  if(!pending(entry))return n('span','u-text-muted',entry.result||'Abgeschlossen');
+  if(!pending(entry)){
+   const result=n('div','ds-row-actions');result.appendChild(n('span','u-text-muted',entry.result||'Abgeschlossen'));
+   if(entry.inspectionId)result.appendChild(ui().button({label:'Protokoll',variant:'secondary',onClick:()=>openProtocol(entry)}));
+   return result;
+  }
   if(isManager)append(box,ui().button({label:'Weitergeben',variant:'secondary',onClick:()=>openAssign(entry)}));
   if(isManager||entry.assignedUserId)append(box,ui().button({label:'Prüfen',variant:'primary',onClick:()=>openComplete(entry)}));
   return box;
@@ -109,19 +113,39 @@
   const textarea=n('textarea','ds-textarea');textarea.maxLength=1000;textarea.rows=3;
   noteField.appendChild(textarea);
   const notice=n('div','ds-task-dialog-message');
+  const signature=root.FWSignature.field('Unterschrift zum Abschluss dieser Geräteprüfung');
   const body=append(n('div','ds-task-dialog'),n('p','',entry.deviceName+' · '+(entry.location||'–')+' · fällig '+d(entry.dueOn)),
-   selectField,noteField,notice);
+   selectField,noteField,signature.element,notice);
   const form=ui().modalContent({content:body,actions:[
    ui().button({label:'Abbrechen',variant:'secondary',onClick:closeModal}),
    ui().button({label:'Prüfung abschließen',variant:'primary',onClick:async()=>{
     const result=select.value,note=textarea.value.trim();
     if(result!=='BESTANDEN'&&!note){message(notice,'Bei einem Mangel ist eine Bemerkung erforderlich.',true);return;}
-    try{await api(URL+'/'+entry.id+'/complete',{method:'POST',body:JSON.stringify({result,note})});
+    try{await api(URL+'/'+entry.id+'/complete',{method:'POST',body:JSON.stringify({result,note,signatureData:signature.signature()})});
       closeModal();await page();
     }catch(error){message(notice,error.message||'Prüfung konnte nicht abgeschlossen werden.',true);}
    }})
   ]});
   modalBody.replaceChildren(form);modal.classList.remove('hidden');
+ }
+ async function openProtocol(entry){
+  try{
+   const record=await api(URL+'/'+entry.id+'/protocol');
+   modalTitle.textContent='Prüfprotokoll · '+entry.deviceName;
+   const body=append(n('div','ds-task-dialog'),
+    n('p','','Gerät: '+(record.deviceName||entry.deviceName)),
+    n('p','','Standort: '+(record.location||'–')),
+    n('p','','Prüfdatum: '+d(record.inspectionDate)),
+    n('p','','Ergebnis: '+(record.result||'–')),
+    n('p','','Prüfer: '+(record.inspector||'–')),
+    n('p','','Bemerkung: '+(record.note||'–')),
+    n('p','','Nächste Prüfung: '+d(record.nextInspectionDate)));
+   if(record.signatureData?.startsWith('data:image/png;base64,')){
+    const img=n('img');img.src=record.signatureData;img.alt='Unterschrift des Prüfers';img.style.cssText='max-width:100%;height:auto;background:#fff;border:1px solid #a6b5c4;border-radius:10px';
+    body.appendChild(img);
+   }
+   modalBody.replaceChildren(body);modal.classList.remove('hidden');
+  }catch(error){alert(error.message||'Protokoll konnte nicht geladen werden.');}
  }
  root.DeviceCycleTasks=Object.freeze({page});
 })(window);
