@@ -43,55 +43,100 @@ async function page(){
  '<div class="panel">Qualifikationen werden geladen …</div>';
  try{await reload();drawPage();}catch(e){content.innerHTML+= '<div class="message error">'+safe(e.message)+'</div>';}
 }
-function drawPage(){
- const canWrite=rights('fire.qualifications.write'),canSensitive=rights('fire.qualifications.sensitive.read');
- content.innerHTML=header('👥 Mitgliederverwaltung · Wehrleitung',
-  'Kompakte Qualifikationskacheln je Mitglied. Kachel anklicken, um Details und Prüfdatum zu bearbeiten.',
-  canWrite?'<button class="btn primary" id="wehrAdd">＋ Qualifikation zuweisen</button>':'')+
- '<div class="panel"><div class="ui-filterbar" role="search" aria-label="Mitglieder und Qualifikationen filtern">'+
- '<label class="ui-filterfield ui-filter-search"><span>Suche</span><input id="wehrSearch" type="search" placeholder="Mitglied oder Qualifikation" value="'+safe(nameFilter)+'"></label>'+
- '<label class="ui-filterfield"><span>Prüfstatus</span><select id="wehrStatus"><option value="ALL">Alle Prüfstatus</option>'+
- ['VALID','DUE','OVERDUE','UNSCHEDULED','INACTIVE'].map(k=>'<option value="'+k+'">'+statusMap[k]+'</option>').join('')+'</select></label>'+
- '<label class="ui-filterfield"><span>Qualifikation</span><select id="wehrType"><option value="">Alle Qualifikationen</option>'+
- types.filter(t=>!t.sensitive||canSensitive).map(t=>'<option value="'+safe(t.code)+'">'+safe(t.title)+'</option>').join('')+'</select></label>'+
- '<label class="ui-filterfield"><span>Kategorie</span><select id="wehrCategory"><option value="ALL">Alle</option><option value="QUALIFICATION">Qualifikationen</option><option value="CERTIFICATE_DOCUMENT">Zertifikate / Dokumente</option></select></label>'+ 
- '<label class="ui-filterfield"><span>Sortierung</span><select id="wehrSort"><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="due-asc">Nächste Prüfung</option><option value="count-desc">Meiste Qualifikationen</option></select></label>'+
- '<div class="ui-filter-actions"><button class="btn secondary" type="button" id="wehrReset">Filter zurücksetzen</button>'+
- (canWrite?'<button class="btn secondary" type="button" id="wehrConfig">⚙️ Baukasten</button>':'')+'</div></div>'+
- '<div class="wehr-legend" aria-label="Legende der Kachelfarben"><span class="wehr-legend-item"><i class="wehr-legend-swatch is-VALID"></i> Gültig</span>'+
- '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-DUE"></i> Bald fällig – schraffiert</span>'+
- '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-OVERDUE"></i> Abgelaufen – grau</span></div>'+
- '<div id="wehrRows"></div></div>';
- const search=el('wehrSearch'),status=el('wehrStatus'),type=el('wehrType'),sort=el('wehrSort'),category=el('wehrCategory');
- status.value=visibleFilter;type.value=typeFilter;sort.value=sortMode;category.value=categoryFilter;
- search.oninput=()=>{nameFilter=search.value;drawRows();};
- status.onchange=()=>{visibleFilter=status.value;drawRows();};
- type.onchange=()=>{typeFilter=type.value;drawRows();};category.onchange=()=>{categoryFilter=category.value;drawRows();};
- sort.onchange=()=>{sortMode=sort.value;drawRows();};
- el('wehrReset').onclick=()=>{nameFilter='';visibleFilter='ALL';typeFilter='';categoryFilter='ALL';sortMode='name-asc';drawPage();};
- if(el('wehrAdd'))el('wehrAdd').onclick=()=>editCard(null);
- if(el('wehrConfig'))el('wehrConfig').onclick=()=>configPage();
- drawRows();
-}
-function drawRows(){
- const host=el('wehrRows');if(!host)return;
+const WEHR_COLUMNS=[
+ {code:'QUALIFICATION',title:'Qualifikationen'},
+ {code:'CERTIFICATE_DOCUMENT',title:'Zertifikate / Dokumente'},
+ {code:'SUITABILITY',title:'Tauglichkeiten'}
+];
+function filteredMemberRows(){
  const needle=nameFilter.trim().toLocaleLowerCase('de'),state=visibleFilter,type=typeFilter,category=categoryFilter;
- const filtered=people.map(p=>({p,list:cards.filter(c=>c.memberId===p.id)
-  .filter(c=>state==='ALL'||c.status===state).filter(c=>!type||c.code===type).filter(c=>category==='ALL'||c.category===category).sort((a,b)=>(a.category==='QUALIFICATION'?0:1)-(b.category==='QUALIFICATION'?0:1)||String(a.title).localeCompare(String(b.title),'de'))}))
+ const matching=people.map(p=>({p,list:cards.filter(c=>c.memberId===p.id)
+  .filter(c=>state==='ALL'||c.status===state).filter(c=>!type||c.code===type)
+  .filter(c=>category==='ALL'||c.category===category)
+  .sort((a,b)=>String(a.title).localeCompare(String(b.title),'de'))}))
  .filter(row=>(!type&&state==='ALL'&&category==='ALL'||row.list.length)&&
   (!needle||row.p.name.toLocaleLowerCase('de').includes(needle)||
    row.list.some(c=>c.title.toLocaleLowerCase('de').includes(needle)||String(c.shortLabel||'').toLocaleLowerCase('de').includes(needle))));
  const collator=new Intl.Collator('de',{sensitivity:'base',numeric:true});
  const soon=row=>Math.min(...row.list.map(c=>c.nextDueOn?Date.parse(c.nextDueOn+'T00:00:00'):Infinity));
- filtered.sort((a,b)=>sortMode==='count-desc'?b.list.length-a.list.length||collator.compare(a.p.name,b.p.name):
+ matching.sort((a,b)=>sortMode==='count-desc'?b.list.length-a.list.length||collator.compare(a.p.name,b.p.name):
   sortMode==='due-asc'?soon(a)-soon(b)||collator.compare(a.p.name,b.p.name):
   sortMode==='name-desc'?collator.compare(b.p.name,a.p.name):collator.compare(a.p.name,b.p.name));
- host.innerHTML=filtered.length?filtered.map(({p,list})=>
-  '<div class="wehr-member-row"><div class="wehr-member-title">'+avatarHtml(p)+'<strong>'+safe(p.name)+'</strong></div>'+
-  '<div class="wehr-card-list">'+(list.length?list.map(cardHtml).join(''):
-  '<span class="sub wehr-empty">Keine Qualifikationen zugeordnet.</span>')+'</div></div>').join(''):
-  '<p class="empty">Keine Mitglieder oder Qualifikationen für diesen Filter.</p>';
+ return matching;
+}
+function wehrLegend(){
+ return '<div class="wehr-legend" aria-label="Legende der Kachelfarben">'+
+ '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-VALID"></i> Gültig (typbezogene Farbe)</span>'+
+ '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-DUE"></i> Bald fällig – schraffiert</span>'+
+ '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-OVERDUE"></i> Abgelaufen – grau</span>'+
+ '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-UNSCHEDULED"></i> Ohne Prüftermin – gepunktet</span></div>';
+}
+function groupedMemberTable(rows,print=false){
+ const visible=print?rows:rows;
+ const head='<thead><tr><th scope="col">Mitglied</th>'+WEHR_COLUMNS.map(c=>
+  '<th scope="col">'+safe(c.title)+'</th>').join('')+'</tr></thead>';
+ const body=visible.map(({p,list})=>'<tr><th scope="row" class="wehr-name-cell">'+
+  (print?'':avatarHtml(p))+'<strong>'+safe(p.name)+'</strong></th>'+
+  WEHR_COLUMNS.map(column=>'<td data-label="'+safe(column.title)+'"><div class="wehr-card-list">'+
+   list.filter(c=>c.category===column.code).map(cardHtml).join('')+
+   '</div></td>').join('')+'</tr>').join('');
+ return '<table class="wehr-overview-table">'+head+'<tbody>'+body+'</tbody></table>';
+}
+function drawPage(){
+ const canWrite=rights('fire.qualifications.write'),canSensitive=rights('fire.qualifications.sensitive.read');
+ content.innerHTML=header('👥 Mitgliederverwaltung · Wehrleitung',
+  'Kacheln je Mitglied in drei Spalten. Anklicken, um Details und Prüftermine zu bearbeiten.',
+  (canWrite?'<button class="btn primary" id="wehrAdd">＋ Kachel zuweisen</button>':'')+
+  '<button class="btn secondary" id="wehrPrint">🖨 Druckbericht</button>')+
+ '<div class="panel"><div class="ui-filterbar" role="search" aria-label="Mitglieder und Kacheln filtern">'+
+ '<label class="ui-filterfield ui-filter-search"><span>Suche</span><input id="wehrSearch" type="search" placeholder="Mitglied oder Kachel" value="'+safe(nameFilter)+'"></label>'+
+ '<label class="ui-filterfield"><span>Prüfstatus</span><select id="wehrStatus"><option value="ALL">Alle Prüfstatus</option>'+
+ ['VALID','DUE','OVERDUE','UNSCHEDULED','INACTIVE'].map(k=>'<option value="'+k+'">'+statusMap[k]+'</option>').join('')+'</select></label>'+
+ '<label class="ui-filterfield"><span>Kacheltyp</span><select id="wehrType"><option value="">Alle Kacheltypen</option>'+
+ types.filter(t=>!t.sensitive||canSensitive).map(t=>'<option value="'+safe(t.code)+'">'+safe(t.title)+'</option>').join('')+'</select></label>'+
+ '<label class="ui-filterfield"><span>Kategorie</span><select id="wehrCategory"><option value="ALL">Alle Kategorien</option>'+
+ WEHR_COLUMNS.map(c=>'<option value="'+c.code+'">'+safe(c.title)+'</option>').join('')+'</select></label>'+
+ '<label class="ui-filterfield"><span>Sortierung</span><select id="wehrSort"><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="due-asc">Nächste Prüfung</option><option value="count-desc">Meiste Kacheln</option></select></label>'+
+ '<div class="ui-filter-actions"><button class="btn secondary" type="button" id="wehrReset">Filter zurücksetzen</button>'+
+ (canWrite?'<button class="btn secondary" type="button" id="wehrConfig">⚙️ Baukasten</button>':'')+'</div></div>'+
+ wehrLegend()+'<div id="wehrRows" class="wehr-table-scroll"></div></div>';
+ const search=el('wehrSearch'),status=el('wehrStatus'),type=el('wehrType'),sort=el('wehrSort'),category=el('wehrCategory');
+ status.value=visibleFilter;type.value=typeFilter;sort.value=sortMode;category.value=categoryFilter;
+ search.oninput=()=>{nameFilter=search.value;drawRows();};
+ status.onchange=()=>{visibleFilter=status.value;drawRows();};
+ type.onchange=()=>{typeFilter=type.value;drawRows();};
+ category.onchange=()=>{categoryFilter=category.value;drawRows();};
+ sort.onchange=()=>{sortMode=sort.value;drawRows();};
+ el('wehrReset').onclick=()=>{nameFilter='';visibleFilter='ALL';typeFilter='';categoryFilter='ALL';sortMode='name-asc';drawPage();};
+ if(el('wehrAdd'))el('wehrAdd').onclick=()=>editCard(null);
+ if(el('wehrConfig'))el('wehrConfig').onclick=()=>configPage();
+ el('wehrPrint').onclick=printWehrReport;
+ drawRows();
+}
+function drawRows(){
+ const host=el('wehrRows');if(!host)return;
+ const rows=filteredMemberRows();
+ host.innerHTML=rows.length?groupedMemberTable(rows):
+  '<p class="empty">Keine Mitglieder oder Kacheln für diesen Filter.</p>';
  bind(host);
+}
+function printWehrReport(){
+ // The report uses exactly the currently visible, server-authorized data and active filters.
+ const rows=filteredMemberRows();
+ const report=document.createElement('section');
+ report.className='wehr-print-report';
+ report.id='wehrPrintReport';
+ report.innerHTML='<h1>Mitgliederverwaltung · Wehrleitung – Qualifikationsübersicht</h1>'+
+ '<p class="wehr-report-date">Stand: '+safe(new Date().toLocaleString('de-DE'))+
+ ' · Mitglieder: '+rows.length+'</p>'+
+ wehrLegend()+(rows.length?groupedMemberTable(rows,true):'<p>Keine Einträge für die aktuellen Filter.</p>')+
+ '<p class="wehr-print-note">Kürzel, Status und Gültigkeit sind in der Kachelübersicht nach den eingeblendeten Filtern dargestellt. Graue Kacheln sind abgelaufen; schraffierte sind bald fällig.</p>';
+ const previous=document.getElementById('wehrPrintReport');
+ if(previous)previous.remove();
+ document.body.appendChild(report);
+ const clean=()=>{report.remove();window.removeEventListener('afterprint',clean);};
+ window.addEventListener('afterprint',clean,{once:true});
+ try{window.print();}catch(error){clean();alert('Drucken nicht möglich: '+error.message);}
 }
 function inputField(label,id,value='',type='text',hint=''){return '<div class="field"><label for="'+id+'">'+safe(label)+'</label><input id="'+id+'" type="'+type+'" value="'+safe(value)+'">'+(hint?'<small class="sub">'+safe(hint)+'</small>':'')+'</div>';}
 async function uploadCardPdf(id,file){
@@ -181,7 +226,7 @@ function drawConfig(){
  '<button class="btn secondary" id="backWehr">Zur Mitgliederverwaltung</button>')+
  '<div class="panel"><div class="quick"><button class="btn secondary" id="defaultWehr">Standardkacheln hinzufügen</button><button class="btn primary" id="newWehrType">＋ Eigene Kachel</button></div>'+
  '<div class="table-wrap"><table class="table"><thead><tr><th>Kachel</th><th>Überwachung</th><th>Vorwarnzeit</th><th>Prüfintervall</th><th>Aktion</th></tr></thead><tbody>'+
- types.slice().sort((a,b)=>(a.category==='QUALIFICATION'?0:1)-(b.category==='QUALIFICATION'?0:1)||a.title.localeCompare(b.title,'de')).map(t=>'<tr><td>'+safe(t.icon+' '+t.title)+'</td><td>'+safe(t.category==='CERTIFICATE_DOCUMENT'?'Zertifikat / Dokument':'Qualifikation')+' · '+(t.tracked?'Ja':'Nein')+(t.sensitive?' · vertraulich':'')+'</td><td>'+t.warningDays+' Tage</td><td>'+t.intervalMonths+' Monate</td><td><button class="btn small secondary" data-type-id="'+t.id+'">Bearbeiten</button> <button class="btn small danger" data-delete-type="'+t.id+'">Löschen</button></td></tr>').join('')+
+ types.slice().sort((a,b)=>WEHR_COLUMNS.findIndex(c=>c.code===a.category)-WEHR_COLUMNS.findIndex(c=>c.code===b.category)||a.title.localeCompare(b.title,'de')).map(t=>'<tr><td>'+safe(t.icon+' '+t.title)+'</td><td>'+safe(WEHR_COLUMNS.find(c=>c.code===t.category)?.title||'Qualifikationen')+' · '+(t.tracked?'Ja':'Nein')+(t.sensitive?' · vertraulich':'')+'</td><td>'+t.warningDays+' Tage</td><td>'+t.intervalMonths+' Monate</td><td><button class="btn small secondary" data-type-id="'+t.id+'">Bearbeiten</button> <button class="btn small danger" data-delete-type="'+t.id+'">Löschen</button></td></tr>').join('')+
  '</tbody></table></div><div id="wehrConfigMsg"></div></div>';
  el('backWehr').onclick=()=>page();el('defaultWehr').onclick=async()=>{try{await api(BASE+'/types/defaults',{method:'POST'});types=await api(BASE+'/types');drawConfig();}catch(e){notice(el('wehrConfigMsg'),e.message);}};
  el('newWehrType').onclick=()=>editType(null);
@@ -198,7 +243,7 @@ function editType(id){
  modalTitle.textContent=t?'Kachel konfigurieren':'Eigene Kachel anlegen';
  modalBody.innerHTML='<div id="wehrTypeMsg"></div>'+
  (t?'<p><strong>'+safe(t.code)+'</strong></p>':inputField('Technische Kennung (A–Z, 0–9, _)','wCode'))+
- '<div class="field"><label>Kategorie</label><select id="wCategory"><option value="QUALIFICATION">Qualifikation</option><option value="CERTIFICATE_DOCUMENT">Zertifikat / Dokument</option></select></div>'+ 
+ '<div class="field"><label>Kategorie</label><select id="wCategory"><option value="QUALIFICATION">Qualifikation</option><option value="CERTIFICATE_DOCUMENT">Zertifikat / Dokument</option><option value="SUITABILITY">Tauglichkeit</option></select></div>'+ 
  inputField('Name','wTitle',t?.title)+inputField('Kürzel (maximal 10 Zeichen)','wShort',t?.shortLabel||'','','Nur dieses Kürzel erscheint in der kleinen Kachel.')+inputField('Symbol','wIcon',t?.icon||'📋')+
  '<div class="field"><label><input id="wTracked" type="checkbox" '+(t?.tracked?'checked':'')+'> Überwachungspflichtig</label></div>'+
  '<div class="field"><label><input id="wSensitive" type="checkbox" '+(t?.sensitive?'checked':'')+'> Vertraulich (gesonderte Berechtigung)</label></div>'+
