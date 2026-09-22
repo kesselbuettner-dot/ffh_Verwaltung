@@ -34,6 +34,15 @@ const injection='<img src=x onerror=alert(1)>';
 const management=api.render('management',{title:'Inventar',columns:[{key:'name',label:'Name'}],rows:[{name:injection}]});
 assert(textOf(management).includes(injection),'Text remains escaped and is rendered as text');
 assert.equal(management.children.find(x=>x.tagName==='header').tagName,'header');
+let lastSearch='';
+const searchable=api.management({columns:[{key:'name',label:'Name'}],rows:[],
+ onSearch:value=>{lastSearch=value;}});
+const searchField=searchable.children.find(x=>x.className==='ds-card')
+ .children.find(x=>x.className==='ds-template-list').children.find(x=>x.className==='ds-template-toolbar').children[0].children[1];
+assert.equal(searchField.type,'search');
+searchField.value='Helm';
+searchField.events.input();
+assert.equal(lastSearch,'Helm','Management search must react during typing, not only after focus leaves field');
 const before=textOf(management);
 assert(!management.children.some(c=>c.tagName==='img'),'No injected HTML element may be created');
 assert.throws(()=>api.render('not-a-real-template'),/Unbekanntes Seiten-Template/);
