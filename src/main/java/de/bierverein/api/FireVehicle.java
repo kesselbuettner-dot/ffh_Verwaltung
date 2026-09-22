@@ -8,6 +8,9 @@ public class FireVehicle {
  @Column(length=1000) private String notes;
  @Column(nullable=false) private boolean active=true;
  private Boolean fireRelevant=true;
+ @Column(length=8) private String requiredLicenseClass;
+ public String getRequiredLicenseClass(){return requiredLicenseClass;}
+ public void setRequiredLicenseClass(String value){requiredLicenseClass=value;}
  public Long getId(){return id;} public String getName(){return name;} public void setName(String v){name=v;}
  public String getCallSign(){return callSign;} public void setCallSign(String v){callSign=v;} public String getNotes(){return notes;} public void setNotes(String v){notes=v;}
  public boolean isActive(){return active;} public void setActive(boolean v){active=v;}
