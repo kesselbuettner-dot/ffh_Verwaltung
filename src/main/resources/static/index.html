@@ -589,6 +589,8 @@ async function adminSettingsPage(section='members'){
   ['design','🧩 Designsystem'],['templates','📐 Seiten-Templates'],['update','⬆️ Update']
  ];
  const host=document.createElement('div');host.id='settingsContent';host.className='ds-admin-module';
+ // Existing admin modules use settingsContent as a global; bind the current template host explicitly.
+ window.settingsContent=host;
  const frame=window.FWPageTemplates.settings({
   title:'Administration',description:'Zentrale Stammdaten, Rollen, Funktionen und Darstellung',
   sections:sections.map(([id,title])=>({id,title,content:id===section?host:null})),
