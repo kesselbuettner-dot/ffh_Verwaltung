@@ -40,7 +40,7 @@
  function management(opts={}){
   const toolbar=elem('div','ds-template-toolbar');
   if(opts.search!==false){
-   put(toolbar,ui().field({label:opts.searchLabel||'Suche',type:'search',value:opts.searchValue||'',placeholder:opts.searchPlaceholder||'Eintrag suchen',onChange:opts.onSearch}));
+   put(toolbar,ui().field({label:opts.searchLabel||'Suche',type:'search',value:opts.searchValue||'',placeholder:opts.searchPlaceholder||'Eintrag suchen',onInput:opts.onSearch}));
   }
   (opts.filters||[]).forEach(f=>put(toolbar,ui().field(f)));
   if(opts.onReset)put(toolbar,ui().button({label:'Filter zurücksetzen',variant:'secondary',onClick:opts.onReset}));
