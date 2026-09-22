@@ -83,3 +83,41 @@ Neue Seite auf Desktop/Tablet/Handy: passende Spalten, Sortierung, Filter, leere
 **Zentraler Editor:** Administration → Designsystem ändert nur serverseitig validierte Werte für `space`, `radius`, `controlHeight`, `pageWidth`, `textSize`, `shadow`; bestehende Farbtheme-Einstellungen unter Erscheinungsbild werden übernommen. Die zentralen Werte gelten für alle neuen `.ds-*`-Komponenten. Datenbankgestützte Benutzerrollen, individuelle Stammdaten oder Altabläufe werden dadurch nicht verändert.
 
 **Wichtige Grenzen:** Die neue `FWComponents.table`-Vorlage ist eine sichere Basis-Tabelle, kein fertiger Datenmanager; fachliche Sortierung, Filter, Pagination und Export sind vom jeweiligen Modul mit bestehenden zentralen Filterkomponenten zu ergänzen. Ein Render-Callback darf DOM-Knoten oder Klartext zurückgeben, niemals unbereinigten HTML-Code. Beim Umstellen einer vorhandenen Seite eine eigene Regression für Desktop, Handy, Berechtigungen und Datenänderung ergänzen.
+
+## Sechs vollständige Seiten-Templates (verbindliche Vorlage für neue Module)
+
+Die bisherigen Grundkomponenten (Button, Tabelle, Karte, Formularfeld) werden nun zu **ganzen Seiten** zusammengesetzt. Die zentrale Implementierung liegt in `src/main/resources/static/page-templates.js`, die gemeinsame Gestaltung in `page-templates.css`. Beide Dateien verwenden das vorhandene Designsystem mit `FWComponents`, den `.ds-*`-Klassen und den zentralen Farben, Schriftgrößen, Abständen und Rundungen. **Nicht die HTML-Struktur für jedes Modul erneut kopieren.**
+
+| Template-ID | Zweck | Übergabe / Standard |
+|---|---|---|
+| `overview` | Dashboard und Bereichsübersichten | `title`, `description`, `metrics`, `panels`, `actions` |
+| `management` | Verwaltungslisten | `title`, `actions`, `columns`, `rows`, `filters`, `onSearch`, `onReset` |
+| `detail` | Mitglieds-/Geräte-/Fahrzeugdetails | `fields`, `status`, `tiles`, `history`, `actions` |
+| `form` | Stammdaten- und Bearbeitungsformulare | `groups` oder `fields`, `onSubmit`, `onCancel` |
+| `tasks` | Fälligkeiten, Prüfungen und Aufgaben | `rows`, `filters`, `columns`, `actions`, pro Zeile `action` |
+| `settings` | Administration und Konfigurationsseiten | `sections`, `onSave` |
+
+**Aufruf für eine neue Seite:**
+```js
+const template = window.FWPageTemplates;
+const screen = template.render('management', {
+  title: 'Geräteverwaltung',
+  description: 'Geräte suchen und prüfen',
+  actions: [window.FWComponents.button({
+    label: '＋ Gerät', variant: 'primary', onClick: () => openDeviceForm()
+  })],
+  columns: [
+    {key: 'name', label: 'Gerät'},
+    {key: 'location', label: 'Standort'}
+  ],
+  rows: permittedDeviceRows,
+  onSearch: term => filterDevices(term)
+});
+content.replaceChildren(screen);
+```
+
+`FWPageTemplates.list()` liefert den Katalog, `FWPageTemplates.preview('management')` eine sichere, datenfreie Vorschau, `FWPageTemplates.render(id,options)` die eigentliche Seite. Die einzelnen `overview`/`management`/…-Funktionen sind ebenfalls nutzbar. Ein Template führt keine API-Abfrage durch, legt keine Daten an und erteilt keine Rollenrechte; Fachmodule übergeben **nur bereits serverseitig autorisierte Daten** und fachliche Callbacks. Speichern, Druck, Sortierung und Statusübergänge bleiben explizite Fachlogik.
+
+**Zentrale Anpassung:** Die `--ds-*`-Tokens und alle strukturellen Klassen für Seiten-Templates stehen in den beiden gemeinsamen CSS-Dateien. Administration → Designsystem verändert die validierten globalen Tokenwerte. Administration → Seiten-Templates zeigt sechs auswählbare, interaktive Demo-Vorschauen. Änderungen an gemeinsamen Klassen wirken auf **jede neue Seite, die das Template verwendet**. Die Galerie speichert keine separaten modulspezifischen Layoutkopien; so können Module nicht unbemerkt auseinanderdriften.
+
+**Bestandschutz:** Die bisherigen Seiten werden nicht automatisch ersetzt. Insbesondere die Wehrleiter-Mitgliedertabelle mit ihren drei Fachspalten, Berechtigungen, Filter-/Druckfunktionen und gespeicherten Daten bleibt bis zu einer gesondert getesteten Migration unverändert.
