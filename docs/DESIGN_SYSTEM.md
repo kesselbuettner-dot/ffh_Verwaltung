@@ -82,3 +82,11 @@ content.replaceChildren(screen);
 ```
 
 Die tatsächliche Anzeige der Buttons und Aktionen muss zusätzlich zur serverseitigen API-Autorisierung auf dem erforderlichen **effektiven Recht** beruhen. Eine reine Menüsichtbarkeit ersetzt niemals eine Serverprüfung. Alte Seiten haben Bestandschutz, neue Seiten verwenden den gemeinsamen Komponentenbaukasten.
+
+## Seitentemplates (vollständige, zentral anpassbare Seiten)
+
+Für jedes **neue** Modul muss vor der Implementierung eines von sechs vollständigen Seiten-Templates ausgewählt werden: `overview`, `management`, `detail`, `form`, `tasks` oder `settings`. `page-templates.js` stellt einheitliche Seitenstruktur, Seitenkopf, Aktionsbereich, Inhalte und sinnvolle leere Zustände bereit. `page-templates.css` steuert zentral deren responsive Rastersysteme, Filterleiste, Detailaufbau, Formulargruppen und Einstellungsnavigation.
+
+Einzelne Seiten übergeben fachliche Daten/Callbacks und das passende rollenabhängige Aktionsangebot, **keine kopierten Seitengerüste**. Der visuelle Template-Katalog ist unter Administration → Seiten-Templates erreichbar. Er enthält nur Beispieldaten; ein Klick auf ein Template ändert keine bestehenden Seiten oder Daten.
+
+Anpassungen globaler Abstände, Typografie, Rundung und Seitengröße erfolgen weiterhin unter Administration → Designsystem oder in den gemeinsamen CSS-Dateien. Bewusst **keine automatische Massenmigration** der vorhandenen Wehrleiter- und Kassenansichten: Ihre Fachfunktionen, Rollenchecks und Druckdarstellung müssen bei jeder separaten Umstellung erhalten bleiben. Weitere Details/API-Beispiele stehen in `docs/UI_KOMPONENTEN.md`.
