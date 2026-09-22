@@ -99,8 +99,15 @@ async function uploadCardPdf(id,file){
   throw Error('Nur PDF-Dateien bis 5 MB zulässig.');
  const bytes=await file.arrayBuffer(),sig=new TextDecoder().decode(bytes.slice(0,5));
  if(sig!=='%PDF-')throw Error('Die Datei ist kein gültiges PDF.');
- return api('/api/fire/qualification-attachments/'+Number(id),
-  {method:'PUT',headers:{'Content-Type':'application/pdf'},body:bytes});
+ const response=await fetch('/api/fire/qualification-attachments/'+Number(id),{
+  method:'PUT',headers:{'Authorization':headers().Authorization,'Content-Type':'application/pdf'},body:bytes,cache:'no-store'
+ });
+ if(response.status===401)throw Error('Nicht angemeldet');
+ if(!response.ok){let detail='PDF konnte nicht gespeichert werden ('+response.status+').';
+  try{const j=await response.json();detail=j.detail||j.message||detail;}catch{}
+  throw Error(detail);
+ }
+ return response.json();
 }
 async function downloadCardPdf(id){
  try{
