@@ -75,9 +75,12 @@ public class DeviceCycleTaskService {
    if(interval==null||interval<1||!device.isInspectionRequired())continue;
    LocalDate date=due(device,today);
    if(date==null||date.isAfter(today.plusDays(WARNING_DAYS)))continue;
-   if(tasks.findByDeviceIdAndDueOn(device.getId(),date).isPresent())continue;
-   tasks.save(new DeviceCycleTask(device,date));
-   added++;
+   if(device.getLastInspectionDate()==null&&device.getNextInspectionDate()==null){
+    // Without a previous date the first task must keep a stable due date across days.
+    device.setNextInspectionDate(date);
+    devices.save(device);
+   }
+   added+=tasks.insertIfAbsent(device.getId(),date);
   }
   return added;
  }
