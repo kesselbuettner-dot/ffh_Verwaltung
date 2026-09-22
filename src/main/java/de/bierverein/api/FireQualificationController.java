@@ -15,18 +15,42 @@ public class FireQualificationController {
  private final FireQualificationPermissions permission;
  private final DrivingCheckService driving;
  private final ManagedUserRoleRepository managedRoles;
+ private final MemberExtraRepository memberExtras;
  public FireQualificationController(FireQualificationTypeRepository types,FireMemberQualificationRepository records,
-     MemberRepository members,FireQualificationPermissions permission,DrivingCheckService driving,ManagedUserRoleRepository managedRoles){
-  this.types=types;this.records=records;this.members=members;this.permission=permission;this.driving=driving;this.managedRoles=managedRoles;
+     MemberRepository members,FireQualificationPermissions permission,DrivingCheckService driving,ManagedUserRoleRepository managedRoles,MemberExtraRepository memberExtras){
+  this.types=types;this.records=records;this.members=members;this.permission=permission;this.driving=driving;this.managedRoles=managedRoles;this.memberExtras=memberExtras;
  }
- public record TypeView(Long id,String code,String title,String icon,boolean tracked,boolean sensitive,int warningDays,int intervalMonths){}
- public record TypeInput(String code,String title,String icon,Boolean tracked,Boolean sensitive,Integer warningDays,Integer intervalMonths){}
+ public record TypeView(Long id,String code,String title,String icon,String shortLabel,boolean tracked,boolean sensitive,int warningDays,int intervalMonths){}
+ public record TypeInput(String code,String title,String icon,String shortLabel,Boolean tracked,Boolean sensitive,Integer warningDays,Integer intervalMonths){}
  public record AssignmentInput(Long typeId,LocalDate issuedOn,LocalDate expiresOn,LocalDate nextDueOn,
    Boolean active,String licenseNumber){}
- public record Card(Long id,Long memberId,String memberName,String code,String title,String icon,
+ public record Card(Long id,Long memberId,String memberName,String code,String title,String icon,String shortLabel,
    LocalDate issuedOn,LocalDate expiresOn,LocalDate lastCheckedOn,LocalDate nextDueOn,String status,boolean referencePresent){}
  private ResponseStatusException bad(String message){return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);}
- private TypeView view(FireQualificationType t){return new TypeView(t.id,t.code,t.title,t.icon,t.tracked,t.sensitive,t.warningDays,t.intervalMonths);}
+ private TypeView view(FireQualificationType t){return new TypeView(t.id,t.code,t.title,t.icon,abbreviation(t),t.tracked,t.sensitive,t.warningDays,t.intervalMonths);}
+ private String abbreviation(FireQualificationType t){
+  if(t.shortLabel!=null&&!t.shortLabel.isBlank())return t.shortLabel;
+  return switch(t.code){
+   case "DRIVERS_LICENSE" -> "FS";
+   case "CHAINSAW" -> "MS";
+   case "MEDICAL_DUE" -> "UNT";
+   case "RETRAINING" -> "AW";
+   default -> {
+    String normalized=t.title.trim();
+    String[] words=normalized.split("[\\s/-]+");
+    StringBuilder shortName=new StringBuilder();
+    if(words.length==1)yield normalized.substring(0,Math.min(3,normalized.length())).toUpperCase(Locale.GERMAN);
+    for(String word:words)if(!word.isBlank()&&shortName.length()<5)shortName.append(word.substring(0,1).toUpperCase(Locale.GERMAN));
+    yield shortName.toString();
+   }
+  };
+ }
+ private String checkedShortLabel(String text){
+  if(text==null||text.isBlank())return null;
+  String label=text.trim().toUpperCase(Locale.GERMAN);
+  if(label.length()>10||!label.matches("[\\p{L}\\p{N} -]+"))throw bad("Abkürzung: maximal 10 Buchstaben/Ziffern");
+  return label;
+ }
  private int range(Integer value,int max,int otherwise){int n=value==null?otherwise:value;if(n<0||n>max)throw bad("Intervall außerhalb des gültigen Bereichs");return n;}
  private String required(String s,int max){if(s==null||s.isBlank()||s.length()>max)throw bad("Pflichtfeld fehlt oder ist zu lang");return s.trim();}
  private boolean canSensitive(Authentication auth){return permission.allowed(auth,"fire.qualifications.sensitive.read");}
@@ -36,7 +60,7 @@ public class FireQualificationController {
   LocalDate due=due(q),now=LocalDate.now();
   String state=!q.active?"INACTIVE":due==null?(q.type.tracked?"UNSCHEDULED":"VALID"):
     due.isBefore(now)?"OVERDUE":!due.isAfter(now.plusDays(q.type.warningDays))?"DUE":"VALID";
-  return new Card(q.id,q.memberId,m.getName(),q.type.code,q.type.title,q.type.icon,
+  return new Card(q.id,q.memberId,m.getName(),q.type.code,q.type.title,q.type.icon,abbreviation(q.type),
    q.issuedOn,q.expiresOn,q.lastCheckedOn,due,state,q.licenseNumberMac!=null);
  }
  private LocalDate due(FireMemberQualification q){
@@ -44,13 +68,19 @@ public class FireQualificationController {
    return q.lastCheckedOn.plusMonths(q.type.intervalMonths);
   return q.nextDueOn!=null?q.nextDueOn:q.expiresOn;
  }
- public record Person(Long id,String name) {}
+ public record Person(Long id,String name,String avatar) {}
  @GetMapping("/people")
  @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.qualifications.read')")
  @Transactional(readOnly=true)
  public List<Person> people(){
-  return members.findAll().stream().filter(Member::isActive).map(m->new Person(m.getId(),m.getName()))
-   .sorted(Comparator.comparing(Person::name)).toList();
+  Map<Long,MemberExtra> avatars=new HashMap<>();
+  for(MemberExtra extra:memberExtras.findAll())if(extra.avatarData!=null&&extra.avatarData.length<=100_000)avatars.put(extra.memberId,extra);
+  return members.findAll().stream().filter(Member::isActive).map(m->{
+   MemberExtra extra=avatars.get(m.getId());
+   String avatar=extra==null||extra.avatarMime==null?null:
+     "data:"+extra.avatarMime+";base64,"+Base64.getEncoder().encodeToString(extra.avatarData);
+   return new Person(m.getId(),m.getName(),avatar);
+  }).sorted(Comparator.comparing(Person::name)).toList();
  }
  public record DueSummary(long due,long overdue){}
  @GetMapping("/dashboard")
@@ -96,6 +126,7 @@ public class FireQualificationController {
   var t=new FireQualificationType(code,required(input.title(),120),
       input.icon()==null?"📋":input.icon(),Boolean.TRUE.equals(input.tracked()),
       Boolean.TRUE.equals(input.sensitive()),range(input.warningDays(),365,30),range(input.intervalMonths(),120,0));
+  t.shortLabel=checkedShortLabel(input.shortLabel());
   return view(types.save(t));
  }
  @PutMapping("/types/{id}")
@@ -105,6 +136,7 @@ public class FireQualificationController {
   if(input==null)throw bad("Daten fehlen");
   FireQualificationType t=types.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
   t.title=required(input.title(),120);if(input.icon()!=null&&input.icon().length()<=20)t.icon=input.icon();
+  t.shortLabel=checkedShortLabel(input.shortLabel());
   t.tracked=Boolean.TRUE.equals(input.tracked());t.sensitive=Boolean.TRUE.equals(input.sensitive());
   t.warningDays=range(input.warningDays(),365,t.warningDays);t.intervalMonths=range(input.intervalMonths(),120,t.intervalMonths);
   return view(types.save(t));
