@@ -119,7 +119,7 @@
     try{await api(URL+'/'+entry.id+'/complete',{method:'POST',body:JSON.stringify({result,note})});
       closeModal();await page();
     }catch(error){message(notice,error.message||'Prüfung konnte nicht abgeschlossen werden.',true);}
-   })
+   }})
   ]});
   modalBody.replaceChildren(form);modal.classList.remove('hidden');
  }
