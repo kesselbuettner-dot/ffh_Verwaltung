@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 const BASE='/api/fire/qualifications';
-let types=[],cards=[],people=[],driving=[],checks=[],visibleFilter='ALL',nameFilter='',typeFilter='',sortMode='name-asc';
+let types=[],cards=[],people=[],driving=[],checks=[],visibleFilter='ALL',nameFilter='',typeFilter='',sortMode='name-asc',categoryFilter='ALL';
 const el=id=>document.getElementById(id);
 const safe=text=>esc(text==null?'':String(text));
 const date=value=>value?new Date(value+'T12:00:00').toLocaleDateString('de-DE'):'–';
@@ -54,6 +54,7 @@ function drawPage(){
  ['VALID','DUE','OVERDUE','UNSCHEDULED','INACTIVE'].map(k=>'<option value="'+k+'">'+statusMap[k]+'</option>').join('')+'</select></label>'+
  '<label class="ui-filterfield"><span>Qualifikation</span><select id="wehrType"><option value="">Alle Qualifikationen</option>'+
  types.filter(t=>!t.sensitive||canSensitive).map(t=>'<option value="'+safe(t.code)+'">'+safe(t.title)+'</option>').join('')+'</select></label>'+
+ '<label class="ui-filterfield"><span>Kategorie</span><select id="wehrCategory"><option value="ALL">Alle</option><option value="QUALIFICATION">Qualifikationen</option><option value="CERTIFICATE_DOCUMENT">Zertifikate / Dokumente</option></select></label>'+ 
  '<label class="ui-filterfield"><span>Sortierung</span><select id="wehrSort"><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="due-asc">Nächste Prüfung</option><option value="count-desc">Meiste Qualifikationen</option></select></label>'+
  '<div class="ui-filter-actions"><button class="btn secondary" type="button" id="wehrReset">Filter zurücksetzen</button>'+
  (canWrite?'<button class="btn secondary" type="button" id="wehrConfig">⚙️ Baukasten</button>':'')+'</div></div>'+
@@ -61,23 +62,23 @@ function drawPage(){
  '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-DUE"></i> Bald fällig – schraffiert</span>'+
  '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-OVERDUE"></i> Abgelaufen – grau</span></div>'+
  '<div id="wehrRows"></div></div>';
- const search=el('wehrSearch'),status=el('wehrStatus'),type=el('wehrType'),sort=el('wehrSort');
- status.value=visibleFilter;type.value=typeFilter;sort.value=sortMode;
+ const search=el('wehrSearch'),status=el('wehrStatus'),type=el('wehrType'),sort=el('wehrSort'),category=el('wehrCategory');
+ status.value=visibleFilter;type.value=typeFilter;sort.value=sortMode;category.value=categoryFilter;
  search.oninput=()=>{nameFilter=search.value;drawRows();};
  status.onchange=()=>{visibleFilter=status.value;drawRows();};
- type.onchange=()=>{typeFilter=type.value;drawRows();};
+ type.onchange=()=>{typeFilter=type.value;drawRows();};category.onchange=()=>{categoryFilter=category.value;drawRows();};
  sort.onchange=()=>{sortMode=sort.value;drawRows();};
- el('wehrReset').onclick=()=>{nameFilter='';visibleFilter='ALL';typeFilter='';sortMode='name-asc';drawPage();};
+ el('wehrReset').onclick=()=>{nameFilter='';visibleFilter='ALL';typeFilter='';categoryFilter='ALL';sortMode='name-asc';drawPage();};
  if(el('wehrAdd'))el('wehrAdd').onclick=()=>editCard(null);
  if(el('wehrConfig'))el('wehrConfig').onclick=()=>configPage();
  drawRows();
 }
 function drawRows(){
  const host=el('wehrRows');if(!host)return;
- const needle=nameFilter.trim().toLocaleLowerCase('de'),state=visibleFilter,type=typeFilter;
+ const needle=nameFilter.trim().toLocaleLowerCase('de'),state=visibleFilter,type=typeFilter,category=categoryFilter;
  const filtered=people.map(p=>({p,list:cards.filter(c=>c.memberId===p.id)
-  .filter(c=>state==='ALL'||c.status===state).filter(c=>!type||c.code===type)}))
- .filter(row=>(!type&&state==='ALL'||row.list.length)&&
+  .filter(c=>state==='ALL'||c.status===state).filter(c=>!type||c.code===type).filter(c=>category==='ALL'||c.category===category).sort((a,b)=>(a.category==='QUALIFICATION'?0:1)-(b.category==='QUALIFICATION'?0:1)||String(a.title).localeCompare(String(b.title),'de'))}))
+ .filter(row=>(!type&&state==='ALL'&&category==='ALL'||row.list.length)&&
   (!needle||row.p.name.toLocaleLowerCase('de').includes(needle)||
    row.list.some(c=>c.title.toLocaleLowerCase('de').includes(needle)||String(c.shortLabel||'').toLocaleLowerCase('de').includes(needle))));
  const collator=new Intl.Collator('de',{sensitivity:'base',numeric:true});
@@ -93,6 +94,24 @@ function drawRows(){
  bind(host);
 }
 function inputField(label,id,value='',type='text',hint=''){return '<div class="field"><label for="'+id+'">'+safe(label)+'</label><input id="'+id+'" type="'+type+'" value="'+safe(value)+'">'+(hint?'<small class="sub">'+safe(hint)+'</small>':'')+'</div>';}
+async function uploadCardPdf(id,file){
+ if(file.size>5_000_000||file.size<8||!(file.name||'').toLowerCase().endsWith('.pdf'))
+  throw Error('Nur PDF-Dateien bis 5 MB zulässig.');
+ const bytes=await file.arrayBuffer(),sig=new TextDecoder().decode(bytes.slice(0,5));
+ if(sig!=='%PDF-')throw Error('Die Datei ist kein gültiges PDF.');
+ return api('/api/fire/qualification-attachments/'+Number(id),
+  {method:'PUT',headers:{'Content-Type':'application/pdf'},body:bytes});
+}
+async function downloadCardPdf(id){
+ try{
+  const response=await fetch('/api/fire/qualification-attachments/'+Number(id),{headers:headers(),cache:'no-store'});
+  if(!response.ok)throw Error('PDF konnte nicht geladen werden ('+response.status+').');
+  const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download='qualifikation-'+Number(id)+'.pdf';link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+ }catch(error){notice(el('wehrDialogMsg'),error.message);}
+}
+const LICENSE_CLASSES=['AM','A1','A2','A','B','BE','B96','C1','C1E','C','CE','D1','D1E','D','DE','L','T'];
 function editCard(id){
  if(!rights('fire.qualifications.write'))return;
  const c=id==null?null:cards.find(x=>x.id===id);
@@ -105,15 +124,36 @@ function editCard(id){
  inputField('Gültig bis (optional)','wExpires',inputDate(c?.expiresOn),'date')+
  inputField('Nächster Termin (optional)','wDue',inputDate(c?.nextDueOn),'date')+
  inputField('Führerscheinnummer nur bei Führerschein: Referenz hinterlegen/ersetzen','wLicense','','text','Die Nummer wird lediglich als geschützter Vergleichswert gespeichert und nie wieder angezeigt.')+
- '<div class="quick"><button class="btn secondary" id="wehrCancel">Abbrechen</button><button class="btn primary" id="wehrSave">Speichern</button></div>';
+ '<div class="field" id="wClassSection"><label>Führerscheinklassen</label><div class="wehr-license-classes">'+LICENSE_CLASSES.map(k=>'<label><input type="checkbox" data-license-class="'+k+'" '+(c?.licenseClasses?.includes(k)?'checked':'')+'> '+k+'</label>').join('')+'</div></div>'+
+ (c?'<div class="field"><label for="wPdf">PDF-Nachweis (optional, maximal 5 MB)</label><input id="wPdf" type="file" accept="application/pdf,.pdf"></div>'+
+ '<div class="quick"><button type="button" id="wViewPdf" class="btn secondary" '+(c.documentAttached?'':'disabled')+'>📄 PDF herunterladen</button><button type="button" id="wDeletePdf" class="btn secondary" '+(c.documentAttached?'':'disabled')+'>PDF entfernen</button></div>':'<p class="sub">Nach dem Anlegen der Kachel kann ein PDF-Nachweis hochgeladen werden.</p>')+
+ '<div class="quick"><button class="btn secondary" id="wehrCancel">Abbrechen</button>'+
+ (c?'<button class="btn danger" id="wehrRemoveCard" type="button">Kachel löschen</button>':'')+
+ '<button class="btn primary" id="wehrSave">Speichern</button></div>';
+ const isLicense=()=>c?.code==='DRIVERS_LICENSE'||(!c&&types.find(t=>t.id===Number(el('wType')?.value))?.code==='DRIVERS_LICENSE');
+ const updateLicense=()=>{const license=isLicense();el('wClassSection').hidden=!license;el('wLicense').closest('.field').hidden=!license;};
+ if(el('wType'))el('wType').onchange=updateLicense;updateLicense();
+ if(c){
+  el('wViewPdf').onclick=()=>downloadCardPdf(c.id);
+  el('wDeletePdf').onclick=async()=>{
+   if(!confirm('PDF-Nachweis wirklich entfernen?'))return;
+   try{await api('/api/fire/qualification-attachments/'+c.id,{method:'DELETE'});el('wViewPdf').disabled=true;el('wDeletePdf').disabled=true;}catch(e){notice(el('wehrDialogMsg'),e.message);}
+  };
+  el('wehrRemoveCard').onclick=async()=>{
+   if(!confirm('Kachel „'+c.title+'“ bei '+c.memberName+' entfernen? Prüfhistorie und PDF bleiben archiviert.'))return;
+   try{await api(BASE+'/cards/'+c.id,{method:'DELETE'});closeModal();await page();}catch(e){notice(el('wehrDialogMsg'),e.message);}
+  };
+ }
  el('wehrCancel').onclick=closeModal;el('wehrSave').onclick=async()=>{
   const typeId=c?c.typeId:Number(el('wType')?.value);
   const payload={typeId,issuedOn:el('wIssued').value||null,expiresOn:el('wExpires').value||null,
-   nextDueOn:el('wDue').value||null,licenseNumber:el('wLicense').value||null,active:true};
+   nextDueOn:el('wDue').value||null,licenseNumber:isLicense()?el('wLicense').value||null:null,
+   licenseClasses:isLicense()?[...modalBody.querySelectorAll('[data-license-class]:checked')].map(x=>x.dataset.licenseClass):null,active:true};
   if(id==null&&!typeId){notice(el('wehrDialogMsg'),'Qualifikationsart fehlt');return;}
   try{
-   await api(id==null?BASE+'/members/'+Number(el('wMember').value):BASE+'/cards/'+id,
+   const assigned=await api(id==null?BASE+'/members/'+Number(el('wMember').value):BASE+'/cards/'+id,
     {method:id==null?'POST':'PUT',body:JSON.stringify(payload)});
+   const file=el('wPdf')?.files?.[0];if(file)await uploadCardPdf(assigned.id,file);
    el('wLicense').value='';closeModal();await page();
   }catch(error){el('wLicense').value='';notice(el('wehrDialogMsg'),error.message);}
  };
