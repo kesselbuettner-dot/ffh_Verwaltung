@@ -48,3 +48,42 @@
 .wehr-member-title{gap:6px}.wehr-member-title strong{font-size:12px}.member-avatar{width:28px;height:28px;min-width:28px;font-size:10px}
 .wehr-card-list{margin-top:0;gap:5px}.wehr-tile{width:49px;max-width:49px;min-width:49px;flex-basis:49px;height:40px;font-size:11px}}
 @media print{.sidebar,.topbar,.mobile-nav,.wehr-card .btn,#drivingExport,#drivingPrint{display:none!important}.main{margin:0!important}.wehr-card{break-inside:avoid}body{background:white!important}}
+
+/* Three equally spaced category columns plus a fixed member/name column. */
+.wehr-table-scroll{width:100%;overflow-x:auto}
+.wehr-overview-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.wehr-overview-table thead th{font-size:13px;text-align:left;padding:10px 12px;border-bottom:2px solid var(--ui-border,var(--line));background:var(--ui-secondary,#f1f4f8);color:var(--ui-text,var(--ink));white-space:normal}
+.wehr-overview-table th:first-child{width:215px}
+.wehr-overview-table tbody th,.wehr-overview-table tbody td{padding:10px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--ui-border,var(--line))}
+.wehr-overview-table tbody tr:last-child th,.wehr-overview-table tbody tr:last-child td{border-bottom:0}
+.wehr-overview-table .wehr-name-cell{font-size:14px;font-weight:650}
+.wehr-overview-table .wehr-name-cell .member-avatar{display:inline-grid;vertical-align:middle;margin-right:9px}
+.wehr-overview-table .wehr-name-cell strong{vertical-align:middle;overflow-wrap:anywhere}
+.wehr-overview-table .wehr-card-list{gap:5px;align-items:center}
+.wehr-overview-table .wehr-tile{break-inside:avoid;page-break-inside:avoid}
+.wehr-legend-swatch.is-UNSCHEDULED{background:#245c9a;border:2px dotted white;outline:1px solid #245c9a}
+.wehr-print-report{display:none}
+@media(max-width:850px){
+ .wehr-overview-table{min-width:650px}
+ .wehr-overview-table th:first-child{width:145px}
+ .wehr-overview-table thead th,.wehr-overview-table tbody th,.wehr-overview-table tbody td{padding:9px 7px}
+}
+@media print{
+ @page{size:A4 landscape;margin:12mm}
+ html,body{background:#fff!important;overflow:visible!important}
+ body > *:not(#wehrPrintReport){display:none!important}
+ body > #wehrPrintReport{display:block!important;position:static!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;color:#172435!important;font-family:Arial,sans-serif!important;font-size:10pt!important}
+ .wehr-print-report h1{font-size:17pt;margin:0 0 4mm}
+ .wehr-report-date{font-size:9pt;margin:0 0 4mm;color:#273a4b}
+ .wehr-print-report .wehr-overview-table{table-layout:fixed;border-collapse:collapse;width:100%;min-width:0!important}
+ .wehr-print-report .wehr-overview-table th:first-child{width:24%}
+ .wehr-print-report .wehr-overview-table th,.wehr-print-report .wehr-overview-table td{border:1px solid #bac7d4!important;padding:5px 7px!important;vertical-align:middle!important}
+ .wehr-print-report .wehr-overview-table thead{display:table-header-group}
+ .wehr-print-report .wehr-overview-table tr{break-inside:avoid;page-break-inside:avoid}
+ .wehr-print-report .wehr-card-list{display:flex!important;flex-wrap:wrap!important;gap:4px!important}
+ .wehr-print-report .wehr-tile{width:45px!important;min-width:45px!important;max-width:45px!important;flex:0 0 45px!important;height:30px!important;padding:2px!important;font-size:9pt!important;line-height:1!important}
+ .wehr-print-report .wehr-legend{display:flex!important;gap:10px;flex-wrap:wrap;margin:0 0 5mm;padding:0;color:#273a4b!important}
+ .wehr-print-report .wehr-legend-item{font-size:9pt}
+ .wehr-print-report .wehr-print-note{margin-top:5mm;font-size:8pt;color:#435365}
+ .wehr-print-report,.wehr-print-report *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
