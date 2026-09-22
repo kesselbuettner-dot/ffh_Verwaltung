@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 const BASE='/api/fire/qualifications';
-let types=[],cards=[],people=[],driving=[],checks=[],visibleFilter='ALL',nameFilter='';
+let types=[],cards=[],people=[],driving=[],checks=[],visibleFilter='ALL',nameFilter='',typeFilter='',sortMode='name-asc';
 const el=id=>document.getElementById(id);
 const safe=text=>esc(text==null?'':String(text));
 const date=value=>value?new Date(value+'T12:00:00').toLocaleDateString('de-DE'):'–';
@@ -14,10 +14,25 @@ function header(title,info,action=''){return '<div class="title-row"><div><h1>'+
 const statusMap={VALID:'Gültig',DUE:'Prüfung fällig',OVERDUE:'Überfällig',UNSCHEDULED:'Termin nicht gesetzt',INACTIVE:'Inaktiv'};
 const statusClass={VALID:'ok',DUE:'warning',OVERDUE:'off',UNSCHEDULED:'warning',INACTIVE:'off'};
 function badge(card){return '<span class="badge '+(statusClass[card.status]||'')+'">'+safe(statusMap[card.status]||card.status)+'</span>';}
+function cardTone(card){
+ const code=String(card.code||card.title||'');
+ let hash=0;for(const char of code)hash=(hash*31+char.charCodeAt(0))>>>0;
+ return 'q-tone-'+hash%8;
+}
+function avatarHtml(person){
+ const name=String(person.name||'?'),initials=name.trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
+ const picture=typeof person.avatar==='string'&&/^data:image\/(jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(person.avatar)?
+  '<img src="'+safe(person.avatar)+'" alt="" loading="lazy">':safe(initials||'?');
+ return '<span class="member-avatar" aria-hidden="true">'+picture+'</span>';
+}
 function cardHtml(card){
- return '<article class="wehr-card" data-card-id="'+card.id+'"><div class="wehr-card-heading"><span aria-hidden="true">'+safe(card.icon||'📋')+'</span><strong>'+safe(card.title)+'</strong>'+badge(card)+'</div>'+
- '<div class="wehr-card-data">Ausgestellt: '+date(card.issuedOn)+' · Nächster Termin: '+date(card.nextDueOn)+'</div>'+
- (rights('fire.qualifications.write')?'<button type="button" class="btn small secondary" data-edit-card="'+card.id+'">Kachel bearbeiten</button>':'')+'</article>';
+ const abbr=String(card.shortLabel||card.code||'Q').slice(0,10);
+ const label=card.title+' – '+(statusMap[card.status]||card.status)+', ausgestellt '+date(card.issuedOn)+', nächster Termin '+date(card.nextDueOn);
+ const content='<span class="q-short">'+safe(abbr)+'</span>';
+ const css='wehr-tile '+cardTone(card)+' is-'+safe(card.status||'VALID');
+ return rights('fire.qualifications.write')?
+ '<button type="button" class="'+css+'" data-edit-card="'+Number(card.id)+'" title="'+safe(label)+'" aria-label="'+safe(label)+'">'+content+'</button>':
+ '<span class="'+css+'" role="img" title="'+safe(label)+'" aria-label="'+safe(label)+'">'+content+'</span>';
 }
 function bind(host){host.querySelectorAll('[data-edit-card]').forEach(b=>b.onclick=()=>editCard(Number(b.dataset.editCard)));}
 async function reload(){[types,cards,people]=await Promise.all([api(BASE+'/types'),api(BASE+'/cards'),api(BASE+'/people')]);}
@@ -30,25 +45,51 @@ async function page(){
 }
 function drawPage(){
  const canWrite=rights('fire.qualifications.write'),canSensitive=rights('fire.qualifications.sensitive.read');
- content.innerHTML=header('👥 Mitgliederverwaltung · Wehrleitung','Qualifikationskacheln je Mitglied; keine Finanzdaten oder zweite Stammdatenverwaltung.',
- canWrite?'<button class="btn primary" id="wehrAdd">＋ Qualifikation zuweisen</button>':'')+
- '<div class="panel"><div class="toolbar"><input id="wehrSearch" placeholder="Mitglied oder Qualifikation suchen" value="'+safe(nameFilter)+'">'+
- '<select id="wehrStatus"><option value="ALL">Alle Prüfstatus</option>'+['VALID','DUE','OVERDUE','UNSCHEDULED','INACTIVE'].map(k=>'<option value="'+k+'">'+statusMap[k]+'</option>').join('')+'</select>'+
- '<select id="wehrType"><option value="">Alle Qualifikationen</option>'+types.filter(t=>!t.sensitive||canSensitive).map(t=>'<option value="'+t.code+'">'+safe(t.title)+'</option>').join('')+'</select>'+
- (canWrite?'<button class="btn secondary" id="wehrConfig">⚙️ Qualifikationsbaukasten</button>':'')+'</div><div id="wehrRows"></div></div>';
- const search=el('wehrSearch'),status=el('wehrStatus'),type=el('wehrType');
- status.value=visibleFilter;search.oninput=()=>{nameFilter=search.value;drawRows();};
- status.onchange=()=>{visibleFilter=status.value;drawRows();};type.onchange=drawRows;
- el('wehrAdd')&&(el('wehrAdd').onclick=()=>editCard(null));
- el('wehrConfig')&&(el('wehrConfig').onclick=()=>configPage());
+ content.innerHTML=header('👥 Mitgliederverwaltung · Wehrleitung',
+  'Kompakte Qualifikationskacheln je Mitglied. Kachel anklicken, um Details und Prüfdatum zu bearbeiten.',
+  canWrite?'<button class="btn primary" id="wehrAdd">＋ Qualifikation zuweisen</button>':'')+
+ '<div class="panel"><div class="ui-filterbar" role="search" aria-label="Mitglieder und Qualifikationen filtern">'+
+ '<label class="ui-filterfield ui-filter-search"><span>Suche</span><input id="wehrSearch" type="search" placeholder="Mitglied oder Qualifikation" value="'+safe(nameFilter)+'"></label>'+
+ '<label class="ui-filterfield"><span>Prüfstatus</span><select id="wehrStatus"><option value="ALL">Alle Prüfstatus</option>'+
+ ['VALID','DUE','OVERDUE','UNSCHEDULED','INACTIVE'].map(k=>'<option value="'+k+'">'+statusMap[k]+'</option>').join('')+'</select></label>'+
+ '<label class="ui-filterfield"><span>Qualifikation</span><select id="wehrType"><option value="">Alle Qualifikationen</option>'+
+ types.filter(t=>!t.sensitive||canSensitive).map(t=>'<option value="'+safe(t.code)+'">'+safe(t.title)+'</option>').join('')+'</select></label>'+
+ '<label class="ui-filterfield"><span>Sortierung</span><select id="wehrSort"><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="due-asc">Nächste Prüfung</option><option value="count-desc">Meiste Qualifikationen</option></select></label>'+
+ '<div class="ui-filter-actions"><button class="btn secondary" type="button" id="wehrReset">Filter zurücksetzen</button>'+
+ (canWrite?'<button class="btn secondary" type="button" id="wehrConfig">⚙️ Baukasten</button>':'')+'</div></div>'+
+ '<div class="wehr-legend" aria-label="Legende der Kachelfarben"><span class="wehr-legend-item"><i class="wehr-legend-swatch is-VALID"></i> Gültig</span>'+
+ '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-DUE"></i> Bald fällig – schraffiert</span>'+
+ '<span class="wehr-legend-item"><i class="wehr-legend-swatch is-OVERDUE"></i> Abgelaufen – grau</span></div>'+
+ '<div id="wehrRows"></div></div>';
+ const search=el('wehrSearch'),status=el('wehrStatus'),type=el('wehrType'),sort=el('wehrSort');
+ status.value=visibleFilter;type.value=typeFilter;sort.value=sortMode;
+ search.oninput=()=>{nameFilter=search.value;drawRows();};
+ status.onchange=()=>{visibleFilter=status.value;drawRows();};
+ type.onchange=()=>{typeFilter=type.value;drawRows();};
+ sort.onchange=()=>{sortMode=sort.value;drawRows();};
+ el('wehrReset').onclick=()=>{nameFilter='';visibleFilter='ALL';typeFilter='';sortMode='name-asc';drawPage();};
+ if(el('wehrAdd'))el('wehrAdd').onclick=()=>editCard(null);
+ if(el('wehrConfig'))el('wehrConfig').onclick=()=>configPage();
  drawRows();
 }
 function drawRows(){
  const host=el('wehrRows');if(!host)return;
- const needle=(el('wehrSearch')?.value||'').toLocaleLowerCase('de'),state=el('wehrStatus')?.value||'ALL',type=el('wehrType')?.value||'';
- const rows=people.map(p=>({p,list:cards.filter(c=>c.memberId===p.id).filter(c=>state==='ALL'||c.status===state).filter(c=>!type||c.code===type)}))
- .filter(row=>(!type&&state==='ALL'||row.list.length)&&(!needle||row.p.name.toLocaleLowerCase('de').includes(needle)||row.list.some(c=>c.title.toLocaleLowerCase('de').includes(needle))));
- host.innerHTML=rows.length?rows.map(({p,list})=>'<div class="wehr-member-row"><div class="wehr-member-title">'+safe(p.name)+'</div><div class="wehr-card-list">'+(list.length?list.map(cardHtml).join(''):'<span class="sub">Keine Qualifikationen zugeordnet.</span>')+'</div></div>').join(''):'<p class="empty">Keine Mitglieder oder Qualifikationen für diesen Filter.</p>';
+ const needle=nameFilter.trim().toLocaleLowerCase('de'),state=visibleFilter,type=typeFilter;
+ const filtered=people.map(p=>({p,list:cards.filter(c=>c.memberId===p.id)
+  .filter(c=>state==='ALL'||c.status===state).filter(c=>!type||c.code===type)}))
+ .filter(row=>(!type&&state==='ALL'||row.list.length)&&
+  (!needle||row.p.name.toLocaleLowerCase('de').includes(needle)||
+   row.list.some(c=>c.title.toLocaleLowerCase('de').includes(needle)||String(c.shortLabel||'').toLocaleLowerCase('de').includes(needle))));
+ const collator=new Intl.Collator('de',{sensitivity:'base',numeric:true});
+ const soon=row=>Math.min(...row.list.map(c=>c.nextDueOn?Date.parse(c.nextDueOn+'T00:00:00'):Infinity));
+ filtered.sort((a,b)=>sortMode==='count-desc'?b.list.length-a.list.length||collator.compare(a.p.name,b.p.name):
+  sortMode==='due-asc'?soon(a)-soon(b)||collator.compare(a.p.name,b.p.name):
+  sortMode==='name-desc'?collator.compare(b.p.name,a.p.name):collator.compare(a.p.name,b.p.name));
+ host.innerHTML=filtered.length?filtered.map(({p,list})=>
+  '<div class="wehr-member-row"><div class="wehr-member-title">'+avatarHtml(p)+'<strong>'+safe(p.name)+'</strong></div>'+
+  '<div class="wehr-card-list">'+(list.length?list.map(cardHtml).join(''):
+  '<span class="sub wehr-empty">Keine Qualifikationen zugeordnet.</span>')+'</div></div>').join(''):
+  '<p class="empty">Keine Mitglieder oder Qualifikationen für diesen Filter.</p>';
  bind(host);
 }
 function inputField(label,id,value='',type='text',hint=''){return '<div class="field"><label for="'+id+'">'+safe(label)+'</label><input id="'+id+'" type="'+type+'" value="'+safe(value)+'">'+(hint?'<small class="sub">'+safe(hint)+'</small>':'')+'</div>';}
@@ -102,14 +143,14 @@ function editType(id){
  modalTitle.textContent=t?'Kachel konfigurieren':'Eigene Kachel anlegen';
  modalBody.innerHTML='<div id="wehrTypeMsg"></div>'+
  (t?'<p><strong>'+safe(t.code)+'</strong></p>':inputField('Technische Kennung (A–Z, 0–9, _)','wCode'))+
- inputField('Name','wTitle',t?.title)+inputField('Symbol','wIcon',t?.icon||'📋')+
+ inputField('Name','wTitle',t?.title)+inputField('Kürzel (maximal 10 Zeichen)','wShort',t?.shortLabel||'','','Nur dieses Kürzel erscheint in der kleinen Kachel.')+inputField('Symbol','wIcon',t?.icon||'📋')+
  '<div class="field"><label><input id="wTracked" type="checkbox" '+(t?.tracked?'checked':'')+'> Überwachungspflichtig</label></div>'+
  '<div class="field"><label><input id="wSensitive" type="checkbox" '+(t?.sensitive?'checked':'')+'> Vertraulich (gesonderte Berechtigung)</label></div>'+
  inputField('Vorwarnzeit in Tagen (0–365)','wWarn',t?.warningDays??30,'number')+
  inputField('Wiederholung in Monaten (0–120)','wMonths',t?.intervalMonths??0,'number')+
  '<div class="quick"><button class="btn secondary" id="wehrTypeCancel">Abbrechen</button><button class="btn primary" id="wehrTypeSave">Speichern</button></div>';
  el('wehrTypeCancel').onclick=closeModal;el('wehrTypeSave').onclick=async()=>{
-  const payload={code:t?.code||el('wCode').value.trim().toUpperCase(),title:el('wTitle').value,icon:el('wIcon').value,
+  const payload={code:t?.code||el('wCode').value.trim().toUpperCase(),title:el('wTitle').value,shortLabel:el('wShort').value.trim(),icon:el('wIcon').value,
    tracked:el('wTracked').checked,sensitive:el('wSensitive').checked,warningDays:Number(el('wWarn').value),intervalMonths:Number(el('wMonths').value)};
   try{await api(BASE+'/types'+(t?'/'+t.id:''),{method:t?'PUT':'POST',body:JSON.stringify(payload)});
    closeModal();types=await api(BASE+'/types');drawConfig();
