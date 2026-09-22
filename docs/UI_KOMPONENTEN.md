@@ -62,3 +62,24 @@ Jede Kachel beschreibt einen **Typ**, pro Mitglied eine **Zuordnung**: Titel, Ic
 
 ## Beispiel-Abnahmekriterien
 Neue Seite auf Desktop/Tablet/Handy: passende Spalten, Sortierung, Filter, leere Liste, Ladefehler, Rechte ohne Schreibfunktion, Datum unbekannt, Tastaturbedienung, Anmeldung/Abmeldung, Export und PWA nach Reload.
+
+## Zentrale Component-Design-Templates – neu
+
+**Einmal definieren, überall gleich gestalten.** Neue Seiten verwenden in der vorhandenen PWA `FWComponents` und die gemeinsamen CSS-Klassen aus `design-system.css`. Die Komponente trägt ihre Semantik, die zentrale CSS-Datei ihre Erscheinung. Komponenten sind DOM-Elemente und können in bestehende Dialoge/Seiten mit `append` oder `replaceChildren` eingebunden werden; kein Frameworkwechsel.
+
+| Template | JS-Funktion | Zentrale CSS-Klassen | Standard |
+|---|---|---|---|
+| Seitenlayout | `FWComponents.page({title,description,actions,children})` | `.ds-page`, `.ds-page-header`, `.ds-page-actions` | Titel, Erklärung, rechte Aktionen, Inhalte |
+| Karte/Kachel | `FWComponents.card({title,content,actions})` | `.ds-card`, `.ds-card-title` | einheitlicher Abstand, Radius, Fläche |
+| Button | `FWComponents.button({label,variant,onClick,disabled})` | `.ds-btn`, `.ds-btn-primary/secondary/danger` | Primär/Sekundär/Löschen, Fokus und Touch |
+| Such-/Formularfeld | `FWComponents.field({label,type,value,options,onChange})` | `.ds-field`, `.ds-input`, `.ds-select` | Label, 44 px Touchfläche, Validierung durch Fachmodul |
+| Tabelle | `FWComponents.table({columns,rows,emptyMessage})` | `.ds-table-wrap`, `.ds-table` | Kopf, Zeilen, leere Liste, Scrollbereich |
+| Status | `FWComponents.badge({label,variant})` | `.ds-badge`, `.is-success/warning/danger` | semantischer Text und Statusfarbe |
+| Leerzustand | `FWComponents.empty({message})` | `.ds-empty` | einheitliche Leermeldung |
+| Dialoginhalt | `FWComponents.modalContent({title,content,actions})` | `.ds-modal-content`, `.ds-modal-actions` | Kopf, Inhalt, Abschlussaktionen |
+
+**Templates statt seitenweiser Kopien:** Zusätzliche Variationen/Komponenten werden zuerst hier und in `design-system.css`/`design-system.js` definiert. Erst danach wird eine neue Seite daraus zusammengesetzt. Responsive Utilities: `.u-flex`, `.u-grid`, `.u-grid-2/3`, `.u-gap-*`, `.u-p-*`, `.u-mt-*`, `.u-rounded-*`. Keine unüberschaubare Sammlung zufälliger Ad-hoc-Klassen.
+
+**Zentraler Editor:** Administration → Designsystem ändert nur serverseitig validierte Werte für `space`, `radius`, `controlHeight`, `pageWidth`, `textSize`, `shadow`; bestehende Farbtheme-Einstellungen unter Erscheinungsbild werden übernommen. Die zentralen Werte gelten für alle neuen `.ds-*`-Komponenten. Datenbankgestützte Benutzerrollen, individuelle Stammdaten oder Altabläufe werden dadurch nicht verändert.
+
+**Wichtige Grenzen:** Die neue `FWComponents.table`-Vorlage ist eine sichere Basis-Tabelle, kein fertiger Datenmanager; fachliche Sortierung, Filter, Pagination und Export sind vom jeweiligen Modul mit bestehenden zentralen Filterkomponenten zu ergänzen. Ein Render-Callback darf DOM-Knoten oder Klartext zurückgeben, niemals unbereinigten HTML-Code. Beim Umstellen einer vorhandenen Seite eine eigene Regression für Desktop, Handy, Berechtigungen und Datenänderung ergänzen.
