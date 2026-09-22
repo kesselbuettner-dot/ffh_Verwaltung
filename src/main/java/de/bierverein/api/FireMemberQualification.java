@@ -14,6 +14,7 @@ public class FireMemberQualification {
  public LocalDate nextDueOn;
  // HMAC of canonical license number; never the document photo or plaintext number.
  @Column(length=64) public String licenseNumberMac;
+ @Column(length=180) public String licenseClasses;
  public boolean active=true;
  protected FireMemberQualification(){}
  public FireMemberQualification(Long memberId,FireQualificationType type){this.memberId=memberId;this.type=type;}
