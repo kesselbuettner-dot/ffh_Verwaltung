@@ -47,7 +47,7 @@ class DeviceInspectionWorkflowServiceTest {
   DeviceInspectionTask session=new DeviceInspectionTask();
   session.setDevice(d);session.setOccurrenceDate(TODAY.plusDays(3));
   when(cycles.findByDeviceIdAndStatusOrderByDueOnAsc(42L,"OPEN")).thenReturn(List.of(cycle));
-  when(sessions.findByDeviceIdAndStatus(42L,"PENDING")).thenReturn(List.of(session));
+  when(sessions.findByDeviceIdAndInspectionIdIsNull(42L)).thenReturn(List.of(session));
   when(inspections.save(any(DeviceInspection.class))).thenAnswer(inv->{
    DeviceInspection i=inv.getArgument(0);ReflectionTestUtils.setField(i,"id",55L);return i;
   });
@@ -59,6 +59,13 @@ class DeviceInspectionWorkflowServiceTest {
   assertEquals("INSPECTED",session.getStatus());assertEquals(55L,session.getInspectionId());
   verify(inspections,times(1)).save(any(DeviceInspection.class));
   verify(cycles).save(cycle);verify(sessions).save(session);
+  // A result saved in a group appointment before individual sign-off must not create a second proof.
+  session.setInspectionId(null);session.setStatus("DEFECTIVE");
+  when(sessions.findByDeviceIdAndInspectionIdIsNull(42L)).thenReturn(List.of(session));
+  Device next=device();next.setNextInspectionDate(TODAY);
+  workflow.record(next,"BESTANDEN","","kamerad",signature(),"Einzelprüfung",null,null,null);
+  assertEquals("INSPECTED",session.getStatus());
+  assertEquals(55L,session.getInspectionId());
  }
  @Test void unsignedOrInvalidChecksCannotBeRecorded(){
   Device d=device();
@@ -76,7 +83,7 @@ class DeviceInspectionWorkflowServiceTest {
    "kamerad",signature(),"Einzelprüfung",null,null,null));
   when(inspections.save(any(DeviceInspection.class))).thenAnswer(inv->inv.getArgument(0));
   when(cycles.findByDeviceIdAndStatusOrderByDueOnAsc(42L,"OPEN")).thenReturn(List.of());
-  when(sessions.findByDeviceIdAndStatus(42L,"PENDING")).thenReturn(List.of());
+  when(sessions.findByDeviceIdAndInspectionIdIsNull(42L)).thenReturn(List.of());
   DeviceInspection proof=workflow.record(d,"MIT_MANGEL","Schlauch undicht",
    "kamerad",signature(),"Einzelprüfung",null,null,null);
   assertEquals(TODAY,d.getNextInspectionDate());
