@@ -1,7 +1,7 @@
 name: FW-Cockpit Designsystem and Components
 on:
   push:
-    branches: [feature/design-system-utilities-20260922, feature/page-templates-20260922, feature/admin-template-cycle-tasks-20260922]
+    branches: [feature/design-system-utilities-20260922, feature/page-templates-20260922, feature/admin-template-cycle-tasks-20260922, feature/unified-inspections-account-delete-20260922]
   pull_request:
     branches: [release/2026-09-22-wehrleiter-3spalten, feature/design-system-utilities-20260922, feature/page-templates-20260922]
   workflow_dispatch:
@@ -23,6 +23,8 @@ jobs:
           node --check src/main/resources/static/design-system.js
           node --check src/main/resources/static/page-templates.js
           node --check src/main/resources/static/device-cycle-tasks.js
+          node --check src/main/resources/static/inspection-signature.js
+          node --check src/main/resources/static/inspection-management.js
           node src/test/js/admin-cycle-tasks-smoke.cjs
           node src/test/js/page-templates-smoke.cjs
           node src/test/js/design-system-smoke.cjs
