@@ -1,0 +1,29 @@
+name: FW-Cockpit Designsystem and Components
+on:
+  push:
+    branches: [feature/design-system-utilities-20260922]
+  pull_request:
+    branches: [release/2026-09-22-wehrleiter-3spalten]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check component scripts and design regressions
+        run: |
+          node --check src/main/resources/static/design-system.js
+          node src/test/js/design-system-smoke.cjs
+          node src/test/js/menu-designer-smoke.cjs
+          node src/test/js/admin-layout-smoke.cjs
+          node src/test/js/wehrleiter-three-columns-print-smoke.cjs
+      - name: Build Java and execute security/database tests
+        run: mvn -B -ntp test
