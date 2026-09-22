@@ -1,0 +1,19 @@
+name: Compact Sidebar Footer CI
+on:
+  push:
+    branches: [feature/compact-sidebar-actions]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate inline JavaScript and sidebar controls
+        run: |
+          node --check src/main/resources/static/menu-designer.js
+          node src/test/js/sidebar-compact-smoke.cjs
+          node src/test/js/menu-designer-smoke.cjs
+          node src/test/js/admin-layout-smoke.cjs

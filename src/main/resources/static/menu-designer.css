@@ -94,3 +94,32 @@
  .mobile-nav{display:grid;bottom:calc(8px + env(safe-area-inset-bottom))}
  .content{padding-bottom:22px}
 }
+
+/* Compact sidebar footer: four equal icon-only actions; navigation stays readable. */
+.sidebar .sidebar-footer{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ align-items:center;gap:5px;margin:10px 7px 3px;padding:9px 0 0;
+ border-top:1px solid #ffffff26;
+}
+.sidebar .sidebar-footer .sidebar-action{
+ display:grid;place-items:center;width:100%;min-width:0;height:42px;min-height:42px;
+ padding:0;border:1px solid #ffffff16;border-radius:10px;
+ background:#ffffff0a;color:#e5eef7;font:inherit;font-size:20px;line-height:1;
+ cursor:pointer;transition:background .16s,color .16s;
+}
+.sidebar .sidebar-footer .sidebar-action:hover{background:#ffffff22;color:#fff}
+.sidebar .sidebar-footer .sidebar-action:focus-visible{outline:2px solid #90c7ff;outline-offset:2px}
+.sidebar .sidebar-footer .sidebar-logout{background:#a51f2b36;border-color:#e38b8b38}
+.sidebar .sidebar-footer .sidebar-logout:hover{background:#b91c1c;color:#fff}
+.sidebar .sidebar-footer .sidebar-version{
+ grid-column:1/-1;display:block;padding:3px 2px 0!important;
+ color:#94a5b4!important;font-size:10px;text-align:center;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+/* Preserve the existing install visibility rules, including the PWA standalone state. */
+.sidebar .sidebar-footer .sidebar-action.hidden{display:none!important}
+@media(max-width:700px){
+ .sidebar .sidebar-footer{gap:6px}
+ .sidebar .sidebar-footer .sidebar-action{height:44px;min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){.sidebar .sidebar-footer .sidebar-action{transition:none}}
