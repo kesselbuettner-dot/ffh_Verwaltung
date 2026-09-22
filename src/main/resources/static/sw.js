@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-admin-cycle-tasks-v44";
+const CACHE_NAME = "ffh-verwaltung-unified-inspections-v45";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -11,7 +11,9 @@ const APP_SHELL = [
   "/design-system.js?v=1",
   "/page-templates.css?v=1",
   "/page-templates.js?v=2",
-  "/device-cycle-tasks.js?v=1",
+  "/inspection-signature.js?v=1",
+  "/device-cycle-tasks.js?v=2",
+  "/inspection-management.js?v=1",
   "/icons/fw-cockpit-brand.svg",
   "/icons/fw-cockpit-icon-192.png",
   "/icons/fw-cockpit-icon-512.png",
