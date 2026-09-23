@@ -121,23 +121,24 @@ function drawRows(){
   '<p class="empty">Keine Mitglieder oder Kacheln für diesen Filter.</p>';
  bind(host);
 }
-function printWehrReport(){
- // The report uses exactly the currently visible, server-authorized data and active filters.
+async function printWehrReport(){
+ // Keep the current filters, sort order and server-authorized qualification data.
+ const button=el('wehrPrint');
+ if(button?.disabled)return;
  const rows=filteredMemberRows();
- const report=document.createElement('section');
- report.className='wehr-print-report';
- report.id='wehrPrintReport';
- report.innerHTML='<h1>Mitgliederverwaltung · Wehrleitung – Qualifikationsübersicht</h1>'+
- '<p class="wehr-report-date">Stand: '+safe(new Date().toLocaleString('de-DE'))+
- ' · Mitglieder: '+rows.length+'</p>'+
- wehrLegend()+(rows.length?groupedMemberTable(rows,true):'<p>Keine Einträge für die aktuellen Filter.</p>')+
- '<p class="wehr-print-note">Kürzel, Status und Gültigkeit sind in der Kachelübersicht nach den eingeblendeten Filtern dargestellt. Graue Kacheln sind abgelaufen; schraffierte sind bald fällig.</p>';
- const previous=document.getElementById('wehrPrintReport');
- if(previous)previous.remove();
- document.body.appendChild(report);
- const clean=()=>{report.remove();window.removeEventListener('afterprint',clean);};
- window.addEventListener('afterprint',clean,{once:true});
- try{window.print();}catch(error){clean();alert('Drucken nicht möglich: '+error.message);}
+ if(button)button.disabled=true;
+ try{
+  if(!window.FWPrintTemplates?.print)throw Error('Die gemeinsame Druckvorlage ist nicht geladen.');
+  await window.FWPrintTemplates.print({
+   orientation:'landscape',
+   title:'Qualifikationsübersicht · Wehrleitung',
+   subtitle:'Stand: '+window.FWPrintTemplates.berlinTime()+' · '+rows.length+' Mitglieder · aktuelle Filterauswahl',
+   body:'<section class="wehr-print-content">'+wehrLegend()+
+    (rows.length?groupedMemberTable(rows,true):'<p>Keine Einträge für die aktuellen Filter.</p>')+
+    '<p class="ffh-print-note">Kürzel, Status und Gültigkeit entsprechen der aktuellen Filterauswahl. Graue Kacheln sind abgelaufen, schraffierte sind bald fällig.</p></section>'
+  });
+ }catch(error){alert('Druckbericht konnte nicht erstellt werden: '+(error.message||error));}
+ finally{if(button)button.disabled=false;}
 }
 function inputField(label,id,value='',type='text',hint=''){return '<div class="field"><label for="'+id+'">'+safe(label)+'</label><input id="'+id+'" type="'+type+'" value="'+safe(value)+'">'+(hint?'<small class="sub">'+safe(hint)+'</small>':'')+'</div>';}
 async function uploadCardPdf(id,file){
