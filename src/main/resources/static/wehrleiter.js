@@ -267,8 +267,10 @@ async function drivingPage(){
 }
 function drawDriving(){
  const allow=rights('fire.drivingcheck.write');
+ const thisYear=Number(new Intl.DateTimeFormat('en',{year:'numeric',timeZone:'Europe/Berlin'}).format(new Date()));
+ const years=Array.from({length:thisYear-1999},(_,i)=>thisYear-i).map(y=>'<option value="'+y+'">'+y+'</option>').join('');
  content.innerHTML=header('🚘 Führerscheinkontrolle','Automatischer positiver Status dokumentiert den OCR-Datenabgleich; alternativ kann die Wehrleitung die Prüfung manuell bestätigen.',
- '<button class="btn secondary" id="drivingExport">⬇ CSV exportieren</button><button class="btn secondary" id="drivingPrint">🖨 Drucken</button>')+
+ '<button class="btn secondary" id="drivingExport">⬇ CSV exportieren</button><label class="driving-year-picker" for="drivingReportYear">Berichtsjahr <select id="drivingReportYear">'+years+'</select></label><button class="btn secondary" id="drivingPrint">🖨 Jahresbericht / PDF</button>')+
  '<div class="panel"><div class="toolbar"><input id="drivingSearch" placeholder="Mitglied suchen"><select id="drivingStatus"><option value="ALL">Alle</option><option value="DUE">Fällig</option><option value="OVERDUE">Überfällig</option><option value="VALID">Aktuell</option></select></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Letzte Prüfung</th><th>Nächste Prüfung</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="drivingRows"></tbody></table></div></div>'+
  '<div class="panel"><h3>Prüfprotokoll</h3><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Datum</th><th>Prüfer / Benutzer-ID</th><th>Prüfweg</th><th>Ergebnis</th></tr></thead><tbody>'+
  checks.map(c=>'<tr><td>'+safe(driving.find(x=>x.memberId===c.memberId)?.memberName||'Mitglied #'+c.memberId)+'</td><td>'+safe(new Date(c.checkedAt).toLocaleString('de-DE'))+'</td><td>'+c.checkedByUserId+'</td><td>'+safe(c.method)+'</td><td>Positiv</td></tr>').join('')+
@@ -282,7 +284,60 @@ function drawDriving(){
   el('drivingRows').querySelectorAll('[data-notify]').forEach(b=>b.onclick=async()=>{try{const answer=await api(BASE+'/driving/'+Number(b.dataset.notify)+'/notify',{method:'POST'});alert(answer.message);}catch(e){alert(e.message);}});
  };
  el('drivingSearch').oninput=render;el('drivingStatus').onchange=render;render();
- el('drivingExport').onclick=exportDriving;el('drivingPrint').onclick=()=>window.print();
+ el('drivingExport').onclick=exportDriving;el('drivingPrint').onclick=printDrivingYear;
+}
+function printDrivingDate(value){
+ return value?new Date(value).toLocaleString('de-DE',{timeZone:'Europe/Berlin',dateStyle:'short',timeStyle:'short'}):'–';
+}
+async function printDrivingYear(){
+ const button=el('drivingPrint'),picker=el('drivingReportYear');
+ if(!button||!picker||button.disabled)return;
+ const year=Number(picker.value);
+ if(!Number.isInteger(year)||year<2000||year>2100){alert('Bitte ein gültiges Berichtsjahr auswählen.');return;}
+ button.disabled=true;
+ const label=button.textContent;button.textContent='Bericht wird erstellt …';
+ try{
+  // Only the server-side, permission-checked historical audit is authoritative.
+  const reportData=await api(BASE+'/driving/report?year='+year);
+  const org=reportData.organisation||{},entries=reportData.entries||[];
+  const orgName=org.name||'Organisation nicht hinterlegt';
+  const address=[org.street,[org.postalCode,org.city].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+  const contact=[org.phone?'Telefon: '+org.phone:'',org.email?'E-Mail: '+org.email:''].filter(Boolean).join(' · ');
+  const representative=org.legalRepresentative?'Vertretung: '+org.legalRepresentative:'';
+  const method={MANUAL:'Manuell durch Wehrleitung',AUTO_OCR_MATCH:'Automatischer Datenabgleich'};
+  const rows=entries.map((c,i)=>'<tr><td>'+(i+1)+'</td><td>'+safe(c.memberName)+'</td><td>'+safe(printDrivingDate(c.checkedAt))+
+   '</td><td>'+safe(c.checkedBy)+'</td><td>'+safe(method[c.method]||c.method)+'</td><td>'+safe(c.result==='POSITIVE'?'Positiv':c.result)+'</td></tr>').join('');
+  const current=document.getElementById('drivingPrintReport');current?.remove();
+  const report=document.createElement('section');report.id='drivingPrintReport';report.className='driving-print-report';
+  report.innerHTML='<header class="driving-print-header"><img class="driving-print-logo" alt="Logo der Organisation"><div>'+
+   '<h1>'+safe(orgName)+'</h1><div>'+safe(address||'Anschrift nicht hinterlegt')+'</div>'+
+   '<div>'+safe(contact||'Kontaktdaten nicht hinterlegt')+'</div>'+
+   (representative?'<div>'+safe(representative)+'</div>':'')+'</div></header>'+
+   '<div class="driving-print-title"><h2>Führerscheinkontrollen – Jahresbericht '+year+'</h2>'+
+   '<div>Berichtszeitraum: 01.01.'+year+' bis 31.12.'+year+' · Dokumentierte Kontrollen: '+entries.length+
+   ' · Erstellt: '+safe(printDrivingDate(new Date().toISOString()))+'</div></div>'+
+   '<table class="driving-print-table"><thead><tr><th>Nr.</th><th>Mitglied</th><th>Prüfdatum / Uhrzeit</th><th>Prüfer</th><th>Prüfweg</th><th>Ergebnis</th></tr></thead><tbody>'+
+   (rows||'<tr><td colspan="6">Für dieses Jahr wurden keine Führerscheinkontrollen protokolliert.</td></tr>')+
+   '</tbody></table><footer>Dieser Bericht enthält ausschließlich die für das gewählte Jahr gespeicherten Prüfvorgänge. Bei automatischer Kontrolle wurde der Datenabgleich dokumentiert; eine Prüfung der Echtheit des Dokuments ist damit nicht verbunden. Es werden keine Führerscheinfotos oder Führerscheinnummern ausgegeben.</footer>';
+  document.body.appendChild(report);
+  // Wait for the organisation logo before opening print/save-as-PDF.
+  const logo=report.querySelector('.driving-print-logo');
+  await new Promise(resolve=>{
+   const finish=()=>resolve();
+   logo.onload=finish;
+   logo.onerror=()=>{
+    if(!logo.src.endsWith('/icons/fw-cockpit-brand.svg')){
+     logo.onerror=finish;logo.src='/icons/fw-cockpit-brand.svg';
+    }else finish();
+   };
+   logo.src=org.logoAvailable?'/api/settings/logo?report='+Date.now():'/icons/fw-cockpit-brand.svg';
+   if(logo.complete){if(logo.naturalWidth>0)finish();else logo.onerror();}
+  });
+  const cleanup=()=>{report.remove();window.removeEventListener('afterprint',cleanup);};
+  window.addEventListener('afterprint',cleanup,{once:true});
+  try{window.print();}catch(error){cleanup();throw error;}
+ }catch(error){alert('Jahresbericht konnte nicht erstellt werden: '+(error.message||error));}
+ finally{button.disabled=false;button.textContent=label;}
 }
 function manualCheck(id){
  if(!rights('fire.drivingcheck.write'))return;
