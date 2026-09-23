@@ -257,10 +257,8 @@ function closeIconPicker(){
  dialog.remove();
  if(returnTo?.isConnected)returnTo.focus();
 }
-function openIconPicker(path,trigger){
- const node=nodeAt(path,draft),isFolder=isGroup(node),page=isFolder?null:known().get(node);
- if(!node)return;
- const current=isFolder?(node.icon||'☰'):(draft.entries[node]?.icon||page?.icon||'☰');
+function chooseIcon(current,trigger,onChoose,fallback='☰',showLibrary=true){
+ if(typeof onChoose!=='function')return;
  closeIconPicker();
  const dialog=document.createElement('div');
  dialog.id='designerIconDialog';
@@ -284,19 +282,18 @@ function openIconPicker(path,trigger){
   const matching=iconPickerChoices(current).filter(([value,name])=>name.toLocaleLowerCase('de').includes(needle)||value.toLocaleLowerCase('de').includes(needle));
   grid.innerHTML=matching.map(([value,name])=>'<button type="button" class="designer-icon-choice'+(value===current?' selected':'')+
     '" data-choose-icon="'+safe(value)+'" title="'+safe(name)+'" aria-label="'+safe(name)+'" aria-pressed="'+String(value===current)+'">'+
-    iconHtml(value||page?.icon||'☰')+'</button>').join('')||'<p class="sub">Kein Icon gefunden.</p>';
+    iconHtml(value||fallback)+'</button>').join('')||'<p class="sub">Kein Icon gefunden.</p>';
   grid.querySelectorAll('[data-choose-icon]').forEach(button=>button.onclick=()=>{
    const chosen=button.dataset.chooseIcon;
    closeIconPicker();
-   setIcon(path,chosen);
-   renderEditor();
-   document.querySelector('[data-icon-picker="'+path.join('.')+'"]')?.focus();
+   onChoose(chosen);
   });
  }
  renderChoices();
  search.oninput=renderChoices;
  dialog.querySelectorAll('[data-icon-close]').forEach(button=>button.onclick=closeIconPicker);
- dialog.querySelector('#designerIconLibrary').onclick=()=>{closeIconPicker();adminSettingsPage('icons');};
+ if(showLibrary)dialog.querySelector('#designerIconLibrary').onclick=()=>{closeIconPicker();adminSettingsPage('icons');};
+ else dialog.querySelector('#designerIconLibrary').remove();
  dialog.onkeydown=event=>{
   if(event.key==='Escape'){event.preventDefault();closeIconPicker();}
   if(event.key==='Tab'){
@@ -308,6 +305,15 @@ function openIconPicker(path,trigger){
   }
  };
  search.focus();
+}
+function openIconPicker(path,trigger){
+ const node=nodeAt(path,draft),isFolder=isGroup(node),page=isFolder?null:known().get(node);
+ if(!node)return;
+ const current=isFolder?(node.icon||'☰'):(draft.entries[node]?.icon||page?.icon||'☰');
+ chooseIcon(current,trigger,chosen=>{
+  setIcon(path,chosen);renderEditor();
+  document.querySelector('[data-icon-picker="'+path.join('.')+'"]')?.focus();
+ },page?.icon||'☰');
 }
 function rowHtml(node,path){
  const p=path.join('.'),depth=path.length-1,g=isGroup(node),item=g?null:known().get(node),cfg=g?null:draft.entries[node]||{};
@@ -445,5 +451,5 @@ async function save(){
   if(msg)msg.innerHTML='<p class="message success">✓ Menükonfiguration dauerhaft gespeichert.</p>';
  }catch(e){message=e.message;renderEditor();}
 }
-window.MenuDesigner={renderNavigation,renderQuickNav,applyStyle,start,loadIcons,iconHtml,iconOptions:options,iconLabel,iconLibraryPage,activatePage(page){const target=document.querySelector('#navContainer [data-page="'+String(page).replace(/[^a-z0-9-]/gi,'')+'"]');if(!target)return;document.querySelectorAll('#navContainer .nav-item').forEach(n=>n.classList.toggle('active',n===target));document.querySelectorAll('#navContainer .nav-group').forEach(g=>{const open=g.contains(target);g.classList.toggle('expanded',open);g.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded',String(open));});}};
+window.MenuDesigner={renderNavigation,renderQuickNav,applyStyle,start,loadIcons,iconHtml,iconOptions:options,iconLabel,iconLibraryPage,chooseIcon,activatePage(page){const target=document.querySelector('#navContainer [data-page="'+String(page).replace(/[^a-z0-9-]/gi,'')+'"]');if(!target)return;document.querySelectorAll('#navContainer .nav-item').forEach(n=>n.classList.toggle('active',n===target));document.querySelectorAll('#navContainer .nav-group').forEach(g=>{const open=g.contains(target);g.classList.toggle('expanded',open);g.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded',String(open));});}};
 })();
