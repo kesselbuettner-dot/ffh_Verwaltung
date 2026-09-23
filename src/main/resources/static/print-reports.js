@@ -99,7 +99,7 @@
        '<div class="ffh-print-signature"><strong>Unterschrift</strong><br><img alt="Prüferunterschrift" src="'+report.signatureData+'"></div>':'')});
  }
  function invoke(method){
-  return async()=>{try{await method();}catch(e){alert('Druckbericht konnte nicht erstellt werden: '+(e.message||e));}};
+  return async(...args)=>{try{await method(...args);}catch(e){alert('Druckbericht konnte nicht erstellt werden: '+(e.message||e));}};
  }
  root.FWPrintReports={shopping:invoke(shopping),memberOverview:invoke(memberOverview),membersAdmin:invoke(membersAdmin),
    devices:invoke(devices),inspectionHistory:invoke(inspectionHistory),checklist:invoke(checklist),
