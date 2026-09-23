@@ -316,7 +316,7 @@ function rowHtml(node,path){
  const controls='<button type="button" class="btn small secondary" data-up="'+p+'" title="Nach oben">↑</button>'+
   '<button type="button" class="btn small secondary" data-down="'+p+'" title="Nach unten">↓</button>';
  return '<div class="designer-row'+(g?' designer-group':'')+'" draggable="true" data-path="'+p+'" style="--level:'+depth+'">'+
-  '<span class="designer-grip" title="Am PC ziehen">⠿</span>'+iconHtml(icon)+
+  '<span class="designer-grip" title="Am PC ziehen">⠿</span>'+ 
   '<div class="designer-entry"><input aria-label="Beschriftung" maxlength="60" value="'+safe(label)+'" data-title="'+p+'"><small>'+safe(g?'Gruppe · Ebene '+(depth+1):'Seite · '+node)+'</small></div>'+
   settings+controls+
   (g?'<button type="button" class="btn small secondary" data-add="'+p+'">+ Untergruppe</button><button type="button" class="btn small danger" data-delete="'+p+'">✕</button>':
