@@ -44,7 +44,9 @@
   const node=render(opts);
   document.body.append(node);
   await waitLogo(node.querySelector('.ffh-print-logo'));
-  const cleanup=()=>{node.remove();root.removeEventListener('afterprint',cleanup);};
+  const priorTitle=document.title;
+  document.title=reportName(settings());
+  const cleanup=()=>{document.title=priorTitle;node.remove();root.removeEventListener('afterprint',cleanup);};
   root.addEventListener('afterprint',cleanup,{once:true});
   try{root.print();}catch(e){cleanup();throw e;}
  }
