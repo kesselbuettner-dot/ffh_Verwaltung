@@ -128,3 +128,7 @@
  .driving-print-table tr{break-inside:avoid;page-break-inside:avoid}
  .driving-print-report footer{border-top:1px solid #c9d1da;padding-top:3mm;margin-top:6mm;color:#47586a;font-size:8pt}
 }
+
+/* The qualification builder reuses the menu's shared visual icon picker. */
+.wehr-icon-picker .wehr-icon-trigger{width:56px;height:52px;min-width:56px;flex:0 0 56px}
+.wehr-icon-picker .wehr-icon-trigger .menu-icon-tabler,.wehr-icon-picker .wehr-icon-trigger .menu-icon-image,.wehr-icon-picker .wehr-icon-trigger .menu-icon-glyph{width:31px;height:31px;min-width:31px}
