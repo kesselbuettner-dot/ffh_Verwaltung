@@ -12,7 +12,7 @@ for(const name of ['design-system.css?v=1','design-system.js?v=1'])
  assert(html.includes(name),'Design system not loaded: '+name);
 for(const path of ['"/design-system.css"','"/design-system.js"'])
  assert(security.includes(path),'Unauthenticated browser could not fetch '+path);
-assert(sw.includes('ffh-verwaltung-print-layouts-v47'),'PWA cache not invalidated after page template update');
+assert(sw.includes('ffh-verwaltung-driving-scan-v48'),'PWA cache not invalidated after page template update');
 assert(sw.includes('/design-system.css?v=1')&&sw.includes('/design-system.js?v=1'),'New design assets not offline-cacheable');
 assert(html.includes("adminSettingsPage('design')"),'Central design admin tab missing');
 assert(html.includes("'/api/settings/design-system'"),'Central design save/load API not used');
