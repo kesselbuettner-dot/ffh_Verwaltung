@@ -1,10 +1,10 @@
-const CACHE_NAME = "ffh-verwaltung-shared-icon-database-v50";
+const CACHE_NAME = "ffh-verwaltung-icon-picker-settings-v51";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/tabler-icons.js?v=1",
-  "/menu-designer.js?v=shared-icon-library-v1",
-  "/menu-designer.css?v=shared-icon-library-v1",
+  "/menu-designer.js?v=icon-only-v2",
+  "/menu-designer.css?v=icon-only-v2",
   "/wehrleiter.js?v=shared-icon-library-v1",
   "/wehrleiter.css?v=shared-icon-library-v1",
   "/ui-theme.css?v=2",
