@@ -39,7 +39,8 @@
  }
  async function print(opts){
   if(!opts||!['landscape','portrait'].includes(opts.orientation||'portrait'))throw Error('Ungültiges Druckformat.');
-  if(document.querySelector('.ffh-print-root'))throw Error('Ein Druckbericht ist bereits geöffnet.');
+  // The admin gallery contains a nested preview; only an active body-level print document blocks a new print.
+  if(document.querySelector('body > .ffh-print-root'))throw Error('Ein Druckbericht ist bereits geöffnet.');
   const node=render(opts);
   document.body.append(node);
   await waitLogo(node.querySelector('.ffh-print-logo'));
