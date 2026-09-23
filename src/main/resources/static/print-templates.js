@@ -27,7 +27,7 @@
   const report=document.createElement('section');
   report.className='ffh-print-root ffh-'+orientation;
   report.setAttribute('aria-label',title);
-  const detail=[address(s),contact(s)].filter(Boolean);
+  const detail=[address(s),contact(s),s.legalRepresentative?'Vertretung: '+s.legalRepresentative:''].filter(Boolean);
   report.innerHTML='<header class="ffh-print-header"><img class="ffh-print-logo" alt="Logo der Organisation"><div class="ffh-print-identity"><strong>'+
    html(organizationName)+'</strong>'+detail.map(t=>'<span>'+html(t)+'</span>').join('')+'</div></header>'+
    '<div class="ffh-print-body"><div class="ffh-print-title"><h1>'+html(title)+'</h1>'+
