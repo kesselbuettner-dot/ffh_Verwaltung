@@ -1,10 +1,10 @@
-const CACHE_NAME = "ffh-verwaltung-print-layouts-v47";
+const CACHE_NAME = "ffh-verwaltung-driving-scan-v48";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/menu-designer.js?v=577e741-v2",
   "/menu-designer.css?v=577e741-v2",
-  "/wehrleiter.js?v=6",
+  "/wehrleiter.js?v=7",
   "/wehrleiter.css?v=6",
   "/ui-theme.css?v=2",
   "/design-system.css?v=1",
