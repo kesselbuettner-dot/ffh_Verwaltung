@@ -68,7 +68,7 @@ for(const asset of ['page-templates.css?v=1','page-templates.js?v=2'])
  assert(html.includes(asset)&&sw.includes('/'+asset),'Page template asset missing from page or PWA cache: '+asset);
 for(const asset of ['"/page-templates.js"','"/page-templates.css"'])
  assert(security.includes(asset),'Static asset not public: '+asset);
-assert(sw.includes('ffh-verwaltung-driving-scan-v48'));
+assert(sw.includes('ffh-verwaltung-print-pagebreak-fix-v49'));
 assert(html.includes("['templates','📐 Seiten-Templates']")&&html.includes('onSelect:key=>adminSettingsPage(key)'),'Template gallery entry in shared admin settings must route correctly');
 assert(html.includes("lib.preview(selectedPageTemplate)")&&html.includes("const lib=window.FWPageTemplates"),'Interactive gallery preview missing');
 assert(docs.includes('FWPageTemplates.render'),'Binding page layout docs missing');
