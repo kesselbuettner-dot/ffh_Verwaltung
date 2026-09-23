@@ -28,7 +28,8 @@ function avatarHtml(person){
 function cardHtml(card,forPrint=false){
  const abbr=String(card.shortLabel||card.code||'Q').slice(0,10);
  const label=card.title+' – '+(statusMap[card.status]||card.status)+', ausgestellt '+date(card.issuedOn)+', nächster Termin '+date(card.nextDueOn);
- const content='<span class="q-short">'+safe(abbr)+'</span>';
+ const symbol=window.MenuDesigner?.iconHtml(card.icon)||'<span class="q-symbol-fallback">'+safe(card.icon||'📋')+'</span>';
+ const content='<span class="q-symbol">'+symbol+'</span><span class="q-short">'+safe(abbr)+'</span>';
  const css='wehr-tile '+cardTone(card)+' is-'+safe(card.status||'VALID');
  return !forPrint&&rights('fire.qualifications.write')?
  '<button type="button" class="'+css+'" data-edit-card="'+Number(card.id)+'" title="'+safe(label)+'" aria-label="'+safe(label)+'">'+content+'</button>':
@@ -37,7 +38,7 @@ function cardHtml(card,forPrint=false){
 function bind(host){host.querySelectorAll('[data-edit-card]').forEach(b=>b.onclick=()=>editCard(Number(b.dataset.editCard)));}
 async function reload(){[types,cards,people]=await Promise.all([api(BASE+'/types'),api(BASE+'/cards'),api(BASE+'/people')]);}
 function memberOptions(selected){return people.map(p=>'<option value="'+p.id+'"'+(selected===p.id?' selected':'')+'>'+safe(p.name)+'</option>').join('');}
-function typeOptions(selected){return types.filter(t=>!t.sensitive||rights('fire.qualifications.sensitive.read')).map(t=>'<option value="'+t.id+'"'+(selected===t.id?' selected':'')+'>'+safe(t.icon+' '+t.title)+'</option>').join('');}
+function typeOptions(selected){return types.filter(t=>!t.sensitive||rights('fire.qualifications.sensitive.read')).map(t=>'<option value="'+t.id+'"'+(selected===t.id?' selected':'')+'>'+safe((window.MenuDesigner?.iconLabel(t.icon)||t.icon)+' · '+t.title)+'</option>').join('');}
 async function page(){
  setActive('wehr-members');content.innerHTML=header('👥 Mitgliederverwaltung · Wehrleitung','Feuerwehrqualifikationen und Fälligkeiten; Stammdaten ausschließlich in der Administration.')+
  '<div class="panel">Qualifikationen werden geladen …</div>';
@@ -215,6 +216,7 @@ function editCard(id){
 }
 async function configPage(){
  if(!rights('fire.qualifications.write'))return;
+ await window.MenuDesigner?.loadIcons();
  setActive('wehr-config');
  content.innerHTML=header('⚙️ Qualifikationsbaukasten','Typen, Kacheln und Überwachungsfristen für Wehrleitung konfigurieren.',
  '<button class="btn secondary" id="backWehr">Zur Mitgliederverwaltung</button>')+
@@ -226,7 +228,7 @@ function drawConfig(){
  '<button class="btn secondary" id="backWehr">Zur Mitgliederverwaltung</button>')+
  '<div class="panel"><div class="quick"><button class="btn secondary" id="defaultWehr">Standardkacheln hinzufügen</button><button class="btn primary" id="newWehrType">＋ Eigene Kachel</button></div>'+
  '<div class="table-wrap"><table class="table"><thead><tr><th>Kachel</th><th>Überwachung</th><th>Vorwarnzeit</th><th>Prüfintervall</th><th>Aktion</th></tr></thead><tbody>'+
- types.slice().sort((a,b)=>WEHR_COLUMNS.findIndex(c=>c.code===a.category)-WEHR_COLUMNS.findIndex(c=>c.code===b.category)||a.title.localeCompare(b.title,'de')).map(t=>'<tr><td>'+safe(t.icon+' '+t.title)+'</td><td>'+safe(WEHR_COLUMNS.find(c=>c.code===t.category)?.title||'Qualifikationen')+' · '+(t.tracked?'Ja':'Nein')+(t.sensitive?' · vertraulich':'')+'</td><td>'+t.warningDays+' Tage</td><td>'+t.intervalMonths+' Monate</td><td><button class="btn small secondary" data-type-id="'+t.id+'">Bearbeiten</button> <button class="btn small danger" data-delete-type="'+t.id+'">Löschen</button></td></tr>').join('')+
+ types.slice().sort((a,b)=>WEHR_COLUMNS.findIndex(c=>c.code===a.category)-WEHR_COLUMNS.findIndex(c=>c.code===b.category)||a.title.localeCompare(b.title,'de')).map(t=>'<tr><td><span class="wehr-type-icon">'+(window.MenuDesigner?.iconHtml(t.icon)||safe(t.icon))+'</span> '+safe(t.title)+'</td><td>+safe(WEHR_COLUMNS.find(c=>c.code===t.category)?.title||'Qualifikationen')+' · '+(t.tracked?'Ja':'Nein')+(t.sensitive?' · vertraulich':'')+'</td><td>'+t.warningDays+' Tage</td><td>'+t.intervalMonths+' Monate</td><td><button class="btn small secondary" data-type-id="'+t.id+'">Bearbeiten</button> <button class="btn small danger" data-delete-type="'+t.id+'">Löschen</button></td></tr>').join('')+
  '</tbody></table></div><div id="wehrConfigMsg"></div></div>';
  el('backWehr').onclick=()=>page();el('defaultWehr').onclick=async()=>{try{await api(BASE+'/types/defaults',{method:'POST'});types=await api(BASE+'/types');drawConfig();}catch(e){notice(el('wehrConfigMsg'),e.message);}};
  el('newWehrType').onclick=()=>editType(null);
@@ -238,19 +240,22 @@ function drawConfig(){
   catch(error){notice(el('wehrConfigMsg'),error.message);}
  });
 }
-function editType(id){
+async function editType(id){
+ await window.MenuDesigner?.loadIcons();
  const t=types.find(x=>x.id===id);
  modalTitle.textContent=t?'Kachel konfigurieren':'Eigene Kachel anlegen';
  modalBody.innerHTML='<div id="wehrTypeMsg"></div>'+
  (t?'<p><strong>'+safe(t.code)+'</strong></p>':inputField('Technische Kennung (A–Z, 0–9, _)','wCode'))+
  '<div class="field"><label>Kategorie</label><select id="wCategory"><option value="QUALIFICATION">Qualifikation</option><option value="CERTIFICATE_DOCUMENT">Zertifikat / Dokument</option><option value="SUITABILITY">Tauglichkeit</option></select></div>'+ 
- inputField('Name','wTitle',t?.title)+inputField('Kürzel (maximal 10 Zeichen)','wShort',t?.shortLabel||'','','Nur dieses Kürzel erscheint in der kleinen Kachel.')+inputField('Symbol','wIcon',t?.icon||'📋')+
+ inputField('Name','wTitle',t?.title)+inputField('Kürzel (maximal 10 Zeichen)','wShort',t?.shortLabel||'','','Das Kürzel steht unter dem Symbol in der kleinen Kachel.')+
+ '<div class="field"><label for="wIcon">Symbol aus der gemeinsamen Icon-Datenbank</label><div class="wehr-icon-picker"><span id="wIconPreview" class="wehr-type-icon">'+(window.MenuDesigner?.iconHtml(t?.icon||'📋')||safe(t?.icon||'📋'))+'</span><select id="wIcon">'+(window.MenuDesigner?.iconOptions(t?.icon||'📋')||'<option value="📋">📋</option>')+'</select></div><small>Eigene Icons kannst du unter Administration → Icon-Datenbank hochladen.</small></div>'+
  '<div class="field"><label><input id="wTracked" type="checkbox" '+(t?.tracked?'checked':'')+'> Überwachungspflichtig</label></div>'+
  '<div class="field"><label><input id="wSensitive" type="checkbox" '+(t?.sensitive?'checked':'')+'> Vertraulich (gesonderte Berechtigung)</label></div>'+
  inputField('Vorwarnzeit in Tagen (0–365)','wWarn',t?.warningDays??30,'number')+
  inputField('Wiederholung in Monaten (0–120)','wMonths',t?.intervalMonths??0,'number')+
  '<div class="quick"><button class="btn secondary" id="wehrTypeCancel">Abbrechen</button><button class="btn primary" id="wehrTypeSave">Speichern</button></div>';
  el('wCategory').value=t?.category||'QUALIFICATION';
+ el('wIcon').onchange=()=>{el('wIconPreview').innerHTML=window.MenuDesigner?.iconHtml(el('wIcon').value)||safe(el('wIcon').value);};
  el('wehrTypeCancel').onclick=closeModal;el('wehrTypeSave').onclick=async()=>{
   const payload={code:t?.code||el('wCode').value.trim().toUpperCase(),title:el('wTitle').value,shortLabel:el('wShort').value.trim(),icon:el('wIcon').value,category:el('wCategory').value,
    tracked:el('wTracked').checked,sensitive:el('wSensitive').checked,warningDays:Number(el('wWarn').value),intervalMonths:Number(el('wMonths').value)};
