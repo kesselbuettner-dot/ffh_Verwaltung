@@ -25,7 +25,7 @@
 @page ffh-report-landscape{size:A4 landscape;margin:37mm 12mm 23mm}
 @media print{
  html,body{background:#fff!important;color:#152332!important;overflow:visible!important}
- body > *:not(.ffh-print-root){display:none!important}
+ body > *:not(.ffh-print-root):not(#wehrPrintReport):not(#drivingPrintReport):not(#inspectionPrintReport){display:none!important}
  body > .ffh-print-root{display:block!important;position:static!important;width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;padding:0!important;color:#152332!important;background:#fff!important;font-family:Arial,sans-serif!important;font-size:9pt!important}
  body > .ffh-print-root *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
  .ffh-portrait{page:ffh-report-portrait}
