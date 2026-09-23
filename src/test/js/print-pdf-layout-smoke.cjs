@@ -14,5 +14,5 @@ assert(css.includes('@page ffh-report-landscape{size:A4 landscape;margin:0}'),'L
 assert(css.includes('@page ffh-report-portrait{size:A4 portrait;margin:0}'),'Portrait PDF page must suppress browser URL/date footer');
 assert(css.includes('padding:12mm!important'),'Printed reports must retain internal A4 margins');
 assert(html.includes('/print-templates.css?v=2')&&sw.includes('/print-templates.css?v=2'),'Printed PWA CSS cache must be refreshed');
-assert(sw.includes('ffh-verwaltung-qualification-a4-report-v53'),'Installed app must invalidate old print layout');
+assert(sw.includes('ffh-verwaltung-devices-wehr-layout-v54'),'Installed app must invalidate old print layout');
 console.log('PASS no stray \\n cover page, normal-flow letterhead/footer, portrait/landscape print size and PWA asset refresh');
