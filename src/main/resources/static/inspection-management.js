@@ -12,7 +12,14 @@
  async function refresh(){
   setActive('device-inspection-plans');
   content.innerHTML='<div class="title-row"><div><h1>✅ Prüftermine</h1><span class="sub">Einzel- und Sammelprüfungen mit gemeinsamem Prüfnachweis</span></div><div class="quick" id="inspectionActions"></div></div><div class="panel"><h3>Geplante Prüftermine</h3><div id="inspectionSessions">Wird geladen …</div></div><div class="panel" style="margin-top:16px"><h3>Unterschriebene Prüfprotokolle</h3><div id="inspectionReports">Wird geladen …</div></div>';
-  if(permitted('training.services.write'))document.getElementById('inspectionActions').append(button('＋ Prüftermin anlegen',()=>openServiceForm(true),'primary'));
+  const tools=document.getElementById('inspectionActions');
+  const yearLabel=node('label','Berichtsjahr ');yearLabel.className='field';const yearSelect=node('select');yearSelect.id='inspectionReportYear';yearSelect.innerHTML=root.FWPrintReports.yearOptions(false);yearLabel.append(yearSelect);
+  const locationLabel=node('label','Standort ');locationLabel.className='field';const locationSelect=node('select');locationSelect.id='inspectionReportLocation';locationSelect.append(new Option('Alle Standorte',''));locationLabel.append(locationSelect);
+  tools.append(yearLabel,locationLabel,button('🖨 Prüfliste (A4 hoch)',()=>root.FWPrintReports.checklist()),
+    button('🖨 Prüfprotokoll · Jahresbericht',()=>root.FWPrintReports.inspectionHistory()));
+  yearSelect.onchange=()=>root.FWPrintReports.refreshInspectionLocations().catch(error);
+  if(permitted('training.services.write'))tools.append(button('＋ Prüftermin anlegen',()=>openServiceForm(true),'primary'));
+  root.FWPrintReports.refreshInspectionLocations().catch(error);
   try{
    const [list,reports]=await Promise.all([api(url+'/sessions'),api(url+'/reports')]);
    const host=document.getElementById('inspectionSessions');
@@ -104,13 +111,7 @@
    const view=node('div');view.className='inspection-report-view';
    view.innerHTML=printable(report);
    const bar=node('div');bar.className='quick';bar.style.marginTop='12px';
-   bar.append(button('Als PDF drucken',()=>{
-    const old=document.getElementById('inspectionPrintReport');old?.remove();
-    const print=node('div');print.id='inspectionPrintReport';print.className='print-report';print.innerHTML=printable(report);
-    document.body.append(print);
-    root.addEventListener('afterprint',()=>print.remove(),{once:true});
-    root.print();
-   },'primary'),button('Schließen',closeModal));
+   bar.append(button('Als PDF drucken',()=>root.FWPrintReports.signedSession(report),'primary'),button('Schließen',closeModal));
    modalBody.replaceChildren(view,bar);modal.classList.remove('hidden');
   }catch(e){error(e);}
  }
