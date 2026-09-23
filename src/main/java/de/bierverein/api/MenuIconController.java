@@ -23,11 +23,15 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/settings/menu-icons")
 public class MenuIconController {
     private final MenuIconRepository repo;
+    private final FireQualificationTypeRepository qualificationTypes;
     private static final Set<String> TAGS = Set.of("svg","g","path","circle","rect","ellipse","line","polyline","polygon","title","desc");
     private static final Set<String> ATTRS = Set.of("xmlns","width","height","viewBox","fill","stroke","stroke-width","stroke-linecap",
         "stroke-linejoin","stroke-miterlimit","d","cx","cy","x","y","rx","ry","r","x1","x2","y1","y2","points",
         "transform","opacity","fill-rule","clip-rule","id");
-    public MenuIconController(MenuIconRepository repo) { this.repo = repo; }
+    public MenuIconController(MenuIconRepository repo, FireQualificationTypeRepository qualificationTypes) {
+        this.repo = repo;
+        this.qualificationTypes = qualificationTypes;
+    }
 
     public record IconDto(Long id, String name, String uri) {}
     private IconDto dto(MenuIcon icon) {
@@ -81,6 +85,8 @@ public class MenuIconController {
     @PreAuthorize("hasRole('ADMIN')")
     public void remove(@PathVariable Long id) {
         if (!repo.existsById(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (qualificationTypes.findAll().stream().anyMatch(type -> ("custom:" + id).equals(type.icon)))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Icon wird in einem Qualifikationsbaustein verwendet.");
         repo.deleteById(id);
     }
 
