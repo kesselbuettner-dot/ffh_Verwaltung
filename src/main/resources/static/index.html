@@ -90,7 +90,7 @@ body.dark .dashboard-role-grid label{background:#0b1823;color:var(--ink)}
 body.dark .vehicle-loading-shell{background:linear-gradient(180deg,#10202e,#0b1823)}
 @media(max-width:800px){.vehicle-loading-shell{padding:10px;border-radius:15px}.vehicle-room-board{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:155px;min-height:330px;padding:10px;border-width:7px;gap:9px}.vehicle-room-board .vehicle-room-v2{grid-column:auto!important;grid-row:auto!important;min-height:155px}.vehicle-orientation{grid-template-columns:48px minmax(110px,150px) 48px;gap:8px}.vehicle-orientation .vehicle-view-arrow{min-width:46px;min-height:46px}.vehicle-orientation-icon{width:82px;height:44px}.vehicle-loading-help{font-size:11px}.vehicle-room-board .mini-device{font-size:7px}.vehicle-room-resize{display:none}}
 </style>
-<link rel="stylesheet" href="/menu-designer.css?v=shared-icon-library-v1">
+<link rel="stylesheet" href="/menu-designer.css?v=icon-only-v2">
 <link rel="stylesheet" href="/ui-theme.css?v=2">
 <link rel="stylesheet" href="/design-system.css?v=1">
 <script defer src="/design-system.js?v=1"></script>
@@ -100,7 +100,7 @@ body.dark .vehicle-loading-shell{background:linear-gradient(180deg,#10202e,#0b18
 <script defer src="/device-cycle-tasks.js?v=2"></script>
 <script defer src="/inspection-management.js?v=2"></script>
 <script defer src="/tabler-icons.js?v=1"></script>
-<script defer src="/menu-designer.js?v=shared-icon-library-v1"></script>
+<script defer src="/menu-designer.js?v=icon-only-v2"></script>
 <link rel="stylesheet" href="/wehrleiter.css?v=shared-icon-library-v1">
 <script defer src="/wehrleiter.js?v=shared-icon-library-v1"></script>
 <link rel="stylesheet" href="/print-templates.css?v=2">
@@ -184,8 +184,7 @@ const menuDefinitions=[
  {id:'admin',section:'Administration',label:'Administration (alte Seite)',icon:'⚙️',action:()=>adminSettingsPage('members'),roles:['ADMIN'],implemented:false},
  {id:'admin-members',section:'Administration',label:'Mitglieder (alte Seite)',icon:'👥',action:()=>adminSettingsPage('members'),roles:['ADMIN'],implemented:false},
  {id:'admin-users',section:'Administration',label:'Benutzer & Rechte (alte Seite)',icon:'🔐',action:()=>adminSettingsPage('accounts'),roles:['ADMIN'],implemented:false},
- {id:'admin-settings',section:'Administration',label:'Administration',icon:'tabler:settings',action:()=>navigate('admin-settings'),roles:['ADMIN']},
- {id:'admin-icons',section:'Administration',label:'Icon-Datenbank',icon:'tabler:photo',action:()=>adminSettingsPage('icons'),roles:['ADMIN']}
+ {id:'admin-settings',section:'Administration',label:'Administration',icon:'tabler:settings',action:()=>navigate('admin-settings'),roles:['ADMIN']}
 ];
 function hasPermission(key){return Array.isArray(myPermissions)&&myPermissions.includes(key)}
 function menuAllowed(item){return item.implemented!==false&&(!item.permission||hasPermission(item.permission))&&(item.roles.includes('*')||item.roles.includes(role))}
@@ -599,7 +598,7 @@ async function adminSettingsPage(section='members'){
  if(section==='users')section='accounts';
  if(role!=='ADMIN'){content.textContent='Keine Berechtigung';return;}
  if(!window.FWPageTemplates){content.textContent='Seiten-Templates konnten nicht geladen werden.';return;}
- setActive(section==='icons'?'admin-icons':'admin-settings');
+ setActive('admin-settings');
  const sections=[
   ['members','👥 Mitgliederstammdaten'],['accounts','🔐 Konten'],['roles','🛡️ Rollen'],
   ['rights','🔑 Rechte & Zuweisungen'],['menu','☰ Menü'],['icons','🖼 Icon-Datenbank'],['dashboard','📊 Dashboard'],
