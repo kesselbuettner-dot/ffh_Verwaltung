@@ -74,5 +74,8 @@ jobs:
              select id,current_date,'OPEN',now() from devices limit 0"
           curl -fsS http://127.0.0.1:18080/device-cycle-tasks.js > /dev/null
           curl -fsS http://127.0.0.1:18080/page-templates.js > /dev/null
+          curl -fsS http://127.0.0.1:18080/print-templates.js > /dev/null
+          curl -fsS http://127.0.0.1:18080/print-templates.css > /dev/null
+          curl -fsS http://127.0.0.1:18080/print-reports.js > /dev/null
           echo "PASS Spring Boot, PostgreSQL cycle-task schema, new page scripts"
 
