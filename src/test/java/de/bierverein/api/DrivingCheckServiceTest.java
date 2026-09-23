@@ -47,6 +47,32 @@ class DrivingCheckServiceTest {
   verify(qualified).save(q);
   verify(checks).save(argThat(c->c.memberId.equals(42L)&&"AUTO_OCR_MATCH".equals(c.method)));
  }
+ @Test void germanNameAndFragmentedLicenseNumberOnSeparateOcrLinesStillBookExactMatch(){
+  var member=new Member();ReflectionTestUtils.setField(member,"id",42L);member.setName("Jörg Müller");
+  var q=data(7L,42L);
+  when(permission.userId(auth)).thenReturn(9L);
+  when(users.findById(9L)).thenReturn(Optional.of(user(9L,member)));
+  when(qualified.findByIdForUpdate(7L)).thenReturn(Optional.of(q));
+  when(checks.save(any(FireQualificationCheck.class))).thenAnswer(i->i.getArgument(0));
+  when(ocr.read("test-camera-image")).thenReturn("FÜHRERSCHEIN\nJOERG\nMUELLER\nNr.: L 12 34 56 789");
+  var report=service.autoScan(7L,new DrivingCheckService.ScanInput("test-camera-image"),auth);
+  assertEquals("POSITIVE",report.result());
+  assertEquals("AUTO_OCR_MATCH",report.method());
+  verify(qualified).save(q);
+  verify(checks).save(argThat(c->"AUTO_OCR_MATCH".equals(c.method)));
+ }
+ @Test void exactNameWithSimilarButDifferentDocumentNumberMustNeverBeAccepted(){
+  var member=new Member();ReflectionTestUtils.setField(member,"id",42L);member.setName("Jörg Müller");
+  var q=data(7L,42L);
+  when(permission.userId(auth)).thenReturn(9L);
+  when(users.findById(9L)).thenReturn(Optional.of(user(9L,member)));
+  when(qualified.findByIdForUpdate(7L)).thenReturn(Optional.of(q));
+  when(ocr.read("test-camera-image")).thenReturn("JOERG MUELLER\nL 12 34 56 780");
+  assertThrows(ResponseStatusException.class,()->service.autoScan(7L,
+    new DrivingCheckService.ScanInput("test-camera-image"),auth));
+  verifyNoInteractions(checks);
+  verify(qualified,never()).save(any());
+ }
  @Test void wrongNumberNeverCreatesPositiveCheck(){
   var member=new Member();ReflectionTestUtils.setField(member,"id",42L);member.setName("Max Muster");
   var q=data(7L,42L);
