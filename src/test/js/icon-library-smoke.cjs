@@ -25,6 +25,17 @@ assert.match(menu,/function openIconPicker\(path,trigger\)/);
 assert.match(menu,/designer-icon-choice/);
 assert.match(menu,/designerIconSearch/);
 assert.match(menu,/designerOpenIcons/);
+assert.match(menu,/function chooseIcon\(current,trigger,onChoose,fallback='☰',showLibrary=true\)/);
+assert.match(menu,/iconLibraryPage,chooseIcon,activatePage/);
+assert.match(qualification,/window\.MenuDesigner\?\.chooseIcon\(el\('wIcon'\)\.value/);
+assert.match(qualification,/id="wIcon" type="hidden"/);
+assert.match(qualification,/id="wIconButton" class="designer-icon-trigger wehr-icon-trigger"/);
+assert.doesNotMatch(qualification,/<select id="wIcon">/,'Qualification icon picker must use icon-only buttons');
+assert.match(qualification,/function typeOptions\(selected\)[^\n]*safe\(t\.title\)/,'Assignment options show the qualification title only');
+assert.doesNotMatch(qualification,/iconLabel\(t\.icon\)/,'Assignment dropdown must not contain symbol names');
+assert.match(sw,/ffh-verwaltung-qualification-icon-picker-v52/);
+assert.match(html,/wehrleiter\.js\?v=qualification-icon-picker-v3/);
+
 assert.doesNotMatch(menu,/<select aria-label="Symbol" data-icon=/,'Long textual menu-icon dropdown must be removed');
 assert.match(sw,/ffh-verwaltung-icon-picker-settings-v51/);
 assert.match(html,/tabler-icons\.js\?v=/);
