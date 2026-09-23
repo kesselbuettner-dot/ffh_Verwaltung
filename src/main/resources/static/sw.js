@@ -1,11 +1,11 @@
-const CACHE_NAME = "ffh-verwaltung-unified-inspections-v45";
+const CACHE_NAME = "ffh-verwaltung-driving-annual-report-v46";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/menu-designer.js?v=577e741-v2",
   "/menu-designer.css?v=577e741-v2",
-  "/wehrleiter.js?v=4",
-  "/wehrleiter.css?v=4",
+  "/wehrleiter.js?v=5",
+  "/wehrleiter.css?v=5",
   "/ui-theme.css?v=2",
   "/design-system.css?v=1",
   "/design-system.js?v=1",
