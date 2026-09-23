@@ -16,7 +16,7 @@ assert(print.includes("const FALLBACK='/icons/fw-cockpit-brand.svg'"), 'Applicat
 assert(css.includes('@page ffh-report-portrait')&&css.includes('@page ffh-report-landscape'),'Both paper templates missing');
 assert(css.includes('.ffh-print-header')&&css.includes('.ffh-print-footer'),'Shared header/footer missing');
 assert(html.includes("['print-templates','🖨 Druckvorlagen']")&&html.includes('adminPrintTemplatesPage'),'Central admin template gallery missing');
-for(const asset of ['print-templates.js?v=1','print-templates.css?v=2','print-reports.js?v=1'])
+for(const asset of ['print-templates.js?v=2','print-templates.css?v=2','print-reports.js?v=1'])
  assert(html.includes('/'+asset)&&sw.includes('/'+asset),'Template asset not loaded and precached: '+asset);
 assert(html.includes('/wehrleiter.js?v=7')&&sw.includes('/wehrleiter.js?v=7'),'Driver report script not refreshed');
 assert(reports.includes('inspectionHistory:invoke(inspectionHistory)')&&reports.includes('signedSession:invoke(signedSession)'),'Device protocols must use the same template');
