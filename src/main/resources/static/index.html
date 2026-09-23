@@ -914,7 +914,8 @@ async function openBarcodeScanner(targetId){
 function useManualBarcode(targetId,value){const v=(value??manualBarcode?.value??'').replace(/\D/g,'');if(!v){scannerStatus.textContent='Bitte einen Barcode eingeben.';return}const el=document.getElementById(targetId);if(el){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}))}closeModal();if(targetId==='purchaseSearch')findPurchaseArticles()}
 const oldCloseModal=closeModal;
 closeModal=function(){if(barcodeTimer){clearTimeout(barcodeTimer);barcodeTimer=null}if(barcodeStream){barcodeStream.getTracks().forEach(t=>t.stop());barcodeStream=null}oldCloseModal()}
-</script>\n<script>
+</script>
+<script>
 window.approveRegistration = async function (id) {
   try {
     await api('/api/admin/users/' + id + '/approve', {method:'POST'});
