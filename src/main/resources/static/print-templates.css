@@ -21,17 +21,20 @@
 .ffh-print-preview .ffh-print-logo{width:60px;height:60px}
 .ffh-print-preview .ffh-print-title{margin-top:15px}
 .ffh-print-preview .ffh-print-footer{margin-top:20px}
-@page ffh-report-portrait{size:A4 portrait;margin:37mm 12mm 23mm}
-@page ffh-report-landscape{size:A4 landscape;margin:37mm 12mm 23mm}
+@page ffh-report-portrait{size:A4 portrait;margin:0}
+@page ffh-report-landscape{size:A4 landscape;margin:0}
 @media print{
- html,body{background:#fff!important;color:#152332!important;overflow:visible!important}
+ html,body{background:#fff!important;color:#152332!important;overflow:visible!important;margin:0!important;padding:0!important}
+ /* Any literal text outside the report must neither appear nor occupy a print page. */
+ body{font-size:0!important;line-height:0!important}
  body > *:not(.ffh-print-root):not(#wehrPrintReport):not(#drivingPrintReport):not(#inspectionPrintReport){display:none!important}
- body > .ffh-print-root{display:block!important;position:static!important;width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;padding:0!important;color:#152332!important;background:#fff!important;font-family:Arial,sans-serif!important;font-size:9pt!important}
+ body > .ffh-print-root{display:block!important;position:static!important;width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;padding:12mm!important;box-sizing:border-box!important;color:#152332!important;background:#fff!important;font-family:Arial,sans-serif!important;font-size:9pt!important;line-height:1.35!important}
  body > .ffh-print-root *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
  .ffh-portrait{page:ffh-report-portrait}
  .ffh-landscape{page:ffh-report-landscape}
- .ffh-print-header{position:fixed;top:-30mm;left:0;right:0;height:28mm;overflow:hidden}
- .ffh-print-footer{position:fixed;bottom:-17mm;left:0;right:0;height:14mm;align-items:start}
+ /* Keep the logo, organisation details and report body in the SAME document flow. */
+ .ffh-print-header{position:static!important;top:auto!important;left:auto!important;right:auto!important;height:auto!important;overflow:visible!important;margin:0 0 6mm!important;break-inside:avoid;page-break-inside:avoid}
+ .ffh-print-footer{position:static!important;bottom:auto!important;left:auto!important;right:auto!important;height:auto!important;align-items:flex-start!important;margin:7mm 0 0!important;break-inside:avoid;page-break-inside:avoid}
  .ffh-print-body{width:100%;padding:0!important;margin:0!important}
  .ffh-print-title{margin:0 0 5mm}
 }
