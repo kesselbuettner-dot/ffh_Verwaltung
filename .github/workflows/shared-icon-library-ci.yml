@@ -1,7 +1,7 @@
 name: Shared Icon Library CI
 on:
   push:
-    branches: [feature/shared-icon-library-qualifications-20260923, feature/shared-icons-on-server-8405775-20260923]
+    branches: [feature/shared-icon-library-qualifications-20260923, feature/shared-icons-on-server-8405775-20260923, feature/icon-only-picker-in-settings-20260923]
   workflow_dispatch:
 jobs:
   verify:
