@@ -19,7 +19,7 @@ assert.doesNotMatch(html,/id:'admin-icons'/,'Icon library belongs inside setting
 assert.match(html,/\['icons','🖼 Icon-Datenbank'\]/);
 assert.match(html,/if\(section==='icons'\)return window\.MenuDesigner\?\.iconLibraryPage\(\)/);
 assert.match(html,/setActive\('admin-settings'\);/);
-assert.match(html,/menu-designer\.js\?v=icon-only-v2/);
+assert.match(html,/menu-designer\.js\?v=qualification-icon-picker-v3/);
 assert.match(menu,/data-icon-picker/);
 assert.match(menu,/function openIconPicker\(path,trigger\)/);
 assert.match(menu,/designer-icon-choice/);
