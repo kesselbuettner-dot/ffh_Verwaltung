@@ -95,7 +95,7 @@
    body:t().table(['Standort','Gerät / Inventar','Ergebnis','Bemerkung','Nächste Prüfung'],
      items.map(i=>[i.location,i.deviceName+' / '+(i.inventoryNumber||'–'),i.result,textValue(i.note),date(i.nextInspectionDate)]))+
      '<p class="ffh-print-note">Abgeschlossen: '+t().html(t().berlinTime(report.signedAt))+' · Verantwortlicher Prüfer: '+t().html(report.inspector)+'</p>'+
-     (report.signatureData?.startsWith('data:image/png;base64,')?
+     (/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(report.signatureData||'')?
        '<div class="ffh-print-signature"><strong>Unterschrift</strong><br><img alt="Prüferunterschrift" src="'+report.signatureData+'"></div>':'')});
  }
  function invoke(method){
