@@ -1,0 +1,37 @@
+/* Shared paper layouts; both named pages override legacy landscape-only print rules. */
+.ffh-print-root{display:none;font-family:Arial,sans-serif;color:#152332;background:#fff}
+.ffh-print-root *{box-sizing:border-box}
+.ffh-print-header{display:grid;grid-template-columns:30mm minmax(0,1fr);gap:5mm;align-items:center;border-bottom:2px solid #c51f2d;padding-bottom:3mm}
+.ffh-print-logo{width:28mm;height:24mm;object-fit:contain;display:block}
+.ffh-print-identity{display:flex;flex-direction:column;gap:1mm;font-size:9pt;line-height:1.25}
+.ffh-print-identity strong{font-size:16pt;line-height:1.1}
+.ffh-print-title h1{font-size:14pt;margin:0 0 2mm}
+.ffh-print-title p{font-size:9pt;color:#405267;margin:0 0 5mm}
+.ffh-print-table{width:100%;border-collapse:collapse;table-layout:auto;font-size:9pt}
+.ffh-print-table th,.ffh-print-table td{border:1px solid #b2c0ce;text-align:left;padding:2mm 2.5mm;vertical-align:top;overflow-wrap:anywhere}
+.ffh-print-table th{background:#ecf2f7;font-weight:700}
+.ffh-print-table thead{display:table-header-group}
+.ffh-print-table tr{break-inside:avoid;page-break-inside:avoid}
+.ffh-print-section{margin:5mm 0 2mm;font-size:11pt;break-after:avoid;page-break-after:avoid}
+.ffh-print-note{font-size:8pt;color:#44576b;margin-top:5mm}
+.ffh-print-footer{display:flex;justify-content:space-between;gap:4mm;border-top:1px solid #c0cbd5;padding-top:2mm;font-size:8pt;color:#44576b}
+.ffh-print-preview{border:1px solid var(--line,#d5dce4);padding:14px;border-radius:10px;background:#fff;color:#152332}
+.ffh-print-preview .ffh-print-root{display:block}
+.ffh-print-preview .ffh-print-header{grid-template-columns:64px 1fr;gap:15px;padding-bottom:10px}
+.ffh-print-preview .ffh-print-logo{width:60px;height:60px}
+.ffh-print-preview .ffh-print-title{margin-top:15px}
+.ffh-print-preview .ffh-print-footer{margin-top:20px}
+@page ffh-report-portrait{size:A4 portrait;margin:37mm 12mm 23mm}
+@page ffh-report-landscape{size:A4 landscape;margin:37mm 12mm 23mm}
+@media print{
+ html,body{background:#fff!important;color:#152332!important;overflow:visible!important}
+ body > *:not(.ffh-print-root){display:none!important}
+ body > .ffh-print-root{display:block!important;position:static!important;width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;padding:0!important;color:#152332!important;background:#fff!important;font-family:Arial,sans-serif!important;font-size:9pt!important}
+ body > .ffh-print-root *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+ .ffh-portrait{page:ffh-report-portrait}
+ .ffh-landscape{page:ffh-report-landscape}
+ .ffh-print-header{position:fixed;top:-30mm;left:0;right:0;height:28mm;overflow:hidden}
+ .ffh-print-footer{position:fixed;bottom:-17mm;left:0;right:0;height:14mm;align-items:start}
+ .ffh-print-body{width:100%;padding:0!important;margin:0!important}
+ .ffh-print-title{margin:0 0 5mm}
+}
