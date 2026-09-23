@@ -9,8 +9,10 @@ const ICONS = [
  ['🎨','Darstellung'],['💶','Finanzen'],['🔴','Offen'],['✓','Erledigt'],['⌂','Haus'],['☰','Menü']
 ];
 const STATIC_ICONS = [['helmet','Feuerwehrhelm'],['engine','Löschfahrzeug'],['extinguisher','Feuerlöscher'],['radio','Funkgerät'],['hose','Schlauch'],['ladder','Leiter'],['flame','Flamme']];
+const TABLER_LABELS = [['layout-dashboard','Dashboard'],['users','Mitglieder'],['calendar','Kalender'],['settings','Einstellungen'],['truck','Fahrzeug'],['clipboard-check','Geräteprüfung'],['file-text','Dokument'],['shield-check','Berechtigungen'],['school','Ausbildung'],['wallet','Finanzen'],['shopping-cart','Einkauf'],['list-check','Prüfliste'],['tool','Werkzeug'],['archive','Lager'],['certificate','Qualifikation'],['user-shield','Administration'],['book','Unterlagen'],['menu-2','Menü'],['photo','Bild'],['search','Suche'],['flame','Flamme'],['home','Startseite'],['bell','Benachrichtigung'],['user-check','Mitglied geprüft']];
+
 const DEFAULT_STYLE = {background:'#071827',active:'#1479e9',text:'#dce7ee',font:'Inter',size:15,weight:500,width:250,gap:3,depth:2,effect:'gradient'};
-let draft=null, icons=[], iconReady=false, iconLoading=false, dragPath=null, message='';
+let draft=null, icons=[], iconReady=false, iconLoading=false, iconPromise=null, dragPath=null, message='';
 const safe = value => esc(value);
 const adminRequired = new Set(['admin','admin-members','admin-users','admin-settings']);
 const PRODUCT_ICON = '/icons/fw-cockpit-brand.svg';
@@ -76,17 +78,23 @@ function iconSrc(value){
  return image?.uri?.startsWith('data:image/')?image.uri:null;
 }
 function iconHtml(value){
+ const tabler=String(value||'').startsWith('tabler:')?String(value).slice(7):'';
+ if(tabler&&Object.prototype.hasOwnProperty.call(window.FWTablerIcons||{},tabler))return '<span class="menu-icon-tabler" aria-hidden="true">'+window.FWTablerIcons[tabler]+'</span>';
  const src=iconSrc(value);
  if(src)return '<img class="menu-icon-image" src="'+safe(src)+'" alt="">';
  const glyph=String(value||'☰').replace(/^emoji:/,'');
  return '<span class="menu-icon-glyph" aria-hidden="true">'+safe(glyph.slice(0,8))+'</span>';
 }
-async function loadIcons(force=false){
- if(iconLoading||iconReady&&!force||!token)return;
+function loadIcons(force=false){
+ if(iconPromise)return iconPromise;
+ if(iconReady&&!force||!token)return Promise.resolve();
  iconLoading=true;
- try {icons=await api('/api/settings/menu-icons');iconReady=true;renderNavigation();if(draft&&document.getElementById('menuDesigner'))renderEditor();}
- catch(e){console.warn('Icon-Bibliothek nicht verfügbar',e);}
- finally {iconLoading=false;}
+ iconPromise=(async()=>{
+  try{icons=await api('/api/settings/menu-icons');iconReady=true;renderNavigation();if(draft&&document.getElementById('menuDesigner'))renderEditor();if(document.getElementById('iconLibraryPanel'))iconLibraryPage();}
+  catch(error){console.warn('Icon-Bibliothek nicht verfügbar',error);}
+  finally{iconLoading=false;iconPromise=null;}
+ })();
+ return iconPromise;
 }
 function styleValue(raw,key){
  if(key==='font')return ['Inter','Roboto','Segoe UI','Arial','system-ui'].includes(raw)?raw:'Inter';
@@ -216,9 +224,23 @@ function dropOn(srcPath,dstPath,inside){
  const list=parentAt(destination,draft);
  list.splice(destination.at(-1),0,source);renderEditor();renderNavigation();
 }
+function iconLabel(value){
+ const raw=String(value||'');
+ if(raw.startsWith('tabler:'))return TABLER_LABELS.find(([key])=>raw==='tabler:'+key)?.[1]||raw;
+ if(raw.startsWith('builtin:'))return STATIC_ICONS.find(([key])=>raw==='builtin:'+key)?.[1]||raw;
+ if(raw.startsWith('custom:'))return icons.find(item=>'custom:'+item.id===raw)?.name||'Eigenes Icon (nicht verfügbar)';
+ return ICONS.find(([glyph])=>glyph===raw)?.[1]||raw||'Standardicon';
+}
 function options(value){
- return '<option value="">Standardicon</option>'+STATIC_ICONS.map(([key,name])=>'<option value="builtin:'+key+'"'+(value==='builtin:'+key?' selected':'')+'>'+safe('▣ '+name)+'</option>').join('')+ICONS.map(([glyph,name])=>'<option value="'+safe(glyph)+'"'+(value===glyph?' selected':'')+'>'+safe(glyph+' '+name)+'</option>').join('')+
- icons.map(x=>'<option value="custom:'+x.id+'"'+(value==='custom:'+x.id?' selected':'')+'>'+safe('🖼 '+x.name)+'</option>').join('');
+ const selected=String(value||'');
+ const choices=[...STATIC_ICONS.map(([key,name])=>['builtin:'+key,'Feuerwehr · '+name]),
+  ...TABLER_LABELS.filter(([key])=>Object.prototype.hasOwnProperty.call(window.FWTablerIcons||{},key)).map(([key,name])=>['tabler:'+key,'Modern · '+name]),
+  ...ICONS.map(([glyph,name])=>[glyph,'Emoji · '+name]),
+  ...icons.map(item=>['custom:'+item.id,'Eigenes Icon · '+item.name])];
+ const known=choices.some(([key])=>key===selected);
+ return '<option value="">Standardicon</option>'+
+  (!known&&selected?'<option value="'+safe(selected)+'" selected>Vorhandenes Symbol · '+safe(iconLabel(selected))+'</option>':'')+
+  choices.map(([key,name])=>'<option value="'+safe(key)+'"'+(selected===key?' selected':'')+'>'+safe(name)+'</option>').join('');
 }
 function rowHtml(node,path){
  const p=path.join('.'),depth=path.length-1,g=isGroup(node),item=g?null:known().get(node),cfg=g?null:draft.entries[node]||{};
@@ -292,6 +314,52 @@ function bindEditor(){
   row.ondrop=event=>{event.preventDefault();event.stopPropagation();row.classList.remove('designer-drop');if(dragPath)dropOn(dragPath,parsePath(row.dataset.path),isGroup(nodeAt(parsePath(row.dataset.path),draft))&&event.offsetX>45);dragPath=null;};
  });
 }
+function iconLibraryPage(){
+ const host=document.getElementById('settingsContent');if(!host)return;
+ if(!iconReady){
+  host.innerHTML='<div class="panel" id="iconLibraryPanel"><h2>Icon-Datenbank</h2><p>Icons werden geladen …</p></div>';
+  if(!iconLoading)loadIcons(true).then(()=>{if(document.getElementById('iconLibraryPanel')&&!document.getElementById('iconLibraryUpload'))iconLibraryPage();});
+  return;
+ }
+ const predefined=[...TABLER_LABELS.filter(([key])=>Object.prototype.hasOwnProperty.call(window.FWTablerIcons||{},key)).map(([key,name])=>({value:'tabler:'+key,name,group:'Moderne Icons'})),
+  ...STATIC_ICONS.map(([key,name])=>({value:'builtin:'+key,name,group:'Feuerwehr-Icons'}))];
+ const gallery=(items)=>items.map(item=>'<div class="icon-library-item" data-icon-search="'+safe(item.name.toLocaleLowerCase('de'))+'">'+iconHtml(item.value)+'<span>'+safe(item.name)+'</span><small>'+safe(item.group)+'</small></div>').join('');
+ host.innerHTML='<div class="panel" id="iconLibraryPanel"><h2>🖼 Icon-Datenbank</h2>'+
+  '<p class="sub">Gemeinsame Auswahl für Menüpunkte und Qualifikationsbausteine. Die Standard-Icons sind offline verfügbar. Das FW-Cockpit-Logo bleibt unverändert.</p>'+
+  '<div class="quick"><button class="btn secondary" type="button" id="iconLibraryBack">Zum Menü-Designer</button>'+
+  '<input type="search" id="iconLibrarySearch" placeholder="Icon nach Name suchen" aria-label="Icons durchsuchen"></div>'+
+  '<h3>Moderne Icons (Tabler)</h3><div class="icon-library-grid">'+gallery(predefined.filter(item=>item.group==='Moderne Icons'))+'</div>'+
+  '<h3>Feuerwehr-Icons</h3><div class="icon-library-grid">'+gallery(predefined.filter(item=>item.group==='Feuerwehr-Icons'))+'</div>'+
+  '<h3>Eigene Icons ('+icons.length+'/50)</h3><div class="icon-library-grid">'+icons.map(item=>
+   '<div class="icon-library-item" data-icon-search="'+safe(item.name.toLocaleLowerCase('de'))+'">'+iconHtml('custom:'+item.id)+'<span>'+safe(item.name)+'</span>'+
+   '<button class="btn small danger" type="button" data-library-delete="'+item.id+'" aria-label="'+safe(item.name)+' löschen">Löschen</button></div>').join('')+'</div>'+
+  '<div class="icon-library-upload"><label class="field">Bezeichnung <input id="iconLibraryName" maxlength="60" placeholder="z. B. Atemschutz"></label>'+
+  '<label class="field">Eigenes SVG/PNG (max. 160 KB) <input id="iconLibraryFile" type="file" accept=".svg,.png,image/svg+xml,image/png"></label>'+
+  '<button class="btn primary" type="button" id="iconLibraryUpload">Icon hochladen</button></div>'+
+  '<div id="iconLibraryNotice" aria-live="polite"></div></div>';
+ host.querySelector('#iconLibraryBack').onclick=()=>adminSettingsPage('menu');
+ host.querySelector('#iconLibrarySearch').oninput=event=>{
+  const needle=event.target.value.trim().toLocaleLowerCase('de');
+  host.querySelectorAll('[data-icon-search]').forEach(node=>{node.hidden=!node.dataset.iconSearch.includes(needle);});
+ };
+ host.querySelector('#iconLibraryUpload').onclick=async()=>{
+  const file=host.querySelector('#iconLibraryFile').files?.[0],name=host.querySelector('#iconLibraryName').value.trim(),notice=host.querySelector('#iconLibraryNotice');
+  if(!file||!name){notice.textContent='Bitte Name und Icon-Datei auswählen.';return;}
+  if(file.size>160000){notice.textContent='Datei ist größer als 160 KB.';return;}
+  const fd=new FormData();fd.append('file',file);fd.append('name',name);
+  try{
+   const response=await fetch('/api/settings/menu-icons',{method:'POST',headers:{Authorization:'Bearer '+token},body:fd});
+   if(!response.ok){let err={};try{err=await response.json();}catch(_){}throw Error(err.detail||err.message||'Upload fehlgeschlagen ('+response.status+')');}
+   iconReady=false;await loadIcons(true);iconLibraryPage();
+   document.getElementById('iconLibraryNotice').textContent='✓ Icon gespeichert und in beiden Auswahllisten verfügbar.';
+  }catch(error){notice.textContent=error.message;}
+ };
+ host.querySelectorAll('[data-library-delete]').forEach(button=>button.onclick=async()=>{
+  if(!confirm('Dieses Icon löschen? Bereits verwendete Menüeinträge benötigen anschließend ein anderes Symbol.'))return;
+  try{await api('/api/settings/menu-icons/'+button.dataset.libraryDelete,{method:'DELETE'});iconReady=false;await loadIcons(true);iconLibraryPage();}
+  catch(error){document.getElementById('iconLibraryNotice').textContent=error.message;}
+ });
+}
 async function upload(){
  const file=document.getElementById('designerIconFile')?.files?.[0],name=document.getElementById('designerIconName')?.value?.trim();
  if(!file||!name){message='Bitte Icon und Namen auswählen.';renderEditor();return;}
@@ -317,5 +385,5 @@ async function save(){
   if(msg)msg.innerHTML='<p class="message success">✓ Menükonfiguration dauerhaft gespeichert.</p>';
  }catch(e){message=e.message;renderEditor();}
 }
-window.MenuDesigner={renderNavigation,renderQuickNav,applyStyle,start,loadIcons,activatePage(page){const target=document.querySelector('#navContainer [data-page="'+String(page).replace(/[^a-z0-9-]/gi,'')+'"]');if(!target)return;document.querySelectorAll('#navContainer .nav-item').forEach(n=>n.classList.toggle('active',n===target));document.querySelectorAll('#navContainer .nav-group').forEach(g=>{const open=g.contains(target);g.classList.toggle('expanded',open);g.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded',String(open));});}};
+window.MenuDesigner={renderNavigation,renderQuickNav,applyStyle,start,loadIcons,iconHtml,iconOptions:options,iconLabel,iconLibraryPage,activatePage(page){const target=document.querySelector('#navContainer [data-page="'+String(page).replace(/[^a-z0-9-]/gi,'')+'"]');if(!target)return;document.querySelectorAll('#navContainer .nav-item').forEach(n=>n.classList.toggle('active',n===target));document.querySelectorAll('#navContainer .nav-group').forEach(g=>{const open=g.contains(target);g.classList.toggle('expanded',open);g.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded',String(open));});}};
 })();

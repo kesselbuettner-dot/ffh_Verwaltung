@@ -100,17 +100,22 @@
   navigation.setAttribute('aria-label','Einstellungsbereiche');
   const sections=opts.sections||[];
   const render=(index)=>{
+
    host.replaceChildren();
    const target=sections[index];
-   if(target)put(host,section(target.title,target.content||ui().empty({message:'Keine Einstellungen'})));
+   if(target)put(host,opts.rawContent?(target.content||ui().empty({message:'Keine Einstellungen'})):section(target.title,target.content||ui().empty({message:'Keine Einstellungen'})));
    Array.from(navigation.children).forEach((button,i)=>button.setAttribute('aria-current',i===index?'page':'false'));
   };
   sections.forEach((group,i)=>{
-   const button=ui().button({label:group.title||'Einstellungen',variant:'secondary',onClick:()=>render(i)});
-   button.classList.add('ds-settings-link');navigation.appendChild(button);
+   const button=ui().button({label:group.title||'Einstellungen',variant:'secondary',
+     onClick:()=>typeof opts.onSelect==='function'?opts.onSelect(group.id||String(i)):render(i)});
+   button.classList.add('ds-settings-link');
+   if(group.id)button.id='stab-'+group.id;
+   navigation.appendChild(button);
   });
   put(layout,navigation,host);
-  if(sections.length)render(0);else put(host,ui().empty({message:'Keine Einstellungsbereiche'}));
+  const selected=sections.findIndex(item=>item.id===opts.activeId);
+  if(sections.length)render(selected<0?0:selected);else put(host,ui().empty({message:'Keine Einstellungsbereiche'}));
   const content=[layout];
   if(opts.onSave)content.push(put(elem('div','ds-modal-actions'),ui().button({label:opts.saveLabel||'Einstellungen speichern',variant:'primary',onClick:opts.onSave})));
   return ui().page({title:opts.title||'Einstellungen',description:opts.description||'',children:content,className:'ds-template-settings'});

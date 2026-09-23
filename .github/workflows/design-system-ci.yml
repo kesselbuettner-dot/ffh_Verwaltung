@@ -1,9 +1,9 @@
 name: FW-Cockpit Designsystem and Components
 on:
   push:
-    branches: [feature/design-system-utilities-20260922, feature/page-templates-20260922]
+    branches: [feature/design-system-utilities-20260922, feature/page-templates-20260922, feature/admin-template-cycle-tasks-20260922]
   pull_request:
-    branches: [release/2026-09-22-wehrleiter-3spalten, feature/design-system-utilities-20260922]
+    branches: [release/2026-09-22-wehrleiter-3spalten, feature/design-system-utilities-20260922, feature/page-templates-20260922]
   workflow_dispatch:
 jobs:
   verify:
@@ -22,6 +22,8 @@ jobs:
         run: |
           node --check src/main/resources/static/design-system.js
           node --check src/main/resources/static/page-templates.js
+          node --check src/main/resources/static/device-cycle-tasks.js
+          node src/test/js/admin-cycle-tasks-smoke.cjs
           node src/test/js/page-templates-smoke.cjs
           node src/test/js/design-system-smoke.cjs
           node src/test/js/menu-designer-smoke.cjs
@@ -29,3 +31,39 @@ jobs:
           node src/test/js/wehrleiter-three-columns-print-smoke.cjs
       - name: Build Java and execute security/database tests
         run: mvn -B -ntp test
+      - name: Build deployable Docker app with isolated PostgreSQL smoke database
+        run: |
+          set -euo pipefail
+          docker build -q -t fw-cockpit-cycle-smoke .
+          docker network create fw-cockpit-cycle-ci
+          docker run -d --name fw-cockpit-cycle-db --network fw-cockpit-cycle-ci \
+            -e POSTGRES_USER=ci -e POSTGRES_DB=ci -e POSTGRES_PASSWORD=ci_only postgres:16-alpine
+          docker run -d --name fw-cockpit-cycle-redis --network fw-cockpit-cycle-ci redis:7-alpine
+          for i in $(seq 1 45); do
+            if docker exec fw-cockpit-cycle-db pg_isready -U ci -d ci >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker run -d --name fw-cockpit-cycle-app --network fw-cockpit-cycle-ci \
+            -p 127.0.0.1:18080:8080 \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://fw-cockpit-cycle-db:5432/ci \
+            -e SPRING_DATASOURCE_USERNAME=ci -e SPRING_DATASOURCE_PASSWORD=ci_only \
+            -e SPRING_DATA_REDIS_HOST=fw-cockpit-cycle-redis \
+            -e JWT_SECRET=ci_only_long_test_secret_never_use_in_production_123456 \
+            fw-cockpit-cycle-smoke
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:18080/index.html > /dev/null; then ready=1; break; fi
+            if ! docker inspect --format='{{.State.Running}}' fw-cockpit-cycle-app | grep -qx true; then break; fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then docker logs --tail 120 fw-cockpit-cycle-app; exit 1; fi
+          actual=$(docker exec fw-cockpit-cycle-db psql -U ci -d ci -Atc \
+            "select to_regclass('public.device_cycle_tasks')")
+          [ "$actual" = "device_cycle_tasks" ] || { echo "Device cycle task table missing"; exit 1; }
+          docker exec fw-cockpit-cycle-db psql -U ci -d ci -v ON_ERROR_STOP=1 -c \
+            "insert into device_cycle_tasks(device_id,due_on,status,created_at)
+             select id,current_date,'OPEN',now() from devices limit 0"
+          curl -fsS http://127.0.0.1:18080/device-cycle-tasks.js > /dev/null
+          curl -fsS http://127.0.0.1:18080/page-templates.js > /dev/null
+          echo "PASS Spring Boot, PostgreSQL cycle-task schema, new page scripts"
+

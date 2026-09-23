@@ -46,3 +46,20 @@
 .ds-settings-layout{grid-template-columns:1fr}.ds-settings-nav{display:flex;overflow-x:auto}.ds-settings-link{flex:0 0 auto;width:auto}
 .ds-template-preview-shell{padding:var(--ds-space-2)}}
 @media print{.ds-template-choice,.ds-template-gallery,.ds-template-preview-shell{box-shadow:none}.ds-template-toolbar,.ds-form-actions{display:none!important}}
+
+/* Existing Administration module content is embedded in the shared Settings shell.
+   Adapt the legacy panels, lists and actions to the same centralized design tokens. */
+.ds-admin-module{min-width:0;display:grid;gap:var(--ds-template-row-gap)}
+.ds-admin-module .panel{background:var(--ds-surface);color:var(--ds-text);border:1px solid var(--ds-border);border-radius:var(--ds-radius-lg);padding:var(--ds-space-4);box-shadow:var(--ds-shadow)}
+.ds-admin-module :is(.btn,.settings-tab){border-radius:var(--ds-radius-md);min-height:var(--ds-control-height)}
+.ds-admin-module :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){border-radius:var(--ds-radius-md);color:var(--ds-text);background:var(--ds-surface);border:1px solid var(--ds-border);min-height:var(--ds-control-height)}
+.ds-admin-module :is(.table,.ds-table){font-size:var(--ds-text-sm)}
+.ds-admin-module :is(.table,.ds-table) th,.ds-admin-module :is(.table,.ds-table) td{padding:var(--ds-space-3);border-bottom:1px solid var(--ds-border)}
+.ds-admin-module .toolbar{display:flex;gap:var(--ds-space-2);flex-wrap:wrap;align-items:center}
+.ds-admin-module :is(.btn,input,select,textarea):focus-visible{outline:3px solid var(--ds-focus);outline-offset:2px}
+.ds-task-hint{font-size:var(--ds-text-sm);color:var(--ds-muted);margin:0 0 var(--ds-space-3)}
+.ds-task-dialog{display:grid;gap:var(--ds-space-3)}
+.ds-task-dialog-message{min-height:1.1em}
+.ds-task-message{margin:var(--ds-space-2) 0;color:var(--ds-success)}
+.ds-task-message.is-error{color:var(--ds-danger)}
+@media(max-width:700px){.ds-admin-module .panel{padding:var(--ds-space-3)}.ds-admin-module .toolbar :is(input,select){min-width:0;max-width:100%}}
