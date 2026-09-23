@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-devices-wehr-layout-v54";
+const CACHE_NAME = "ffh-verwaltung-devices-dropdowns-v55";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -7,7 +7,7 @@ const APP_SHELL = [
   "/menu-designer.css?v=icon-only-v2",
   "/wehrleiter.js?v=qualification-a4-report-v4",
   "/wehrleiter.css?v=qualification-a4-report-v4",
-  "/ui-theme.css?v=device-wehr-layout-v3",
+  "/ui-theme.css?v=device-dropdowns-v4",
   "/design-system.css?v=1",
   "/design-system.js?v=1",
   "/page-templates.css?v=1",

@@ -33,11 +33,11 @@ assert.match(qualification,/id="wIconButton" class="designer-icon-trigger wehr-i
 assert.doesNotMatch(qualification,/<select id="wIcon">/,'Qualification icon picker must use icon-only buttons');
 assert.match(qualification,/function typeOptions\(selected\)[^\n]*safe\(t\.title\)/,'Assignment options show the qualification title only');
 assert.doesNotMatch(qualification,/iconLabel\(t\.icon\)/,'Assignment dropdown must not contain symbol names');
-assert.match(sw,/ffh-verwaltung-devices-wehr-layout-v54/);
+assert.match(sw,/ffh-verwaltung-devices-dropdowns-v55/);
 assert.match(html,/wehrleiter\.js\?v=qualification-a4-report-v4/);
 
 assert.doesNotMatch(menu,/<select aria-label="Symbol" data-icon=/,'Long textual menu-icon dropdown must be removed');
-assert.match(sw,/ffh-verwaltung-devices-wehr-layout-v54/);
+assert.match(sw,/ffh-verwaltung-devices-dropdowns-v55/);
 assert.match(html,/tabler-icons\.js\?v=/);
 assert.match(menu,/iconOptions:options,iconLabel,iconLibraryPage/);
 assert.match(menu,/\/api\/settings\/menu-icons/);
