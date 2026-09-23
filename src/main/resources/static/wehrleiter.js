@@ -294,50 +294,20 @@ async function printDrivingYear(){
  if(!button||!picker||button.disabled)return;
  const year=Number(picker.value);
  if(!Number.isInteger(year)||year<2000||year>2100){alert('Bitte ein gültiges Berichtsjahr auswählen.');return;}
- button.disabled=true;
- const label=button.textContent;button.textContent='Bericht wird erstellt …';
+ button.disabled=true;const prior=button.textContent;button.textContent='Bericht wird erstellt …';
  try{
-  // Only the server-side, permission-checked historical audit is authoritative.
-  const reportData=await api(BASE+'/driving/report?year='+year);
-  const org=reportData.organisation||{},entries=reportData.entries||[];
-  const orgName=org.name||'Organisation nicht hinterlegt';
-  const address=[org.street,[org.postalCode,org.city].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
-  const contact=[org.phone?'Telefon: '+org.phone:'',org.email?'E-Mail: '+org.email:''].filter(Boolean).join(' · ');
-  const representative=org.legalRepresentative?'Vertretung: '+org.legalRepresentative:'';
-  const method={MANUAL:'Manuell durch Wehrleitung',AUTO_OCR_MATCH:'Automatischer Datenabgleich'};
-  const rows=entries.map((c,i)=>'<tr><td>'+(i+1)+'</td><td>'+safe(c.memberName)+'</td><td>'+safe(printDrivingDate(c.checkedAt))+
-   '</td><td>'+safe(c.checkedBy)+'</td><td>'+safe(method[c.method]||c.method)+'</td><td>'+safe(c.result==='POSITIVE'?'Positiv':c.result)+'</td></tr>').join('');
-  const current=document.getElementById('drivingPrintReport');current?.remove();
-  const report=document.createElement('section');report.id='drivingPrintReport';report.className='driving-print-report';
-  report.innerHTML='<header class="driving-print-header"><img class="driving-print-logo" alt="Logo der Organisation"><div>'+
-   '<h1>'+safe(orgName)+'</h1><div>'+safe(address||'Anschrift nicht hinterlegt')+'</div>'+
-   '<div>'+safe(contact||'Kontaktdaten nicht hinterlegt')+'</div>'+
-   (representative?'<div>'+safe(representative)+'</div>':'')+'</div></header>'+
-   '<div class="driving-print-title"><h2>Führerscheinkontrollen – Jahresbericht '+year+'</h2>'+
-   '<div>Berichtszeitraum: 01.01.'+year+' bis 31.12.'+year+' · Dokumentierte Kontrollen: '+entries.length+
-   ' · Erstellt: '+safe(printDrivingDate(new Date().toISOString()))+'</div></div>'+
-   '<table class="driving-print-table"><thead><tr><th>Nr.</th><th>Mitglied</th><th>Prüfdatum / Uhrzeit</th><th>Prüfer</th><th>Prüfweg</th><th>Ergebnis</th></tr></thead><tbody>'+
-   (rows||'<tr><td colspan="6">Für dieses Jahr wurden keine Führerscheinkontrollen protokolliert.</td></tr>')+
-   '</tbody></table><footer>Dieser Bericht enthält ausschließlich die für das gewählte Jahr gespeicherten Prüfvorgänge. Bei automatischer Kontrolle wurde der Datenabgleich dokumentiert; eine Prüfung der Echtheit des Dokuments ist damit nicht verbunden. Es werden keine Führerscheinfotos oder Führerscheinnummern ausgegeben.</footer>';
-  document.body.appendChild(report);
-  // Wait for the organisation logo before opening print/save-as-PDF.
-  const logo=report.querySelector('.driving-print-logo');
-  await new Promise(resolve=>{
-   const finish=()=>resolve();
-   logo.onload=finish;
-   logo.onerror=()=>{
-    if(!logo.src.endsWith('/icons/fw-cockpit-brand.svg')){
-     logo.onerror=finish;logo.src='/icons/fw-cockpit-brand.svg';
-    }else finish();
-   };
-   logo.src=org.logoAvailable?'/api/settings/logo?report='+Date.now():'/icons/fw-cockpit-brand.svg';
-   if(logo.complete){if(logo.naturalWidth>0)finish();else logo.onerror();}
-  });
-  const cleanup=()=>{report.remove();window.removeEventListener('afterprint',cleanup);};
-  window.addEventListener('afterprint',cleanup,{once:true});
-  try{window.print();}catch(error){cleanup();throw error;}
+  const report=await api(BASE+'/driving/report?year='+year);
+  const entries=report.entries||[];
+  const method={MANUAL:'Manuelle Prüfung',AUTO_OCR_MATCH:'Automatischer Datenabgleich'};
+  const rows=entries.map((c,i)=>[i+1,c.memberName,printDrivingDate(c.checkedAt),
+    c.checkedBy,method[c.method]||c.method,c.result==='POSITIVE'?'Positiv':c.result]);
+  await FWPrintTemplates.print({orientation:'landscape',
+   title:'Führerscheinkontrollen – Jahresbericht '+year,
+   subtitle:'Prüfzeitraum: 01.01.'+year+' bis 31.12.'+year+' · '+entries.length+' protokollierte Kontrollen',
+   body:FWPrintTemplates.table(['Nr.','Mitglied','Prüfdatum / Uhrzeit','Prüfer','Prüfweg','Ergebnis'],rows)+
+     '<p class="ffh-print-note">Dokumentierte automatische Kontrollen bestätigen den Datenabgleich, nicht die Echtheit des Führerscheins. Führerscheinfotos und Dokumentnummern werden nicht gespeichert oder ausgegeben.</p>'});
  }catch(error){alert('Jahresbericht konnte nicht erstellt werden: '+(error.message||error));}
- finally{button.disabled=false;button.textContent=label;}
+ finally{button.disabled=false;button.textContent=prior;}
 }
 function manualCheck(id){
  if(!rights('fire.drivingcheck.write'))return;
