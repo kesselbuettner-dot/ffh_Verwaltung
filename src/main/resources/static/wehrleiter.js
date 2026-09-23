@@ -38,7 +38,7 @@ function cardHtml(card,forPrint=false){
 function bind(host){host.querySelectorAll('[data-edit-card]').forEach(b=>b.onclick=()=>editCard(Number(b.dataset.editCard)));}
 async function reload(){[types,cards,people]=await Promise.all([api(BASE+'/types'),api(BASE+'/cards'),api(BASE+'/people')]);}
 function memberOptions(selected){return people.map(p=>'<option value="'+p.id+'"'+(selected===p.id?' selected':'')+'>'+safe(p.name)+'</option>').join('');}
-function typeOptions(selected){return types.filter(t=>!t.sensitive||rights('fire.qualifications.sensitive.read')).map(t=>'<option value="'+t.id+'"'+(selected===t.id?' selected':'')+'>'+safe((window.MenuDesigner?.iconLabel(t.icon)||t.icon)+' · '+t.title)+'</option>').join('');}
+function typeOptions(selected){return types.filter(t=>!t.sensitive||rights('fire.qualifications.sensitive.read')).map(t=>'<option value="'+t.id+'"'+(selected===t.id?' selected':'')+'>'+safe(t.title)+'</option>').join('');}
 async function page(){
  setActive('wehr-members');content.innerHTML=header('👥 Mitgliederverwaltung · Wehrleitung','Feuerwehrqualifikationen und Fälligkeiten; Stammdaten ausschließlich in der Administration.')+
  '<div class="panel">Qualifikationen werden geladen …</div>';
@@ -121,23 +121,24 @@ function drawRows(){
   '<p class="empty">Keine Mitglieder oder Kacheln für diesen Filter.</p>';
  bind(host);
 }
-function printWehrReport(){
- // The report uses exactly the currently visible, server-authorized data and active filters.
+async function printWehrReport(){
+ // Keep the current filters, sort order and server-authorized qualification data.
+ const button=el('wehrPrint');
+ if(button?.disabled)return;
  const rows=filteredMemberRows();
- const report=document.createElement('section');
- report.className='wehr-print-report';
- report.id='wehrPrintReport';
- report.innerHTML='<h1>Mitgliederverwaltung · Wehrleitung – Qualifikationsübersicht</h1>'+
- '<p class="wehr-report-date">Stand: '+safe(new Date().toLocaleString('de-DE'))+
- ' · Mitglieder: '+rows.length+'</p>'+
- wehrLegend()+(rows.length?groupedMemberTable(rows,true):'<p>Keine Einträge für die aktuellen Filter.</p>')+
- '<p class="wehr-print-note">Kürzel, Status und Gültigkeit sind in der Kachelübersicht nach den eingeblendeten Filtern dargestellt. Graue Kacheln sind abgelaufen; schraffierte sind bald fällig.</p>';
- const previous=document.getElementById('wehrPrintReport');
- if(previous)previous.remove();
- document.body.appendChild(report);
- const clean=()=>{report.remove();window.removeEventListener('afterprint',clean);};
- window.addEventListener('afterprint',clean,{once:true});
- try{window.print();}catch(error){clean();alert('Drucken nicht möglich: '+error.message);}
+ if(button)button.disabled=true;
+ try{
+  if(!window.FWPrintTemplates?.print)throw Error('Die gemeinsame Druckvorlage ist nicht geladen.');
+  await window.FWPrintTemplates.print({
+   orientation:'landscape',
+   title:'Qualifikationsübersicht · Wehrleitung',
+   subtitle:'Stand: '+window.FWPrintTemplates.berlinTime()+' · '+rows.length+' Mitglieder · aktuelle Filterauswahl',
+   body:'<section class="wehr-print-content">'+wehrLegend()+
+    (rows.length?groupedMemberTable(rows,true):'<p>Keine Einträge für die aktuellen Filter.</p>')+
+    '<p class="ffh-print-note">Kürzel, Status und Gültigkeit entsprechen der aktuellen Filterauswahl. Graue Kacheln sind abgelaufen, schraffierte sind bald fällig.</p></section>'
+  });
+ }catch(error){alert('Druckbericht konnte nicht erstellt werden: '+(error.message||error));}
+ finally{if(button)button.disabled=false;}
 }
 function inputField(label,id,value='',type='text',hint=''){return '<div class="field"><label for="'+id+'">'+safe(label)+'</label><input id="'+id+'" type="'+type+'" value="'+safe(value)+'">'+(hint?'<small class="sub">'+safe(hint)+'</small>':'')+'</div>';}
 async function uploadCardPdf(id,file){
@@ -248,14 +249,18 @@ async function editType(id){
  (t?'<p><strong>'+safe(t.code)+'</strong></p>':inputField('Technische Kennung (A–Z, 0–9, _)','wCode'))+
  '<div class="field"><label>Kategorie</label><select id="wCategory"><option value="QUALIFICATION">Qualifikation</option><option value="CERTIFICATE_DOCUMENT">Zertifikat / Dokument</option><option value="SUITABILITY">Tauglichkeit</option></select></div>'+ 
  inputField('Name','wTitle',t?.title)+inputField('Kürzel (maximal 10 Zeichen)','wShort',t?.shortLabel||'','','Das Kürzel steht unter dem Symbol in der kleinen Kachel.')+
- '<div class="field"><label for="wIcon">Symbol aus der gemeinsamen Icon-Datenbank</label><div class="wehr-icon-picker"><span id="wIconPreview" class="wehr-type-icon">'+(window.MenuDesigner?.iconHtml(t?.icon||'📋')||safe(t?.icon||'📋'))+'</span><select id="wIcon">'+(window.MenuDesigner?.iconOptions(t?.icon||'📋')||'<option value="📋">📋</option>')+'</select></div><small>Eigene Icons kannst du unter Administration → Icon-Datenbank hochladen.</small></div>'+
+ '<div class="field"><label for="wIconButton">Symbol aus der gemeinsamen Icon-Datenbank</label><div class="wehr-icon-picker"><input id="wIcon" type="hidden" value="'+safe(t?.icon||'📋')+'"><button type="button" id="wIconButton" class="designer-icon-trigger wehr-icon-trigger" title="Symbol wählen" aria-label="Symbol wählen">'+(window.MenuDesigner?.iconHtml(t?.icon||'📋')||safe(t?.icon||'📋'))+'</button></div><small>Eigene Icons kannst du unter Administration → Einstellungen → Icon-Datenbank hochladen.</small></div>'+
  '<div class="field"><label><input id="wTracked" type="checkbox" '+(t?.tracked?'checked':'')+'> Überwachungspflichtig</label></div>'+
  '<div class="field"><label><input id="wSensitive" type="checkbox" '+(t?.sensitive?'checked':'')+'> Vertraulich (gesonderte Berechtigung)</label></div>'+
  inputField('Vorwarnzeit in Tagen (0–365)','wWarn',t?.warningDays??30,'number')+
  inputField('Wiederholung in Monaten (0–120)','wMonths',t?.intervalMonths??0,'number')+
  '<div class="quick"><button class="btn secondary" id="wehrTypeCancel">Abbrechen</button><button class="btn primary" id="wehrTypeSave">Speichern</button></div>';
  el('wCategory').value=t?.category||'QUALIFICATION';
- el('wIcon').onchange=()=>{el('wIconPreview').innerHTML=window.MenuDesigner?.iconHtml(el('wIcon').value)||safe(el('wIcon').value);};
+ el('wIconButton').onclick=()=>window.MenuDesigner?.chooseIcon(el('wIcon').value,el('wIconButton'),chosen=>{
+  el('wIcon').value=chosen||'📋';
+  el('wIconButton').innerHTML=window.MenuDesigner?.iconHtml(el('wIcon').value)||safe(el('wIcon').value);
+  el('wIconButton').title='Symbol: '+(window.MenuDesigner?.iconLabel(el('wIcon').value)||'');
+ },'📋',false);
  el('wehrTypeCancel').onclick=closeModal;el('wehrTypeSave').onclick=async()=>{
   const payload={code:t?.code||el('wCode').value.trim().toUpperCase(),title:el('wTitle').value,shortLabel:el('wShort').value.trim(),icon:el('wIcon').value,category:el('wCategory').value,
    tracked:el('wTracked').checked,sensitive:el('wSensitive').checked,warningDays:Number(el('wWarn').value),intervalMonths:Number(el('wMonths').value)};

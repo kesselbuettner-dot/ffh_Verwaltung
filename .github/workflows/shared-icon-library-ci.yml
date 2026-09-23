@@ -1,7 +1,7 @@
 name: Shared Icon Library CI
 on:
   push:
-    branches: [feature/shared-icon-library-qualifications-20260923, feature/shared-icons-on-server-8405775-20260923, feature/icon-only-picker-in-settings-20260923]
+    branches: [feature/shared-icon-library-qualifications-20260923, feature/shared-icons-on-server-8405775-20260923, feature/icon-only-picker-in-settings-20260923, feature/qualification-icon-picker-plain-type-names-20260923]
   workflow_dispatch:
 jobs:
   verify:
@@ -19,6 +19,7 @@ jobs:
       - name: Validate icon database and JavaScript
         run: |
           node src/test/js/icon-library-smoke.cjs
+          node src/test/js/print-pdf-layout-smoke.cjs
           node --check src/main/resources/static/menu-designer.js
           node --check src/main/resources/static/wehrleiter.js
           node --check src/main/resources/static/tabler-icons.js

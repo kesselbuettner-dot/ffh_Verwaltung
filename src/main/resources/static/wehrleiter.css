@@ -128,3 +128,28 @@
  .driving-print-table tr{break-inside:avoid;page-break-inside:avoid}
  .driving-print-report footer{border-top:1px solid #c9d1da;padding-top:3mm;margin-top:6mm;color:#47586a;font-size:8pt}
 }
+
+/* The qualification builder reuses the menu's shared visual icon picker. */
+.wehr-icon-picker .wehr-icon-trigger{width:56px;height:52px;min-width:56px;flex:0 0 56px}
+.wehr-icon-picker .wehr-icon-trigger .menu-icon-tabler,.wehr-icon-picker .wehr-icon-trigger .menu-icon-image,.wehr-icon-picker .wehr-icon-trigger .menu-icon-glyph{width:31px;height:31px;min-width:31px}
+
+/* Qualification overview in the shared A4 landscape organisation print template. */
+.ffh-print-root .wehr-print-content{width:100%;min-width:0}
+.ffh-print-root .wehr-legend{gap:9px;padding:1mm 0 3mm;flex-wrap:wrap;font-size:8pt}
+.ffh-print-root .wehr-legend-item{gap:4px}
+.ffh-print-root .wehr-overview-table{table-layout:fixed;width:100%;min-width:0!important;border-collapse:collapse;font-size:9pt}
+.ffh-print-root .wehr-overview-table th:first-child{width:24%}
+.ffh-print-root .wehr-overview-table th,.ffh-print-root .wehr-overview-table td{border:1px solid #b2c0ce;padding:2mm;vertical-align:middle;overflow-wrap:anywhere}
+.ffh-print-root .wehr-overview-table thead th{background:#ecf2f7;color:#152332;font-size:9pt}
+.ffh-print-root .wehr-overview-table thead{display:table-header-group}
+.ffh-print-root .wehr-overview-table tr{break-inside:avoid;page-break-inside:avoid}
+.ffh-print-root .wehr-overview-table .wehr-card-list{display:flex;flex-wrap:wrap;gap:3px}
+.ffh-print-root .wehr-overview-table .wehr-tile{width:45px;min-width:45px;max-width:45px;flex:0 0 45px;height:32px;padding:2px;font-size:9pt;break-inside:avoid;page-break-inside:avoid}
+.ffh-print-root .wehr-tile .q-symbol,.ffh-print-root .wehr-tile .q-symbol .menu-icon-tabler,.ffh-print-root .wehr-tile .q-symbol .menu-icon-image{width:13px;height:13px;min-width:13px}
+.ffh-print-root .wehr-tile .q-short{font-size:8pt}
+@media print{
+ .ffh-print-root .wehr-overview-table{min-width:0!important}
+ .ffh-print-root .wehr-overview-table th:first-child{width:24%!important}
+ .ffh-print-root .wehr-overview-table th,.ffh-print-root .wehr-overview-table td{padding:2mm!important}
+ .ffh-print-root .wehr-print-content,.ffh-print-root .wehr-print-content *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
