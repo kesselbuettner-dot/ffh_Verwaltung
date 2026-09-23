@@ -24,6 +24,15 @@ public class DrivingCheckController {
   boolean sent=reminders.notifyOne(id);
   return new NotifyResult(sent,sent?"Persönliche Erinnerung zugestellt.":"Keine Erinnerung zugestellt: noch nicht fällig, bereits erinnert oder keine Push-Anmeldung vorhanden.");
  }
+ /** Return safe, actionable scan errors to the phone; never echo photo, OCR text, or reference number. */
+ @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+ public org.springframework.http.ResponseEntity<java.util.Map<String,String>> scanError(
+      org.springframework.web.server.ResponseStatusException error){
+  return org.springframework.http.ResponseEntity.status(error.getStatusCode())
+      .cacheControl(org.springframework.http.CacheControl.noStore())
+      .body(java.util.Map.of("detail",error.getReason()==null?
+          "Kontrolle konnte nicht abgeschlossen werden. Bitte erneut versuchen oder Wehrleitung kontaktieren.":error.getReason()));
+ }
  public record NotifyResult(boolean delivered,String message){}
  @GetMapping("/checks")
  @PreAuthorize("@fireQualificationPermissions.allowed(authentication,'fire.drivingcheck.read')")
