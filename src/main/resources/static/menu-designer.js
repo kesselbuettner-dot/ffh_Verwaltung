@@ -242,14 +242,81 @@ function options(value){
   (!known&&selected?'<option value="'+safe(selected)+'" selected>Vorhandenes Symbol · '+safe(iconLabel(selected))+'</option>':'')+
   choices.map(([key,name])=>'<option value="'+safe(key)+'"'+(selected===key?' selected':'')+'>'+safe(name)+'</option>').join('');
 }
+function iconPickerChoices(value){
+ const current=String(value||'');
+ const list=[['','Standardicon'],...STATIC_ICONS.map(([key,name])=>['builtin:'+key,name]),
+  ...TABLER_LABELS.filter(([key])=>Object.prototype.hasOwnProperty.call(window.FWTablerIcons||{},key)).map(([key,name])=>['tabler:'+key,name]),
+  ...ICONS.map(([glyph,name])=>[glyph,name]),...icons.map(item=>['custom:'+item.id,item.name])];
+ if(current&&!list.some(([key])=>key===current))list.unshift([current,iconLabel(current)]);
+ return list;
+}
+function closeIconPicker(){
+ const dialog=document.getElementById('designerIconDialog');
+ if(!dialog)return;
+ const returnTo=dialog._returnFocus;
+ dialog.remove();
+ if(returnTo?.isConnected)returnTo.focus();
+}
+function openIconPicker(path,trigger){
+ const node=nodeAt(path,draft),isFolder=isGroup(node),page=isFolder?null:known().get(node);
+ if(!node)return;
+ const current=isFolder?(node.icon||'☰'):(draft.entries[node]?.icon||page?.icon||'☰');
+ closeIconPicker();
+ const dialog=document.createElement('div');
+ dialog.id='designerIconDialog';
+ dialog.className='designer-icon-dialog';
+ dialog.setAttribute('role','dialog');
+ dialog.setAttribute('aria-modal','true');
+ dialog.setAttribute('aria-labelledby','designerIconDialogTitle');
+ dialog._returnFocus=trigger;
+ dialog.innerHTML='<div class="designer-icon-backdrop" data-icon-close></div>'+
+  '<section class="designer-icon-surface"><div class="designer-icon-heading"><h3 id="designerIconDialogTitle">Icon auswählen</h3>'+
+  '<button type="button" class="btn secondary small" data-icon-close aria-label="Icon-Auswahl schließen">✕</button></div>'+
+  '<input type="search" id="designerIconSearch" placeholder="Icon suchen …" aria-label="Icon suchen">'+
+  '<div class="designer-icon-grid" id="designerIconChoices"></div>'+
+  '<div class="designer-icon-footer"><button type="button" class="btn secondary" id="designerIconLibrary">Icon-Datenbank verwalten</button>'+
+  '<button type="button" class="btn secondary" data-icon-close>Abbrechen</button></div></section>';
+ document.body.appendChild(dialog);
+ const search=dialog.querySelector('#designerIconSearch');
+ const grid=dialog.querySelector('#designerIconChoices');
+ function renderChoices(){
+  const needle=search.value.trim().toLocaleLowerCase('de');
+  const matching=iconPickerChoices(current).filter(([value,name])=>name.toLocaleLowerCase('de').includes(needle)||value.toLocaleLowerCase('de').includes(needle));
+  grid.innerHTML=matching.map(([value,name])=>'<button type="button" class="designer-icon-choice'+(value===current?' selected':'')+
+    '" data-choose-icon="'+safe(value)+'" title="'+safe(name)+'" aria-label="'+safe(name)+'" aria-pressed="'+String(value===current)+'">'+
+    iconHtml(value||page?.icon||'☰')+'</button>').join('')||'<p class="sub">Kein Icon gefunden.</p>';
+  grid.querySelectorAll('[data-choose-icon]').forEach(button=>button.onclick=()=>{
+   const chosen=button.dataset.chooseIcon;
+   closeIconPicker();
+   setIcon(path,chosen);
+   renderEditor();
+   document.querySelector('[data-icon-picker="'+path.join('.')+'"]')?.focus();
+  });
+ }
+ renderChoices();
+ search.oninput=renderChoices;
+ dialog.querySelectorAll('[data-icon-close]').forEach(button=>button.onclick=closeIconPicker);
+ dialog.querySelector('#designerIconLibrary').onclick=()=>{closeIconPicker();adminSettingsPage('icons');};
+ dialog.onkeydown=event=>{
+  if(event.key==='Escape'){event.preventDefault();closeIconPicker();}
+  if(event.key==='Tab'){
+   const focusable=[...dialog.querySelectorAll('button:not([disabled]),input:not([disabled])')].filter(el=>el.getClientRects().length);
+   if(!focusable.length)return;
+   const first=focusable[0],last=focusable.at(-1);
+   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  }
+ };
+ search.focus();
+}
 function rowHtml(node,path){
  const p=path.join('.'),depth=path.length-1,g=isGroup(node),item=g?null:known().get(node),cfg=g?null:draft.entries[node]||{};
  const label=g?node.title:(cfg.label||item?.label||node),icon=g?node.icon:(cfg.icon||item?.icon||'☰');
- const settings='<select aria-label="Symbol" data-icon="'+p+'">'+options(icon)+'</select>';
+ const settings='<button type="button" class="designer-icon-trigger" data-icon-picker="'+p+'" title="Icon wählen: '+safe(iconLabel(icon))+'" aria-label="Icon für '+safe(label)+' wählen">'+iconHtml(icon)+'</button>';
  const controls='<button type="button" class="btn small secondary" data-up="'+p+'" title="Nach oben">↑</button>'+
   '<button type="button" class="btn small secondary" data-down="'+p+'" title="Nach unten">↓</button>';
  return '<div class="designer-row'+(g?' designer-group':'')+'" draggable="true" data-path="'+p+'" style="--level:'+depth+'">'+
-  '<span class="designer-grip" title="Am PC ziehen">⠿</span>'+iconHtml(icon)+
+  '<span class="designer-grip" title="Am PC ziehen">⠿</span>'+ 
   '<div class="designer-entry"><input aria-label="Beschriftung" maxlength="60" value="'+safe(label)+'" data-title="'+p+'"><small>'+safe(g?'Gruppe · Ebene '+(depth+1):'Seite · '+node)+'</small></div>'+
   settings+controls+
   (g?'<button type="button" class="btn small secondary" data-add="'+p+'">+ Untergruppe</button><button type="button" class="btn small danger" data-delete="'+p+'">✕</button>':
@@ -263,7 +330,7 @@ function renderEditor(){
  applyStyle();
  host.innerHTML='<div class="panel" id="menuDesigner"><h2>☰ Menü-Designer</h2>'+
  '<p class="sub">Gruppen und Seiten ziehen oder mit ↑ ↓ und „In Gruppe“ sortieren. Änderungen werden erst mit „Speichern“ dauerhaft übernommen. Die Berechtigungen bleiben unverändert.</p>'+
- '<div class="quick"><button type="button" class="btn primary" id="designerAdd">+ Hauptgruppe</button><button type="button" class="btn secondary" id="designerSave">Menü speichern</button><button type="button" class="btn secondary" id="designerReset">Änderungen verwerfen</button></div>'+
+ '<div class="quick"><button type="button" class="btn primary" id="designerAdd">+ Hauptgruppe</button><button type="button" class="btn secondary" id="designerSave">Menü speichern</button><button type="button" class="btn secondary" id="designerReset">Änderungen verwerfen</button><button type="button" class="btn secondary" id="designerOpenIcons">Icon-Datenbank</button></div>'+
  '<div id="designerNotice" aria-live="polite"></div>'+
  '<div class="designer-layout"><section class="designer-list" id="designerList">'+draft.groups.map((g,i)=>rowHtml(g,[i])).join('')+'</section>'+
  '<section class="designer-options"><h3>Darstellung</h3>'+
@@ -273,10 +340,7 @@ function renderEditor(){
  '<label class="field">Effekt <select data-style="effect"><option value="flat">Einfarbig</option><option value="gradient">Farbverlauf</option><option value="gloss">Farbverlauf + Reflexion</option></select></label>'+
  '<h3>Schnellzugriff Handy & Tablet</h3><p class="sub">Unten stehen maximal drei frei wählbare Seiten und der feste Menüknopf (insgesamt vier Symbole). Nicht berechtigte Seiten werden nicht angezeigt.</p>'+ 
  '<div class="designer-quick-settings">'+[0,1,2].map(index=>'<label>Platz '+(index+1)+'<select data-quick-position="'+index+'"><option value="">Kein Eintrag</option>'+[['messages','✉️ Meldungen'],...menuDefinitions.filter(i=>i.implemented!==false).map(i=>[i.id,i.label])].map(([id,label])=>'<option value="'+safe(id)+'"'+(draft.quickNav?.[index]===id?' selected':'')+'>'+safe(label)+'</option>').join('')+'</select></label>').join('')+'</div>'+ 
- '<h3>Eigene Icons</h3><div class="field"><label>Bezeichnung <input id="designerIconName" maxlength="60" placeholder="z. B. Feuerwehrhelm"></label></div>'+
- '<div class="field"><label>Icon-Datei (PNG oder SVG, max. 160 KB) <input id="designerIconFile" type="file" accept=".png,.svg,image/png,image/svg+xml"></label></div>'+
- '<button type="button" class="btn primary small" id="designerUpload">Icon hochladen</button><div id="designerIconList">'+
- icons.map(x=>'<div class="designer-custom-icon">'+iconHtml('custom:'+x.id)+' <span>'+safe(x.name)+'</span><button class="btn small danger" type="button" data-delete-icon="'+x.id+'" title="Icon löschen">✕</button></div>').join('')+'</div>'+
+ '<p class="sub">Eigene Icons und die gemeinsame Bibliothek verwaltest du unter Einstellungen → Icon-Datenbank.</p>'+
  '</section></div></div>';
  document.querySelector('[data-style="effect"]').value=draft.style.effect;
  if(message){document.getElementById('designerNotice').innerHTML='<p class="message error">'+safe(message)+'</p>';message='';}
@@ -288,9 +352,9 @@ function bindEditor(){
  root.querySelector('#designerAdd').onclick=()=>addGroup(null);
  root.querySelector('#designerSave').onclick=save;
  root.querySelector('#designerReset').onclick=()=>{draft=normalized();renderEditor();renderNavigation();};
- root.querySelector('#designerUpload').onclick=upload;
+ root.querySelector('#designerOpenIcons').onclick=()=>adminSettingsPage('icons');
  root.querySelectorAll('[data-title]').forEach(input=>input.onchange=()=>{rename(parsePath(input.dataset.title),input.value);renderNavigation();});
- root.querySelectorAll('[data-icon]').forEach(input=>input.onchange=()=>{setIcon(parsePath(input.dataset.icon),input.value);renderEditor();});
+ root.querySelectorAll('[data-icon-picker]').forEach(button=>button.onclick=()=>openIconPicker(parsePath(button.dataset.iconPicker),button));
  root.querySelectorAll('[data-visible]').forEach(input=>input.onchange=()=>visibility(input.dataset.visible,input.checked));
  root.querySelectorAll('[data-up]').forEach(button=>button.onclick=()=>move(parsePath(button.dataset.up),-1));
  root.querySelectorAll('[data-down]').forEach(button=>button.onclick=()=>move(parsePath(button.dataset.down),1));
@@ -302,10 +366,6 @@ function bindEditor(){
   const key=input.dataset.style;draft.style[key]=styleValue(input.value,key);
   const value=root.querySelector('[data-value="'+key+'"]');if(value)value.textContent=draft.style[key]+(key==='size'||key==='width'||key==='gap'?'px':'');
   applyStyle();
- });
- root.querySelectorAll('[data-delete-icon]').forEach(button=>button.onclick=async()=>{
-   if(!confirm('Dieses Icon löschen? Bereits verwendete Menüeinträge zeigen dann ihr Standardsymbol.'))return;
-   try {await api('/api/settings/menu-icons/'+button.dataset.deleteIcon,{method:'DELETE'});iconReady=false;await loadIcons(true);renderEditor();}catch(e){alert(e.message);}
  });
  root.querySelectorAll('.designer-row').forEach(row=>{
   row.ondragstart=event=>{if(event.target.closest('input,select,button')){event.preventDefault();return;}dragPath=parsePath(row.dataset.path);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',row.dataset.path);};
