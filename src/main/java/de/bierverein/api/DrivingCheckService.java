@@ -41,8 +41,45 @@ public class DrivingCheckService {
  }
  private ResponseStatusException bad(String message){return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);}
  private String norm(String value){
-  return Normalizer.normalize(value==null?"":value,Normalizer.Form.NFD)
+  // Never store or return the original document number. This is only a transient comparison key.
+  return Normalizer.normalize((value==null?"":value).replace("ß","SS").replace("ẞ","SS"),Normalizer.Form.NFD)
    .replaceAll("\\p{M}","").toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]","");
+ }
+ private String nameKey(String value){
+  // German ID spellings: MÜLLER, MUELLER and MULLER must match the same member name.
+  return norm(value).replace("AE","A").replace("OE","O").replace("UE","U");
+ }
+ private boolean matchesName(String ocrText,String memberName){
+  String recognized=nameKey(ocrText);
+  String expected=nameKey(memberName);
+  if(expected.length()<4)return false;
+  if(recognized.contains(expected))return true;
+  // OCR places first and last name on separate lines; additional middle names need not be printed.
+  String[] parts=memberName.trim().split("[\\s,]+");
+  if(parts.length<2)return false;
+  String first=nameKey(parts[0]),last=nameKey(parts[parts.length-1]);
+  return first.length()>=2&&last.length()>=2&&recognized.contains(first)&&recognized.contains(last);
+ }
+ private boolean matchesNumber(String ocrText,String savedReferenceMac){
+  if(savedReferenceMac==null||!savedReferenceMac.matches("[0-9a-f]{64}"))return false;
+  byte[] reference=savedReferenceMac.getBytes(StandardCharsets.US_ASCII);
+  // Tesseract may insert spaces, hyphens, or short line-internal breaks in a document number.
+  // Only compare exact normalized strings (never OCR-confusable substitutions).
+  for(String line:ocrText.split("[\\r\\n]+")){
+   String[] words=Arrays.stream(line.split("[^\\p{L}\\p{N}]+"))
+    .map(this::norm).filter(x->!x.isEmpty()).toArray(String[]::new);
+   for(int start=0;start<words.length;start++){
+    StringBuilder candidate=new StringBuilder();
+    for(int end=start;end<words.length&&end<start+6;end++){
+     candidate.append(words[end]);
+     if(candidate.length()>30)break;
+     if(candidate.length()<5)continue;
+     byte[] digest=fingerprint(candidate.toString()).getBytes(StandardCharsets.US_ASCII);
+     if(MessageDigest.isEqual(reference,digest))return true;
+    }
+   }
+  }
+  return false;
  }
  public String fingerprint(String number){
   String normalized=norm(number);
@@ -95,30 +132,13 @@ public class DrivingCheckService {
   checkOcrRateLimit(userId);
   // Read photo once, transiently, via local OCR stdin. No image is written to file, DB, cache or audit.
   String raw=ocr.read(input.imageData());
-  String content=norm(raw);
-  String expected=norm(user.getMember().getName());
-  String[] nameParts=user.getMember().getName().split("[\\s,]+");
-  boolean matchesName=expected.length()>=4&&
-    (content.contains(expected)||Arrays.stream(nameParts).filter(p->norm(p).length()>=2).allMatch(p->content.contains(norm(p))));
-  boolean matchesNumber=false;
-  // Compare only exact OCR candidates to the pre-approved HMAC reference; never disclose the reference.
-  for(String line:raw.split("[\\r\\n]+")){
-   // An OCR engine may insert spaces in a document number. Try bounded adjacent fragments.
-   String[] words=line.toUpperCase(Locale.ROOT).split("[^A-Z0-9]+");
-   List<String> candidates=new ArrayList<>(Arrays.asList(words));
-   for(int i=0;i<words.length;i++){
-    for(int j=i+1;j<Math.min(words.length,i+3);j++)candidates.add(String.join("",Arrays.copyOfRange(words,i,j+1)));
-   }
-   for(String candidate:candidates){
-    if(candidate.length()<5||candidate.length()>30)continue;
-    String digest=fingerprint(candidate);
-    if(MessageDigest.isEqual(q.licenseNumberMac.getBytes(StandardCharsets.US_ASCII),
-        digest.getBytes(StandardCharsets.US_ASCII))){matchesNumber=true;break;}
-   }
-   if(matchesNumber)break;
-  }
-  if(!matchesName||!matchesNumber)
-   throw new ResponseStatusException(HttpStatus.CONFLICT,"Name oder Führerscheinnummer im Foto nicht eindeutig erkannt. Bitte ein besseres Foto aufnehmen oder Wehrleitung kontaktieren.");
+  boolean nameMatches=matchesName(raw,user.getMember().getName());
+  boolean numberMatches=matchesNumber(raw,q.licenseNumberMac);
+  if(!nameMatches||!numberMatches)
+   throw new ResponseStatusException(HttpStatus.CONFLICT,
+     "Foto wurde übertragen, aber der geschützte Abgleich von Name und Führerscheinnummer ist fehlgeschlagen. "+
+     "Bitte Führerschein vollständig, scharf und ohne Spiegelung fotografieren. "+
+     "Falls die Angaben gut lesbar sind, soll die Wehrleitung die hinterlegte Referenznummer prüfen und gegebenenfalls neu hinterlegen.");
   // Positive status refers to the DATA MATCH. OCR cannot independently verify document authenticity.
   return finish(q,userId,"AUTO_OCR_MATCH");
  }
@@ -130,7 +150,7 @@ public class DrivingCheckService {
   return finish(license(id),checker,"MANUAL");
  }
  private CheckView finish(FireMemberQualification q,Long checker,String method){
-  LocalDate today=LocalDate.now();
+  LocalDate today=LocalDate.now(ZoneId.of("Europe/Berlin"));
   if(today.equals(q.lastCheckedOn))
    throw new ResponseStatusException(HttpStatus.CONFLICT,"Diese Qualifikation wurde heute bereits positiv gebucht");
   q.lastCheckedOn=today;
