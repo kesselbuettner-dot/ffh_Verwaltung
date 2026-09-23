@@ -5,7 +5,7 @@ public class FireQualificationType {
  @Id @GeneratedValue(strategy=GenerationType.IDENTITY) public Long id;
  @Column(nullable=false,unique=true,length=64) public String code;
  @Column(nullable=false,length=120) public String title;
- @Column(length=20) public String icon="📋";
+ @Column(length=80) public String icon="📋";
  @Column(length=10) public String shortLabel;
  @Column(length=32) public String category;
  public boolean tracked=false;
