@@ -32,6 +32,7 @@ jobs:
           node --check src/main/resources/static/print-templates.js
           node --check src/main/resources/static/print-reports.js
           node src/test/js/driving-year-report-smoke.cjs
+          node src/test/js/print-pdf-layout-smoke.cjs
           node src/test/js/mobile-driving-scan-smoke.cjs
           node src/test/js/admin-cycle-tasks-smoke.cjs
           node src/test/js/page-templates-smoke.cjs
