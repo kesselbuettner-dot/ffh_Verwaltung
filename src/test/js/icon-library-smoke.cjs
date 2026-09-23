@@ -33,18 +33,26 @@ assert.match(qualification,/id="wIconButton" class="designer-icon-trigger wehr-i
 assert.doesNotMatch(qualification,/<select id="wIcon">/,'Qualification icon picker must use icon-only buttons');
 assert.match(qualification,/function typeOptions\(selected\)[^\n]*safe\(t\.title\)/,'Assignment options show the qualification title only');
 assert.doesNotMatch(qualification,/iconLabel\(t\.icon\)/,'Assignment dropdown must not contain symbol names');
-assert.match(sw,/ffh-verwaltung-qualification-icon-picker-v52/);
-assert.match(html,/wehrleiter\.js\?v=qualification-icon-picker-v3/);
+assert.match(sw,/ffh-verwaltung-qualification-a4-report-v53/);
+assert.match(html,/wehrleiter\.js\?v=qualification-a4-report-v4/);
 
 assert.doesNotMatch(menu,/<select aria-label="Symbol" data-icon=/,'Long textual menu-icon dropdown must be removed');
-assert.match(sw,/ffh-verwaltung-icon-picker-settings-v51/);
+assert.match(sw,/ffh-verwaltung-qualification-a4-report-v53/);
 assert.match(html,/tabler-icons\.js\?v=/);
 assert.match(menu,/iconOptions:options,iconLabel,iconLibraryPage/);
 assert.match(menu,/\/api\/settings\/menu-icons/);
-assert.match(qualification,/window\.MenuDesigner\?\.iconOptions/);
+assert.doesNotMatch(qualification,/window\.MenuDesigner\?\.iconOptions/,'Text-based icon options must not appear in qualification editing');
 assert.match(qualification,/window\.MenuDesigner\?\.iconHtml\(card\.icon\)/);
+assert.match(qualification,/FWPrintTemplates\.print\(\{/,'Qualification report uses shared organisation print template');
+assert.match(qualification,/orientation:'landscape'/,'Qualification report prints A4 landscape');
+assert.match(qualification,/groupedMemberTable\(rows,true\)/,'Print must retain the three-column qualification overview');
+assert.doesNotMatch(qualification,/document\.body\.appendChild\(report\)/,'Legacy stand-alone print report must not be used');
+const printCss=fs.readFileSync(dir+'wehrleiter.css','utf8');
+assert.match(printCss,/\.ffh-print-root \.wehr-overview-table/,'Qualification table is sized for the common print template');
+assert.match(sw,/\/wehrleiter\.css\?v=qualification-a4-report-v4/);
+
 assert.match(model,/@Column\(length=80\) public String icon/);
 assert.match(controller,/checkedIcon\(input\.icon\(\)\)/);
 assert.match(sw,/\/tabler-icons\.js\?v=/);
 assert.match(security,/"\/tabler-icons\.js"/);
-console.log('PASS compact icon-only menu picker, shared settings icon library and qualification icons; bundled offline icons; unchanged FW-Cockpit logo.');
+console.log('PASS shared icon gallery, plain qualification option labels and shared A4 landscape qualification print template.');
