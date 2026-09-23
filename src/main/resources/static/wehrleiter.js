@@ -342,35 +342,61 @@ async function myDrivingPage(){
   content.innerHTML=header('🚘 Meine Führerscheinkontrolle','Automatischer positiver Abschluss nach vollständigem Namens- und Nummernabgleich; keine Dokumentfotos werden gespeichert.')+
   '<div class="panel">'+(list.length?list.map(c=>
    '<div class="wehr-my-check"><h3>'+safe(c.memberName)+'</h3>'+badge(c)+'<p>Nächster Termin: '+date(c.nextDueOn)+'</p>'+
-   (!c.referencePresent?'<p class="message warning">Die Referenznummer wurde noch nicht von der Wehrleitung hinterlegt.</p>':
-   '<label class="field">Führerschein fotografieren<input type="file" accept="image/*" capture="environment" data-scan-file="'+c.id+'"></label><div id="scanResult-'+c.id+'" aria-live="polite"></div>')+'</div>').join(''):'<p>Du hast keinen offenen Führerscheinauftrag.</p>')+'</div>';
+   (!c.referencePresent?'<p class="message warning">Die Wehrleitung muss zuerst die Referenznummer des Führerscheins hinterlegen.</p>':
+   !['DUE','OVERDUE'].includes(c.status)?'<p class="message success">Aktuell ist keine weitere Führerscheinkontrolle fällig. Der nächste Prüftermin steht oben.</p>':
+   '<label class="field">Führerschein fotografieren<input type="file" accept="image/*" capture="environment" data-scan-file="'+c.id+'"></label><div id="scanResult-'+c.id+'" aria-live="polite"></div>')+'</div>').join(''):'<p>Du hast keinen Führerscheinauftrag.</p>')+'</div>';
   content.querySelectorAll('[data-scan-file]').forEach(f=>f.onchange=()=>scanPhoto(Number(f.dataset.scanFile),f));
  }catch(e){notice(content,e.message);}
 }
-async function scanPhoto(id,fileInput){
- const info=el('scanResult-'+id),file=fileInput.files?.[0];if(!info||!file)return;
- if(file.size>15*1024*1024){fileInput.value='';notice(info,'Foto ist zu groß (max. 15 MB).');return;}
- if(!('createImageBitmap' in window)){
-  fileInput.value='';notice(info,'Dein Browser kann das Foto nicht verarbeiten. Bitte einen aktuellen Browser verwenden oder die Wehrleitung zur manuellen Kontrolle kontaktieren.');return;
+async function loadLicenseBitmap(file){
+ if(typeof createImageBitmap==='function'){
+  try{return await createImageBitmap(file);}catch(e){/* Older Safari/HEIC fallback below. */}
  }
- notice(info,'Das Foto wird nur vorübergehend im Arbeitsspeicher verarbeitet. Die automatische Erkennung erfolgt auf dem FW-Cockpit-Server; es wird kein Bild gespeichert.','success');
+ // An object URL is only a temporary in-memory reference; revoke it immediately after decoding.
+ const url=URL.createObjectURL(file);
+ try{
+  const image=new Image();
+  await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('Bildformat nicht lesbar. Bitte direkt mit der Handykamera ein neues Foto aufnehmen.'));image.src=url;});
+  return {width:image.naturalWidth,height:image.naturalHeight,image,close(){}};
+ }finally{URL.revokeObjectURL(url);}
+}
+async function scanPhoto(id,fileInput){
+ const info=el('scanResult-'+id),file=fileInput.files?.[0];
+ if(!info||!file)return;
+ if(file.size>15*1024*1024){fileInput.value='';notice(info,'Foto ist zu groß (max. 15 MB).');return;}
+ if(file.type&&!file.type.startsWith('image/')){fileInput.value='';notice(info,'Bitte ein Foto des Führerscheins auswählen.');return;}
+ fileInput.disabled=true;
+ notice(info,'Foto wird auf dem Handy für die sichere Übertragung vorbereitet …','success');
  let bitmap=null,canvas=null,encoded=null;
  try{
-  bitmap=await createImageBitmap(file);
-  if(bitmap.width<400||bitmap.height<240)throw Error('Foto ist zu klein. Bitte neu aufnehmen.');
-  const scale=Math.min(1,1800/Math.max(bitmap.width,bitmap.height));
-  canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+  bitmap=await loadLicenseBitmap(file);
+  if(bitmap.width<400||bitmap.height<240)throw Error('Foto ist zu klein. Bitte den gesamten Führerschein scharf aufnehmen.');
+  const scale=Math.min(1,2000/Math.max(bitmap.width,bitmap.height));
+  canvas=document.createElement('canvas');
+  canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
   const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw Error('Fotoverarbeitung nicht verfügbar.');
-  ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
-  encoded=canvas.toDataURL('image/jpeg',.88);
-  if(encoded.length>7_500_000)throw Error('Das komprimierte Foto ist zu groß. Bitte erneut aufnehmen.');
+  ctx.drawImage(bitmap.image||bitmap,0,0,canvas.width,canvas.height);
+  encoded=canvas.toDataURL('image/jpeg',.9);
+  if(!encoded.startsWith('data:image/jpeg;base64,')||encoded.length>7_500_000)throw Error('Foto konnte nicht passend komprimiert werden. Bitte erneut aufnehmen.');
   bitmap.close();bitmap=null;canvas.width=0;canvas.height=0;canvas=null;
-  fileInput.value='';
+  notice(info,'Foto wird zum Server übertragen und mit den hinterlegten Daten abgeglichen …','success');
   const answer=await api(BASE+'/driving/my/'+id+'/scan',{method:'POST',body:JSON.stringify({imageData:encoded})});
-  info.innerHTML='<div class="message success">✓ Der automatische Abgleich von Name und Führerscheinnummer wurde positiv dokumentiert. Kein Dokumentfoto wurde gespeichert.</div>';
-  return answer;
- }catch(error){notice(info,error.message||'Foto konnte nicht geprüft werden. Bitte erneut versuchen oder Wehrleitung kontaktieren.');}
- finally{bitmap?.close?.();if(canvas){canvas.width=0;canvas.height=0;}fileInput.value='';encoded=null;}
+  if(answer?.result!=='POSITIVE'||Number(answer.qualificationId)!==id)
+   throw Error('Es liegt noch keine bestätigte Prüfbuchung vor. Bitte die Wehrleitung kontaktieren.');
+  encoded=null;
+  // The old page kept displaying the previous due date even after a successful server save.
+  await myDrivingPage();
+  const latest=el('scanResult-'+id);
+  const success='✓ Erfolgreich übertragen und protokolliert. Name und Führerscheinnummer wurden auf dem Server abgeglichen; der neue Prüftermin ist oben sichtbar. Das Foto wurde nicht gespeichert.';
+  if(latest)notice(latest,success,'success');
+  else if(document.getElementById('content'))document.getElementById('content').insertAdjacentHTML('afterbegin','<div class="message success">'+safe(success)+'</div>');
+ }catch(error){
+  const target=el('scanResult-'+id)||info;
+  const message=error.message||'Foto konnte nicht geprüft werden.';
+  notice(target,message==='Fehler'?'Die Übertragung oder Prüfung hat nicht funktioniert. Bitte Verbindung prüfen und erneut versuchen.':message);
+ }finally{
+  bitmap?.close?.();if(canvas){canvas.width=0;canvas.height=0;}fileInput.value='';fileInput.disabled=false;encoded=null;
+ }
 }
 async function dashboard(){
  if(!rights('fire.qualifications.read'))return;
