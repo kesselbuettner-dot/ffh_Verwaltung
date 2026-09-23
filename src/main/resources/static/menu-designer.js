@@ -12,7 +12,7 @@ const STATIC_ICONS = [['helmet','Feuerwehrhelm'],['engine','Löschfahrzeug'],['e
 const TABLER_LABELS = [['layout-dashboard','Dashboard'],['users','Mitglieder'],['calendar','Kalender'],['settings','Einstellungen'],['truck','Fahrzeug'],['clipboard-check','Geräteprüfung'],['file-text','Dokument'],['shield-check','Berechtigungen'],['school','Ausbildung'],['wallet','Finanzen'],['shopping-cart','Einkauf'],['list-check','Prüfliste'],['tool','Werkzeug'],['archive','Lager'],['certificate','Qualifikation'],['user-shield','Administration'],['book','Unterlagen'],['menu-2','Menü'],['photo','Bild'],['search','Suche'],['flame','Flamme'],['home','Startseite'],['bell','Benachrichtigung'],['user-check','Mitglied geprüft']];
 
 const DEFAULT_STYLE = {background:'#071827',active:'#1479e9',text:'#dce7ee',font:'Inter',size:15,weight:500,width:250,gap:3,depth:2,effect:'gradient'};
-let draft=null, icons=[], iconReady=false, iconLoading=false, dragPath=null, message='';
+let draft=null, icons=[], iconReady=false, iconLoading=false, iconPromise=null, dragPath=null, message='';
 const safe = value => esc(value);
 const adminRequired = new Set(['admin','admin-members','admin-users','admin-settings']);
 const PRODUCT_ICON = '/icons/fw-cockpit-brand.svg';
@@ -85,12 +85,16 @@ function iconHtml(value){
  const glyph=String(value||'☰').replace(/^emoji:/,'');
  return '<span class="menu-icon-glyph" aria-hidden="true">'+safe(glyph.slice(0,8))+'</span>';
 }
-async function loadIcons(force=false){
- if(iconLoading||iconReady&&!force||!token)return;
+function loadIcons(force=false){
+ if(iconPromise)return iconPromise;
+ if(iconReady&&!force||!token)return Promise.resolve();
  iconLoading=true;
- try {icons=await api('/api/settings/menu-icons');iconReady=true;renderNavigation();if(draft&&document.getElementById('menuDesigner'))renderEditor();if(document.getElementById('iconLibraryPanel'))iconLibraryPage();}
- catch(e){console.warn('Icon-Bibliothek nicht verfügbar',e);}
- finally {iconLoading=false;}
+ iconPromise=(async()=>{
+  try{icons=await api('/api/settings/menu-icons');iconReady=true;renderNavigation();if(draft&&document.getElementById('menuDesigner'))renderEditor();if(document.getElementById('iconLibraryPanel'))iconLibraryPage();}
+  catch(error){console.warn('Icon-Bibliothek nicht verfügbar',error);}
+  finally{iconLoading=false;iconPromise=null;}
+ })();
+ return iconPromise;
 }
 function styleValue(raw,key){
  if(key==='font')return ['Inter','Roboto','Segoe UI','Arial','system-ui'].includes(raw)?raw:'Inter';
