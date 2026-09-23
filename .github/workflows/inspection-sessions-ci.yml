@@ -15,7 +15,7 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Run appointment regression unit tests
-        run: mvn -B -ntp -Dtest=DeviceInspectionPlanningControllerTest test
+        run: mvn -B -ntp -Dtest=DeviceInspectionPlanningControllerTest,DrivingYearReportControllerTest test
       - name: Test HTTP endpoint against disposable PostgreSQL
         run: |
           set -euo pipefail
