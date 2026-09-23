@@ -4,6 +4,7 @@ const css=fs.readFileSync('src/main/resources/static/print-templates.css','utf8'
 const js=fs.readFileSync('src/main/resources/static/print-templates.js','utf8');
 const sw=fs.readFileSync('src/main/resources/static/sw.js','utf8');
 new vm.Script(js,{filename:'print-templates.js'});
+assert(js.includes("document.querySelector('body > .ffh-print-root')"),'Admin template gallery must not block its own print preview');
 assert(!html.includes('</script>\\n<script>'),'Literal backslash-n between script tags creates a visible PDF cover page');
 assert(!css.includes('.ffh-print-header{position:fixed'),'Fixed negative header must not land on a separate page');
 assert(!css.includes('.ffh-print-footer{position:fixed'),'Fixed footer must not overlap report heading');
