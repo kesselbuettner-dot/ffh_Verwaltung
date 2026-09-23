@@ -71,7 +71,7 @@
 @media print{
  @page{size:A4 landscape;margin:12mm}
  html,body{background:#fff!important;overflow:visible!important}
- body > *:not(#wehrPrintReport){display:none!important}
+ body > *:not(#wehrPrintReport):not(#drivingPrintReport){display:none!important}
  body > #wehrPrintReport{display:block!important;position:static!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;color:#172435!important;font-family:Arial,sans-serif!important;font-size:10pt!important}
  .wehr-print-report h1{font-size:17pt;margin:0 0 4mm}
  .wehr-report-date{font-size:9pt;margin:0 0 4mm;color:#273a4b}
@@ -86,4 +86,31 @@
  .wehr-print-report .wehr-legend-item{font-size:9pt}
  .wehr-print-report .wehr-print-note{margin-top:5mm;font-size:8pt;color:#435365}
  .wehr-print-report,.wehr-print-report *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
+
+
+/* Jahresprotokoll Führerscheinkontrolle: nur das eigens erzeugte Dokument drucken. */
+.driving-year-picker{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;font-weight:650}
+.driving-year-picker select{border:1px solid var(--ui-border,#b8c4ce);border-radius:8px;padding:8px;background:var(--ui-surface,#fff);color:var(--ui-text,#172435);font:inherit}
+.driving-print-report{display:none}
+@media print {
+ @page {size:A4 landscape;margin:12mm}
+ body > #drivingPrintReport{display:block!important;position:static!important;max-width:none!important;width:100%!important;
+   margin:0!important;padding:0!important;background:#fff!important;color:#142333!important;font:10pt Arial,sans-serif!important}
+ .driving-print-report,.driving-print-report *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ .driving-print-header{display:grid;grid-template-columns:32mm 1fr;gap:6mm;align-items:center;
+   border-bottom:2px solid #bb2835;padding:0 0 5mm;margin:0 0 6mm}
+ .driving-print-logo{display:block;width:30mm;height:25mm;object-fit:contain}
+ .driving-print-header h1{font-size:16pt;line-height:1.2;margin:0 0 2mm}
+ .driving-print-header div{line-height:1.4}
+ .driving-print-title{margin:0 0 5mm}
+ .driving-print-title h2{font-size:14pt;margin:0 0 2mm}
+ .driving-print-title div{font-size:9pt;color:#364b5c}
+ .driving-print-table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:auto!important}
+ .driving-print-table th,.driving-print-table td{border:1px solid #aabac9!important;padding:2.2mm 2.8mm!important;
+   text-align:left!important;vertical-align:top!important;overflow-wrap:anywhere}
+ .driving-print-table th{background:#eaf0f5!important;font-weight:700}
+ .driving-print-table thead{display:table-header-group}
+ .driving-print-table tr{break-inside:avoid;page-break-inside:avoid}
+ .driving-print-report footer{border-top:1px solid #c9d1da;padding-top:3mm;margin-top:6mm;color:#47586a;font-size:8pt}
 }
