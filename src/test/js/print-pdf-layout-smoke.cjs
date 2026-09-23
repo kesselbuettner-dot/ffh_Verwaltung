@@ -1,0 +1,17 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
+const html=fs.readFileSync('src/main/resources/static/index.html','utf8');
+const css=fs.readFileSync('src/main/resources/static/print-templates.css','utf8');
+const js=fs.readFileSync('src/main/resources/static/print-templates.js','utf8');
+const sw=fs.readFileSync('src/main/resources/static/sw.js','utf8');
+new vm.Script(js,{filename:'print-templates.js'});
+assert(!html.includes('</script>\\n<script>'),'Literal backslash-n between script tags creates a visible PDF cover page');
+assert(!css.includes('.ffh-print-header{position:fixed'),'Fixed negative header must not land on a separate page');
+assert(!css.includes('.ffh-print-footer{position:fixed'),'Fixed footer must not overlap report heading');
+assert(css.includes('.ffh-print-header{position:static!important'),'Letterhead must flow before report content');
+assert(css.includes('.ffh-print-footer{position:static!important'),'Footer must flow after report content');
+assert(css.includes('@page ffh-report-landscape{size:A4 landscape;margin:0}'),'Landscape PDF page must suppress browser URL/date footer');
+assert(css.includes('@page ffh-report-portrait{size:A4 portrait;margin:0}'),'Portrait PDF page must suppress browser URL/date footer');
+assert(css.includes('padding:12mm!important'),'Printed reports must retain internal A4 margins');
+assert(html.includes('/print-templates.css?v=2')&&sw.includes('/print-templates.css?v=2'),'Printed PWA CSS cache must be refreshed');
+assert(sw.includes('ffh-verwaltung-print-pagebreak-fix-v49'),'Installed app must invalidate old print layout');
+console.log('PASS no stray \\n cover page, normal-flow letterhead/footer, portrait/landscape print size and PWA asset refresh');
