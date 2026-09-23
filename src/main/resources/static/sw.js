@@ -1,12 +1,12 @@
-const CACHE_NAME = "ffh-verwaltung-qualification-icon-picker-v52";
+const CACHE_NAME = "ffh-verwaltung-qualification-a4-report-v53";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/tabler-icons.js?v=1",
   "/menu-designer.js?v=qualification-icon-picker-v3",
   "/menu-designer.css?v=icon-only-v2",
-  "/wehrleiter.js?v=qualification-icon-picker-v3",
-  "/wehrleiter.css?v=qualification-icon-picker-v3",
+  "/wehrleiter.js?v=qualification-a4-report-v4",
+  "/wehrleiter.css?v=qualification-a4-report-v4",
   "/ui-theme.css?v=2",
   "/design-system.css?v=1",
   "/design-system.js?v=1",
