@@ -165,7 +165,7 @@ public class FireQualificationController {
  public TypeView updateType(@PathVariable Long id,@RequestBody TypeInput input){
   if(input==null)throw bad("Daten fehlen");
   FireQualificationType t=types.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
-  t.title=required(input.title(),120);t.icon=checkedIcon(input.icon());
+  t.title=required(input.title(),120);if(input.icon()!=null)t.icon=checkedIcon(input.icon());
   t.shortLabel=checkedShortLabel(input.shortLabel());
   t.category=validCategory(input.category());
   t.tracked=Boolean.TRUE.equals(input.tracked());t.sensitive=Boolean.TRUE.equals(input.sensitive());
