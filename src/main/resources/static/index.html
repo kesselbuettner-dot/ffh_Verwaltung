@@ -583,7 +583,7 @@ async function adminSettingsPage(section='members'){
  if(section==='users')section='accounts';
  if(role!=='ADMIN'){content.textContent='Keine Berechtigung';return;}
  if(!window.FWPageTemplates){content.textContent='Seiten-Templates konnten nicht geladen werden.';return;}
- setActive('admin-settings');
+ setActive(section==='icons'?'admin-icons':'admin-settings');
  const sections=[
   ['members','👥 Mitgliederstammdaten'],['accounts','🔐 Konten'],['roles','🛡️ Rollen'],
   ['rights','🔑 Rechte & Zuweisungen'],['menu','☰ Menü'],['icons','🖼 Icon-Datenbank'],['dashboard','📊 Dashboard'],
