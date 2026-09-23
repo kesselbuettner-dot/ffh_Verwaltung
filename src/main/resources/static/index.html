@@ -90,16 +90,17 @@ body.dark .dashboard-role-grid label{background:#0b1823;color:var(--ink)}
 body.dark .vehicle-loading-shell{background:linear-gradient(180deg,#10202e,#0b1823)}
 @media(max-width:800px){.vehicle-loading-shell{padding:10px;border-radius:15px}.vehicle-room-board{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:155px;min-height:330px;padding:10px;border-width:7px;gap:9px}.vehicle-room-board .vehicle-room-v2{grid-column:auto!important;grid-row:auto!important;min-height:155px}.vehicle-orientation{grid-template-columns:48px minmax(110px,150px) 48px;gap:8px}.vehicle-orientation .vehicle-view-arrow{min-width:46px;min-height:46px}.vehicle-orientation-icon{width:82px;height:44px}.vehicle-loading-help{font-size:11px}.vehicle-room-board .mini-device{font-size:7px}.vehicle-room-resize{display:none}}
 </style>
-<link rel="stylesheet" href="/menu-designer.css?v=577e741-v2">
+<link rel="stylesheet" href="/menu-designer.css?v=shared-icon-library-v1">
 <link rel="stylesheet" href="/ui-theme.css?v=2">
 <link rel="stylesheet" href="/design-system.css?v=1">
 <script defer src="/design-system.js?v=1"></script>
 <link rel="stylesheet" href="/page-templates.css?v=1">
 <script defer src="/page-templates.js?v=2"></script>
 <script defer src="/device-cycle-tasks.js?v=1"></script>
-<script defer src="/menu-designer.js?v=577e741-v2"></script>
-<link rel="stylesheet" href="/wehrleiter.css?v=4">
-<script defer src="/wehrleiter.js?v=4"></script>
+<script defer src="/tabler-icons.js?v=1"></script>
+<script defer src="/menu-designer.js?v=shared-icon-library-v1"></script>
+<link rel="stylesheet" href="/wehrleiter.css?v=shared-icon-library-v1">
+<script defer src="/wehrleiter.js?v=shared-icon-library-v1"></script>
 </head>
 <body>
 <div id="pageLoader" class="page-loader" aria-hidden="true"><div class="fire-loader"><div class="fire-loader-scene"><i class="beacon red"></i><i class="beacon blue"></i><img class="fire-loader-logo" src="/icons/fw-cockpit-brand.svg" alt=""><i class="loader-road"></i></div><strong>FFH wird geladen …</strong><small>Einen Augenblick bitte</small></div></div>
@@ -146,39 +147,40 @@ function openRegistration(){modalTitle.textContent='Mitglied registrieren';modal
 async function registerMember(){const first=regFirst.value.trim(),last=regLast.value.trim(),email=regEmail.value.trim(),password=regPass.value;if(!first||!last||!email||password.length<8){regMsg.innerHTML='<div class="message error">Bitte Vorname, Nachname, E-Mail und ein Passwort mit mindestens 8 Zeichen eingeben.</div>';return}try{const r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({firstName:first,lastName:last,email,password})});if(!r.ok){let t='Registrierung fehlgeschlagen';try{const j=await r.json();t=j.message||j.error||t}catch{}throw Error(t)}const x=await r.json();closeModal();loginMsg.innerHTML='<div class="message success">✓ '+esc(x.message)+'</div>'}catch(e){regMsg.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}}
 async function login(){const u=loginUser.value.trim(),p=loginPass.value;loginMsg.innerHTML='';beginLoading();try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});if(!r.ok){let t='Ungültige Zugangsdaten';try{const j=await r.json();t=j.message||j.error||t}catch{}throw Error(t)}const x=await r.json();token=x.token;role=x.role;username=x.username;memberId=x.memberId;memberName=x.memberName||'';localStorage.setItem('token',token);localStorage.setItem('role',role);localStorage.setItem('username',username);if(memberId)localStorage.setItem('memberId',memberId);else localStorage.removeItem('memberId');localStorage.setItem('memberName',memberName);await showApp()}catch(e){loginMsg.innerHTML=`<div class="message error">${esc(e.message)}</div>`}finally{endLoading()}}
 const menuDefinitions=[
- {id:'dashboard',section:'Übersicht',label:'Dashboard',icon:'🏠',action:()=>navigate('dashboard'),roles:['*']},
- {id:'members',section:'Verein',label:'Mitgliederübersicht',icon:'👥',action:()=>navigate('members'),roles:['ADMIN','VORSTAND','KASSENWART','THEKE']},
+ {id:'dashboard',section:'Übersicht',label:'Dashboard',icon:'tabler:layout-dashboard',action:()=>navigate('dashboard'),roles:['*']},
+ {id:'members',section:'Verein',label:'Mitgliederübersicht',icon:'tabler:users',action:()=>navigate('members'),roles:['ADMIN','VORSTAND','KASSENWART','THEKE']},
  {id:'theke',section:'Verkauf',label:'Kasse / Theke',icon:'🍺',action:()=>navigate('theke'),roles:['ADMIN','THEKE','MEMBER','GETRAENKEWART']},
- {id:'shopping',section:'Einkauf & Lager',label:'Einkaufsliste',icon:'🛒',action:()=>inventoryPage('shopping'),roles:['ADMIN','GETRAENKEWART']},
- {id:'purchase',section:'Einkauf & Lager',label:'Wareneingang',icon:'📥',action:()=>inventoryPage('purchase'),roles:['ADMIN','GETRAENKEWART']},
- {id:'inventory',section:'Einkauf & Lager',label:'Inventur',icon:'📋',action:()=>inventoryPage('inventory'),roles:['ADMIN','GETRAENKEWART']},
- {id:'articles',section:'Einkauf & Lager',label:'Artikel verwalten',icon:'🥤',action:()=>inventoryPage('articles'),roles:['ADMIN','GETRAENKEWART']},
+ {id:'shopping',section:'Einkauf & Lager',label:'Einkaufsliste',icon:'tabler:shopping-cart',action:()=>inventoryPage('shopping'),roles:['ADMIN','GETRAENKEWART']},
+ {id:'purchase',section:'Einkauf & Lager',label:'Wareneingang',icon:'tabler:archive',action:()=>inventoryPage('purchase'),roles:['ADMIN','GETRAENKEWART']},
+ {id:'inventory',section:'Einkauf & Lager',label:'Inventur',icon:'tabler:list-check',action:()=>inventoryPage('inventory'),roles:['ADMIN','GETRAENKEWART']},
+ {id:'articles',section:'Einkauf & Lager',label:'Artikel verwalten',icon:'tabler:archive',action:()=>inventoryPage('articles'),roles:['ADMIN','GETRAENKEWART']},
  {id:'food',section:'Einkauf & Lager',label:'Essen',icon:'🍴',action:()=>module('Essen'),roles:['ADMIN','GETRAENKEWART'],implemented:false},
  {id:'stock',section:'Einkauf & Lager',label:'Lager',icon:'📦',action:()=>module('Lager'),roles:['ADMIN','GETRAENKEWART'],implemented:false},
- {id:'wehr-members',section:'Wehrleitung',label:'Mitgliederverwaltung',icon:'👥',action:()=>WehrleiterUI.page(),roles:['*'],permission:'fire.qualifications.read'},
+ {id:'wehr-members',section:'Wehrleitung',label:'Mitgliederverwaltung',icon:'tabler:users',action:()=>WehrleiterUI.page(),roles:['*'],permission:'fire.qualifications.read'},
  {id:'wehr-driving',section:'Wehrleitung',label:'Führerscheinkontrolle',icon:'🚘',action:()=>WehrleiterUI.drivingPage(),roles:['*'],permission:'fire.drivingcheck.read'},
- {id:'wehr-config',section:'Wehrleitung',label:'Qualifikationsbaukasten',icon:'⚙️',action:()=>WehrleiterUI.configPage(),roles:['*'],permission:'fire.qualifications.write'},
- {id:'my-driving',section:'Meine Aufgaben',label:'Meine Führerscheinkontrolle',icon:'🚘',action:()=>WehrleiterUI.myDrivingPage(),roles:['*']},
- {id:'device-cycle-tasks',section:'Meine Aufgaben',label:'Geräteprüfung',icon:'🧰',action:()=>DeviceCycleTasks.page(),roles:['*']},
- {id:'devices',section:'Gerätewart',label:'Geräte',icon:'🧰',action:()=>devicePage(),roles:['*'],permission:'fire.devices.read'},
- {id:'device-inspection-plans',section:'Gerätewart',label:'Prüftermine',icon:'✅',action:()=>deviceInspectionPlansPage(),roles:['*'],permission:'fire.devices.read'},
- {id:'vehicles',section:'Gerätewart',label:'Fahrzeuge',icon:'🚒',action:()=>vehiclesPage(),roles:['*'],permission:'fire.vehicles.read'},
- {id:'device-settings',section:'Gerätewart',label:'Einstellungen',icon:'⚙️',action:()=>deviceSettingsPage(),roles:['*'],permission:'fire.devices.read'},
+ {id:'wehr-config',section:'Wehrleitung',label:'Qualifikationsbaukasten',icon:'tabler:certificate',action:()=>WehrleiterUI.configPage(),roles:['*'],permission:'fire.qualifications.write'},
+ {id:'my-driving',section:'Meine Aufgaben',label:'Meine Führerscheinkontrolle',icon:'tabler:user-check',action:()=>WehrleiterUI.myDrivingPage(),roles:['*']},
+ {id:'device-cycle-tasks',section:'Meine Aufgaben',label:'Geräteprüfung',icon:'tabler:clipboard-check',action:()=>DeviceCycleTasks.page(),roles:['*']},
+ {id:'devices',section:'Gerätewart',label:'Geräte',icon:'tabler:tool',action:()=>devicePage(),roles:['*'],permission:'fire.devices.read'},
+ {id:'device-inspection-plans',section:'Gerätewart',label:'Prüftermine',icon:'tabler:clipboard-check',action:()=>deviceInspectionPlansPage(),roles:['*'],permission:'fire.devices.read'},
+ {id:'vehicles',section:'Gerätewart',label:'Fahrzeuge',icon:'tabler:truck',action:()=>vehiclesPage(),roles:['*'],permission:'fire.vehicles.read'},
+ {id:'device-settings',section:'Gerätewart',label:'Einstellungen',icon:'tabler:settings',action:()=>deviceSettingsPage(),roles:['*'],permission:'fire.devices.read'},
  {id:'drivebook',section:'Gerätewart',label:'Fahrtenbuch',icon:'🚒',action:()=>deviceModule('Fahrtenbuch'),roles:['ADMIN','GERATEWART'],implemented:false},
  {id:'devicebook',section:'Gerätewart',label:'Gerätebuch',icon:'📖',action:()=>deviceModule('Gerätebuch'),roles:['ADMIN','GERATEWART'],implemented:false},
  {id:'material',section:'Gerätewart',label:'Material',icon:'📦',action:()=>deviceModule('Material'),roles:['ADMIN','GERATEWART'],implemented:false},
  {id:'events',section:'Weitere Bereiche',label:'Veranstaltungen',icon:'📅',action:()=>module('Veranstaltungen'),roles:['*'],implemented:false},
  {id:'firewehr',section:'Weitere Bereiche',label:'Feuerwehr',icon:'🚒',action:()=>module('Feuerwehr'),roles:['*'],implemented:false},
- {id:'services',section:'Schulung / Dienst',label:'Dienste',icon:'🚒',action:()=>navigate('services'),roles:['*'],permission:'training.services.read'},
- {id:'training-documents',section:'Schulung / Dienst',label:'Unterlagen',icon:'📎',action:()=>navigate('training-documents'),roles:['*'],permission:'training.documents.read'},
+ {id:'services',section:'Schulung / Dienst',label:'Dienste',icon:'tabler:school',action:()=>navigate('services'),roles:['*'],permission:'training.services.read'},
+ {id:'training-documents',section:'Schulung / Dienst',label:'Unterlagen',icon:'tabler:book',action:()=>navigate('training-documents'),roles:['*'],permission:'training.documents.read'},
  {id:'finance',section:'Weitere Bereiche',label:'Finanzen',icon:'💶',action:()=>module('Finanzen'),roles:['ADMIN','VORSTAND','KASSENWART'],implemented:false},
  {id:'documents',section:'Weitere Bereiche',label:'Dokumente',icon:'📄',action:()=>module('Dokumente'),roles:['*'],implemented:false},
- {id:'calendar',section:'Weitere Bereiche',label:'Kalender',icon:'📆',action:()=>navigate('calendar'),roles:['*']},
+ {id:'calendar',section:'Weitere Bereiche',label:'Kalender',icon:'tabler:calendar',action:()=>navigate('calendar'),roles:['*']},
  {id:'donations',section:'Weitere Bereiche',label:'Spenden',icon:'🤝',action:()=>module('Spenden'),roles:['ADMIN','VORSTAND'],implemented:false},
  {id:'admin',section:'Administration',label:'Administration (alte Seite)',icon:'⚙️',action:()=>adminSettingsPage('members'),roles:['ADMIN'],implemented:false},
  {id:'admin-members',section:'Administration',label:'Mitglieder (alte Seite)',icon:'👥',action:()=>adminSettingsPage('members'),roles:['ADMIN'],implemented:false},
  {id:'admin-users',section:'Administration',label:'Benutzer & Rechte (alte Seite)',icon:'🔐',action:()=>adminSettingsPage('accounts'),roles:['ADMIN'],implemented:false},
- {id:'admin-settings',section:'Administration',label:'Administration',icon:'⚙️',action:()=>navigate('admin-settings'),roles:['ADMIN']}
+ {id:'admin-settings',section:'Administration',label:'Administration',icon:'tabler:settings',action:()=>navigate('admin-settings'),roles:['ADMIN']},
+ {id:'admin-icons',section:'Administration',label:'Icon-Datenbank',icon:'tabler:photo',action:()=>adminSettingsPage('icons'),roles:['ADMIN']}
 ];
 function hasPermission(key){return Array.isArray(myPermissions)&&myPermissions.includes(key)}
 function menuAllowed(item){return item.implemented!==false&&(!item.permission||hasPermission(item.permission))&&(item.roles.includes('*')||item.roles.includes(role))}
@@ -581,10 +583,10 @@ async function adminSettingsPage(section='members'){
  if(section==='users')section='accounts';
  if(role!=='ADMIN'){content.textContent='Keine Berechtigung';return;}
  if(!window.FWPageTemplates){content.textContent='Seiten-Templates konnten nicht geladen werden.';return;}
- setActive('admin-settings');
+ setActive(section==='icons'?'admin-icons':'admin-settings');
  const sections=[
   ['members','👥 Mitgliederstammdaten'],['accounts','🔐 Konten'],['roles','🛡️ Rollen'],
-  ['rights','🔑 Rechte & Zuweisungen'],['menu','☰ Menü'],['dashboard','📊 Dashboard'],
+  ['rights','🔑 Rechte & Zuweisungen'],['menu','☰ Menü'],['icons','🖼 Icon-Datenbank'],['dashboard','📊 Dashboard'],
   ['master','🏢 Stammdaten & Impressum'],['appearance','🎨 Erscheinungsbild'],
   ['design','🧩 Designsystem'],['templates','📐 Seiten-Templates'],['update','⬆️ Update']
  ];
@@ -602,6 +604,7 @@ async function adminSettingsPage(section='members'){
  if(section==='roles')return adminRolesSettingsPage();
  if(section==='rights')return adminPermissionsSettingsPage();
  if(section==='menu')return adminMenuSettingsPage();
+ if(section==='icons')return window.MenuDesigner?.iconLibraryPage();
  if(section==='dashboard')return adminDashboardSettingsPage();
  if(section==='master')return adminMasterSettingsPage();
  if(section==='update')return adminUpdateSettingsPage();

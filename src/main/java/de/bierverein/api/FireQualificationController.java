@@ -67,6 +67,12 @@ public class FireQualificationController {
    }
   };
  }
+ private String checkedIcon(String raw){
+  if(raw==null||raw.isBlank())return "📋";
+  String icon=raw.trim();
+  if(icon.length()>80||icon.contains("<")||icon.contains(">"))throw bad("Icon ungültig oder zu lang");
+  return icon;
+ }
  private String checkedShortLabel(String text){
   if(text==null||text.isBlank())return null;
   String label=text.trim().toUpperCase(Locale.GERMAN);
@@ -147,7 +153,7 @@ public class FireQualificationController {
   String code=required(input.code(),64).toUpperCase(Locale.ROOT);
   if(!code.matches("[A-Z][A-Z0-9_]{0,63}")||types.findByCode(code).isPresent())throw bad("Kennung ungültig oder vorhanden");
   var t=new FireQualificationType(code,required(input.title(),120),
-      input.icon()==null?"📋":input.icon(),Boolean.TRUE.equals(input.tracked()),
+      checkedIcon(input.icon()),Boolean.TRUE.equals(input.tracked()),
       Boolean.TRUE.equals(input.sensitive()),range(input.warningDays(),365,30),range(input.intervalMonths(),120,0));
   t.shortLabel=checkedShortLabel(input.shortLabel());
   t.category=validCategory(input.category());
@@ -159,7 +165,7 @@ public class FireQualificationController {
  public TypeView updateType(@PathVariable Long id,@RequestBody TypeInput input){
   if(input==null)throw bad("Daten fehlen");
   FireQualificationType t=types.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
-  t.title=required(input.title(),120);if(input.icon()!=null&&input.icon().length()<=20)t.icon=input.icon();
+  t.title=required(input.title(),120);if(input.icon()!=null)t.icon=checkedIcon(input.icon());
   t.shortLabel=checkedShortLabel(input.shortLabel());
   t.category=validCategory(input.category());
   t.tracked=Boolean.TRUE.equals(input.tracked());t.sensitive=Boolean.TRUE.equals(input.sensitive());

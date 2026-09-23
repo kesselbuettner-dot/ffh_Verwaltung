@@ -87,3 +87,17 @@
  .wehr-print-report .wehr-print-note{margin-top:5mm;font-size:8pt;color:#435365}
  .wehr-print-report,.wehr-print-report *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 }
+
+/* Shared qualification symbols: icon above abbreviated label, including print view. */
+.wehr-tile{flex-direction:column;gap:1px}
+.wehr-tile .q-symbol{display:inline-flex;align-items:center;justify-content:center;height:17px;max-width:100%;line-height:1}
+.wehr-tile .q-symbol .menu-icon-tabler,.wehr-tile .q-symbol .menu-icon-image{height:17px;width:17px;min-width:17px}
+.wehr-tile .q-symbol .menu-icon-tabler svg{width:100%;height:100%;stroke:currentColor}
+.wehr-tile .q-short{font-weight:800;line-height:1.1;max-width:100%;overflow:hidden}
+.wehr-type-icon{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:27px;height:27px;min-width:27px}
+.wehr-type-icon .menu-icon-tabler,.wehr-type-icon .menu-icon-image{width:24px;height:24px;min-width:24px}
+.wehr-icon-picker{display:flex;align-items:center;gap:10px}
+.wehr-icon-picker select{flex:1;min-width:0}
+.wehr-icon-picker .wehr-type-icon{border:1px solid var(--line);border-radius:8px;width:46px;height:46px;flex:0 0 46px}
+.wehr-print-report .wehr-tile .q-symbol,.wehr-print-report .wehr-tile .q-symbol .menu-icon-tabler,.wehr-print-report .wehr-tile .q-symbol .menu-icon-image{width:12px!important;height:12px!important;min-width:12px!important}
+.wehr-print-report .wehr-tile .q-short{font-size:8pt}
