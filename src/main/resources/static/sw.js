@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-driving-scan-v48";
+const CACHE_NAME = "ffh-verwaltung-print-pagebreak-fix-v49";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -12,7 +12,7 @@ const APP_SHELL = [
   "/page-templates.css?v=1",
   "/page-templates.js?v=2",
   "/print-templates.js?v=1",
-  "/print-templates.css?v=1",
+  "/print-templates.css?v=2",
   "/print-reports.js?v=1",
   "/inspection-signature.js?v=1",
   "/device-cycle-tasks.js?v=2",
