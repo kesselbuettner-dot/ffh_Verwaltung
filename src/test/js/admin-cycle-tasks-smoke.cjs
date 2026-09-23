@@ -23,7 +23,7 @@ assert(service.includes('Objects.equals(task.getAssignedUserId(),user.getId())')
 assert(service.includes('tasks.insertIfAbsent('),'Concurrent task creation requires atomic idempotency');
 assert(security.includes('"/device-cycle-tasks.js"'),'Browser cannot load task asset without login header');
 assert(html.includes('/device-cycle-tasks.js?v=2')&&sw.includes('/device-cycle-tasks.js?v=2'),'New task asset must be versioned in PWA shell');
-assert(sw.includes('ffh-verwaltung-driving-scan-v48'),'PWA cache must change when print/inspection assets change');
+assert(sw.includes('ffh-verwaltung-print-pagebreak-fix-v49'),'PWA cache must change when print/inspection assets change');
 assert(html.includes('inspection-signature.js?v=1')&&html.includes('inspection-management.js?v=2'),'Both inspection assets must load');
 assert(sw.includes('/inspection-signature.js?v=1')&&sw.includes('/inspection-management.js?v=2'),'Both inspection assets must be precached');
 assert(scripts.includes('signatureData:signature.signature()'),'Delegated inspections must be signed');
