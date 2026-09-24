@@ -102,8 +102,8 @@ body.dark .vehicle-loading-shell{background:linear-gradient(180deg,#10202e,#0b18
 <script defer src="/inspection-signature.js?v=1"></script>
 <script defer src="/device-cycle-tasks.js?v=2"></script>
 <script defer src="/inspection-management.js?v=2"></script>
-<script defer src="/tabler-icons.js?v=1"></script>
-<script defer src="/menu-designer.js?v=qualification-icon-picker-v3"></script>
+<script defer src="/tabler-icons.js?v=menu-icon-fix-20260924"></script>
+<script defer src="/menu-designer.js?v=menu-icon-fix-20260924"></script>
 <link rel="stylesheet" href="/wehrleiter.css?v=qualification-a4-report-v4">
 <script defer src="/wehrleiter.js?v=qualification-a4-report-v4"></script>
 <link rel="stylesheet" href="/print-templates.css?v=2">
@@ -213,7 +213,7 @@ function renderOriginalNavigation(){
  const groups=[];
  items.forEach(item=>{let group=groups[groups.length-1];if(!group||group.name!==item.section){group={name:item.section,items:[]};groups.push(group)}group.items.push(item)});
  let collapsedGroups=[];try{collapsedGroups=JSON.parse(localStorage.getItem('collapsedNavGroups')||'[]')}catch{}const collapsed=new Set(Array.isArray(collapsedGroups)?collapsedGroups:[]);
- host.innerHTML=groups.map(g=>'<div class="nav-group '+(collapsed.has(g.name)?'collapsed':'')+'" data-group="'+esc(g.name)+'"><button class="nav-section" type="button"><span>'+esc(g.name)+'</span><span class="chevron">⌄</span></button><div class="nav-group-items">'+g.items.map(i=>'<button class="nav-item '+(i.id.includes('-')?'nav-child':'')+'" data-page="'+esc(i.id)+'" data-nav-id="'+esc(i.id)+'">'+i.icon+' <span>'+esc(i.label)+'</span></button>').join('')+'</div></div>').join('');
+ host.innerHTML=groups.map(g=>'<div class="nav-group '+(collapsed.has(g.name)?'collapsed':'')+'" data-group="'+esc(g.name)+'"><button class="nav-section" type="button"><span>'+esc(g.name)+'</span><span class="chevron">⌄</span></button><div class="nav-group-items">'+g.items.map(i=>'<button class="nav-item '+(i.id.includes('-')?'nav-child':'')+'" data-page="'+esc(i.id)+'" data-nav-id="'+esc(i.id)+'">'+(window.MenuDesigner?.iconHtml?window.MenuDesigner.iconHtml(i.icon):'<span class="menu-icon-glyph" aria-hidden="true">'+esc(i.icon.startsWith('tabler:')?'▦':i.icon)+'</span>')+' <span>'+esc(i.label)+'</span></button>').join('')+'</div></div>').join('');
  host.querySelectorAll('.nav-section').forEach(button=>button.addEventListener('click',()=>{const group=button.closest('.nav-group');group.classList.toggle('collapsed');const closed=[...host.querySelectorAll('.nav-group.collapsed')].map(x=>x.dataset.group);localStorage.setItem('collapsedNavGroups',JSON.stringify(closed))}));
  host.querySelectorAll('[data-nav-id]').forEach(button=>{button.addEventListener('click',()=>{closeMenu();const item=menuDefinitions.find(x=>x.id===button.dataset.navId);if(item)item.action()})});
  setActive(window.currentPage||'dashboard');
