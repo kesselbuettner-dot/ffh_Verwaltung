@@ -1,9 +1,9 @@
-const CACHE_NAME = "ffh-verwaltung-attendance-print-20260924-v2";
+const CACHE_NAME = "ffh-verwaltung-menu-icon-fix-20260924";
 const APP_SHELL = [
   "/",
   "/manifest.json",
-  "/tabler-icons.js?v=1",
-  "/menu-designer.js?v=qualification-icon-picker-v3",
+  "/tabler-icons.js?v=menu-icon-fix-20260924",
+  "/menu-designer.js?v=menu-icon-fix-20260924",
   "/menu-designer.css?v=icon-only-v2",
   "/wehrleiter.js?v=qualification-a4-report-v4",
   "/wehrleiter.css?v=qualification-a4-report-v4",
