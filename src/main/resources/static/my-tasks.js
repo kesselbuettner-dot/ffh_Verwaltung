@@ -11,10 +11,11 @@
   return {source,id,title,description,dueOn,status,action,...extra};
  }
  async function load(){
-  const [manual,devices,services,messages]=await Promise.all([
+  const [manual,devices,services,messages,driving]=await Promise.all([
    api(BASE),api('/api/my-tasks/device-inspections?includeDone=false').catch(()=>[]),
    api('/api/training/events/reminders').catch(()=>[]),
-   api('/api/dashboard/messages').catch(()=>[])
+   api('/api/dashboard/messages').catch(()=>[]),
+   api('/api/fire/qualifications/driving/my').catch(()=>[])
   ]);
   const items=(manual.tasks||[]).map(t=>row('GENERAL',String(t.id),t.title,t.description,t.dueOn,t.status,
    ()=>editTask(t),{raw:t,canEdit:t.canEdit,canChangeStatus:t.canChangeStatus,assigneeName:t.assigneeName}));
@@ -24,10 +25,11 @@
    new Date(x.startAt).toLocaleString('de-DE'),x.occurrenceDate,'OPEN',()=>serviceRemindersPage())));
   (Array.isArray(messages)?messages:[]).filter(x=>x.type==='MESSAGE'&&x.active&&!x.read).forEach(x=>items.push(
    row('MESSAGE',String(x.id),x.title,x.body||'',null,'OPEN',()=>openMobileMessages())));
-  // Driving qualification module keeps its own proof/status rules; it is linked, not auto-closed.
-  if(document.querySelector('[data-nav-id="my-driving"]')){
-   items.push(row('DRIVING','personal','Meine Führerscheinkontrolle','Prüfstatus im Führerscheinmodul ansehen',null,'INFO',()=>WehrleiterUI.myDrivingPage()));
-  }
+  // Only genuinely due driving checks appear as tasks, never a permanent dummy task.
+  (Array.isArray(driving)?driving:[]).filter(c=>['DUE','OVERDUE'].includes(c.status)).forEach(c=>items.push(
+   row('DRIVING',String(c.id),'Meine Führerscheinkontrolle',c.referencePresent?'Führerscheinprüfung durchführen':'Referenzdaten durch die Wehrleitung erforderlich',
+    c.nextDueOn||null,'OPEN',()=>WehrleiterUI.myDrivingPage())));
+
   last={manual,items};return last;
  }
  function badge(task){
