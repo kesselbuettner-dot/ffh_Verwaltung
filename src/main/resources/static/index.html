@@ -90,6 +90,7 @@ body.dark .dashboard-role-grid label{background:#0b1823;color:var(--ink)}
 body.dark .vehicle-loading-shell{background:linear-gradient(180deg,#10202e,#0b1823)}
 @media(max-width:800px){.vehicle-loading-shell{padding:10px;border-radius:15px}.vehicle-room-board{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:155px;min-height:330px;padding:10px;border-width:7px;gap:9px}.vehicle-room-board .vehicle-room-v2{grid-column:auto!important;grid-row:auto!important;min-height:155px}.vehicle-orientation{grid-template-columns:48px minmax(110px,150px) 48px;gap:8px}.vehicle-orientation .vehicle-view-arrow{min-width:46px;min-height:46px}.vehicle-orientation-icon{width:82px;height:44px}.vehicle-loading-help{font-size:11px}.vehicle-room-board .mini-device{font-size:7px}.vehicle-room-resize{display:none}}
 .service-reminder-badge{margin-left:auto;background:#c51f2d;color:white;border-radius:10px;padding:2px 7px;font-size:11px}.topbar .top-search{margin-left:auto;flex:0 1 370px;min-width:90px}.topbar-icon{position:relative;flex:none;display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);border-radius:11px;background:transparent;color:var(--ink);font-size:24px;cursor:pointer}.topbar-icon:hover,.topbar-icon:focus-visible{background:var(--blue);color:#fff}.topbar-badge{position:absolute;right:-5px;top:-6px;min-width:17px;height:17px;padding:1px 4px;border-radius:20px;background:#c51f2d;color:white;font-size:10px;line-height:15px;font-weight:800}.topbar .profile-wrap{margin-left:0;flex:none}@media(max-width:700px){.topbar .top-status{display:none}.topbar .top-search{flex:1 1 auto;max-width:none}.topbar-icon{width:32px;height:34px;font-size:19px}.topbar{gap:5px}}
+.calendar-finished{background:#eef0f3!important;border-color:#c8ced6!important;color:#667085!important;filter:grayscale(1)}.calendar-finished .training-date{background:#e0e3e8!important;color:#667085!important}.calendar-finished .training-response{display:none!important}.calendar-archive-panel{margin-top:22px}.calendar-archive-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.calendar-archive-controls label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:12px;min-width:125px;flex:1}.calendar-archive-controls select,.calendar-archive-controls input{padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface,#fff);color:var(--ink);min-width:0;width:100%}.calendar-current-label{margin:0 0 15px}
 </style>
 <link rel="stylesheet" href="/menu-designer.css?v=icon-only-v2">
 <link rel="stylesheet" href="/ui-theme.css?v=device-dropdowns-v4">
@@ -1536,4 +1537,76 @@ async function previewDeviceImport(){const file=document.getElementById('deviceI
 async function commitDeviceImport(){const file=document.getElementById('deviceImportFile')?.files?.[0];if(!file||file!==window.deviceImportPreviewFile||!window.deviceImportPreview||window.deviceImportPreview.errors)return;deviceImportCommit.disabled=true;try{const x=await deviceImportRequest('commit',file);closeModal();await loadDevices();const msg=document.getElementById('deviceMsg');if(msg)msg.innerHTML='<div class="message success">'+x.imported+' Geräte importiert, '+x.skipped+' vorhandene übersprungen.</div>'}catch(e){const target=document.getElementById('deviceImportResult');if(target)target.insertAdjacentHTML('afterbegin','<div class="message error">'+esc(e.message)+'</div>');deviceImportCommit.disabled=false}}
 
 function resetDeviceFilters(){['deviceSearch','deviceCategoryFilter','deviceVehicleFilter','deviceStatusFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='' });const required=document.getElementById('deviceInspectionFilter');if(required)required.checked=false;loadDevices()}
+
+/* Calendar lifecycle: finished events are read-only for 48 hours, then shown
+ * only in the year/category archive. The original database records remain intact. */
+const CALENDAR_ARCHIVE_DELAY_MS=48*60*60*1000;
+function calendarEventFinished(item){return new Date(item.endAt).getTime()<=Date.now()}
+function calendarEventArchived(item){return new Date(item.endAt).getTime()<=Date.now()-CALENDAR_ARCHIVE_DELAY_MS}
+const calendarCardBase=trainingOccurrenceCard;
+trainingOccurrenceCard=function(item,source='module'){
+ if(!calendarEventFinished(item))return calendarCardBase(item,source);
+ // Never render actions or response controls for concluded entries.
+ const markup=calendarCardBase({...item,canManage:false,canRespond:false,registrationRequired:false},source);
+ return markup.replace('class="training-event"','class="training-event calendar-finished"')
+   .replace('</h3>','</h3><span class="badge">Abgelaufen · nur lesen</span>');
+};
+const calendarTrainingPageBase=window.trainingPage;
+window.trainingPage=async function(mode='training'){
+ await calendarTrainingPageBase(mode);
+ if(mode==='calendar')await prepareCalendarArchive();
+};
+const calendarRenderOccurrencesBase=renderTrainingOccurrences;
+renderTrainingOccurrences=function(){
+ const host=document.getElementById('trainingEventRows');
+ if(!host)return;
+ const filter=window.trainingFilter||'ALL';
+ const list=(window.trainingModule?.occurrences||[])
+   .filter(x=>(filter==='ALL'||x.type===filter)&&!calendarEventArchived(x));
+ host.innerHTML=list.map(x=>trainingOccurrenceCard(x)).join('')||
+   '<div class="empty">Keine aktuellen Termine. Vergangene Termine findest du im Archiv.</div>';
+};
+async function prepareCalendarArchive(){
+ if(window.trainingPageMode!=='calendar'||!document.getElementById('trainingEventRows'))return;
+ const currentPanel=document.getElementById('trainingEventRows').closest('.panel');
+ if(currentPanel&& !currentPanel.querySelector('.calendar-current-label')){
+   const title=document.createElement('h3');title.className='calendar-current-label';
+   title.textContent='Aktuelle Termine · abgelaufene Termine bleiben zwei Tage grau sichtbar';
+   currentPanel.insertBefore(title,currentPanel.querySelector('.training-toolbar'));
+ }
+ const archive=document.createElement('section');archive.className='panel calendar-archive-panel';
+ archive.innerHTML='<h2>📁 Terminarchiv</h2><p class="sub">Abgeschlossene Dienste, Schulungen und Veranstaltungen werden 48 Stunden nach ihrem Ende hier angezeigt. Die Einträge bleiben unverändert erhalten.</p>'+
+  '<div class="toolbar calendar-archive-controls"><label>Jahr <select id="calendarArchiveYear" onchange="loadCalendarArchive()"><option value="">Lade Jahre …</option></select></label>'+
+  '<label>Terminart <select id="calendarArchiveType" onchange="loadCalendarArchive()"><option value="ALL">Alle</option><option value="SERVICE">Dienste</option><option value="TRAINING">Schulungen</option><option value="EVENT">Veranstaltungen</option></select></label>'+
+  '<label>Termin suchen <input type="search" id="calendarArchiveQuery" placeholder="Titel oder Veranstaltung" oninput="renderCalendarArchive()"></label></div>'+
+  '<div class="table-wrap"><table class="table calendar-archive-table"><thead><tr><th>Datum</th><th>Beginn – Ende</th><th>Termin / Veranstaltung</th><th>Art</th></tr></thead><tbody id="calendarArchiveRows"><tr><td colspan="4">Archiv wird geladen …</td></tr></tbody></table></div>';
+ const contentRoot=document.getElementById('trainingEventRows').closest('.panel');
+ contentRoot?.insertAdjacentElement('afterend',archive);
+ try{
+   const years=await api('/api/training/events/archive/years');
+   const select=document.getElementById('calendarArchiveYear');if(!select)return;
+   const nowYear=new Date().getFullYear(),values=[...new Set([nowYear,...years])].sort((a,b)=>b-a);
+   select.replaceChildren(...values.map(year=>new Option(String(year),String(year))));
+   await loadCalendarArchive();
+ }catch(e){const host=document.getElementById('calendarArchiveRows');if(host)host.innerHTML='<tr><td colspan="4">'+esc(e.message)+'</td></tr>'}
+}
+window.calendarArchiveItems=[];
+async function loadCalendarArchive(){
+ const year=document.getElementById('calendarArchiveYear')?.value,type=document.getElementById('calendarArchiveType')?.value||'ALL';
+ if(!year)return;
+ const host=document.getElementById('calendarArchiveRows');if(host)host.innerHTML='<tr><td colspan="4">Archiv wird geladen …</td></tr>';
+ try{window.calendarArchiveItems=await api('/api/training/events/archive?year='+encodeURIComponent(year)+'&type='+encodeURIComponent(type));renderCalendarArchive()}
+ catch(e){if(host)host.innerHTML='<tr><td colspan="4">'+esc(e.message)+'</td></tr>'}
+}
+function renderCalendarArchive(){
+ const host=document.getElementById('calendarArchiveRows');if(!host)return;
+ const query=(document.getElementById('calendarArchiveQuery')?.value||'').trim().toLocaleLowerCase('de');
+ const results=(window.calendarArchiveItems||[]).filter(item=>!query||[item.title,trainingTypeLabel(item.type),item.notes].some(x=>String(x||'').toLocaleLowerCase('de').includes(query)));
+ host.innerHTML=results.map(item=>{
+ const start=new Date(item.startAt),end=new Date(item.endAt);
+ const date=start.toLocaleDateString('de-DE'),clock=d=>d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+ return '<tr><td>'+esc(date)+'</td><td>'+(item.allDay?'Ganztägig':esc(clock(start)+' – '+clock(end)))+'</td><td><strong>'+esc(item.title)+'</strong></td><td>'+esc(trainingTypeLabel(item.type))+'</td></tr>';
+ }).join('')||'<tr><td colspan="4" class="empty">Keine archivierten Termine für diese Filterauswahl.</td></tr>';
+}
+
 </script></body></html>
