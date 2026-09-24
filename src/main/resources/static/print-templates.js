@@ -37,18 +37,33 @@
   report.querySelector('.ffh-print-logo').src=logoSrc(s);
   return report;
  }
- async function print(opts){
+ function print(opts){
   if(!opts||!['landscape','portrait'].includes(opts.orientation||'portrait'))throw Error('Ungültiges Druckformat.');
-  // The admin gallery contains a nested preview; only an active body-level print document blocks a new print.
-  if(document.querySelector('body > .ffh-print-root'))throw Error('Ein Druckbericht ist bereits geöffnet.');
+  // Run window.print in the original click call stack. Waiting for remote logos
+  // or other asynchronous work can cause browsers to suppress the print dialog.
+  const previous=document.querySelector('body > .ffh-print-root');
+  if(previous)previous.remove();
   const node=render(opts);
   document.body.append(node);
-  await waitLogo(node.querySelector('.ffh-print-logo'));
   const priorTitle=document.title;
   document.title=reportName(settings());
-  const cleanup=()=>{document.title=priorTitle;node.remove();root.removeEventListener('afterprint',cleanup);};
+  let cleaned=false;
+  const cleanup=()=>{
+   if(cleaned)return;
+   cleaned=true;
+   document.title=priorTitle;
+   node.remove();
+   root.removeEventListener('afterprint',cleanup);
+   root.removeEventListener('beforeunload',cleanup);
+  };
   root.addEventListener('afterprint',cleanup,{once:true});
-  try{root.print();}catch(e){cleanup();throw e;}
+  root.addEventListener('beforeunload',cleanup,{once:true});
+  try{
+   root.print();
+   // Some embedded/PWA browsers do not emit afterprint. Do not retain an
+   // invisible report that blocks later attempts.
+   root.setTimeout(cleanup,30000);
+  }catch(e){cleanup();throw e;}
  }
  function preview(orientation){
   const options={orientation,title:'Druckvorlage – '+(orientation==='landscape'?'Querformat':'Hochformat'),
