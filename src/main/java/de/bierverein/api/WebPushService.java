@@ -42,5 +42,22 @@ public class WebPushService {
   if(!invalid.isEmpty())subscriptions.deleteAllById(invalid);
   return delivered;
  }
+ /** A new dated appointment uses the existing Web Push subscriptions. */
+ public void sendAppointment(DashboardMessage appointment){
+  if(!enabled()||!appointment.isActive()||appointment.getEventAt()==null)return;
+  Map<String,Object> payload=Map.of("title","Neuer Termin: "+appointment.getTitle(),
+   "body",java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm").withZone(java.time.ZoneId.of("Europe/Berlin")).format(appointment.getEventAt()),
+   "url","/?appointments=1","tag","ffh-appointment-"+appointment.getId());
+  List<Long> invalid=new ArrayList<>();
+  for(PushSubscription subscription:subscriptions.findAll()){
+   try{
+    PushService service=new PushService(publicKey,privateKey,subject);
+    Notification notice=new Notification(subscription.getEndpoint(),subscription.getP256dh(),subscription.getAuth(),json.writeValueAsBytes(payload));
+    int code=service.send(notice).getStatusLine().getStatusCode();
+    if(code==404||code==410)invalid.add(subscription.getId());
+   }catch(Exception ignored){}
+  }
+  if(!invalid.isEmpty())subscriptions.deleteAllById(invalid);
+ }
  public void sendMessage(DashboardMessage message){if(!enabled()||!message.isActive())return;Map<String,Object> payload=Map.of("title",message.getTitle(),"body",Optional.ofNullable(message.getBody()).orElse("Eine neue Meldung ist verfügbar."),"url","/?messages=1","tag","ffh-message-"+message.getId());List<Long> invalid=new ArrayList<>();for(PushSubscription s:subscriptions.findAll()){try{PushService service=new PushService(publicKey,privateKey,subject);Notification notification=new Notification(s.getEndpoint(),s.getP256dh(),s.getAuth(),json.writeValueAsBytes(payload));var response=service.send(notification);if(response.getStatusLine().getStatusCode()==404||response.getStatusLine().getStatusCode()==410)invalid.add(s.getId());}catch(Exception ignored){}}if(!invalid.isEmpty())subscriptions.deleteAllById(invalid);}
 }
