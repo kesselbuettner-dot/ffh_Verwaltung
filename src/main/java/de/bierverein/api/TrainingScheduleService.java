@@ -68,7 +68,40 @@ public class TrainingScheduleService {
     @Transactional(readOnly = true)
     public List<OccurrenceView> dashboard(String username) {
         LocalDate today = LocalDate.now(ZONE);
-        return list(username, today, today.plusDays(90)).occurrences().stream().limit(8).toList();
+        Instant now=Instant.now();
+        return list(username, today, today.plusDays(90)).occurrences().stream()
+                .filter(o->o.endAt().isAfter(now)).limit(8).toList();
+    }
+
+    /** The archive is a view on the original event records, not a copy:
+     * cancellations and attendance remain attached to their occurrence.
+     * Only occurrences whose actual end was more than 48 hours ago appear.
+     */
+    @Transactional(readOnly = true)
+    public List<OccurrenceView> archive(String username,int year,String type) {
+        if(year<2000||year>LocalDate.now(ZONE).getYear())throw bad("Ungültiges Archivjahr.");
+        String requested=type==null||type.isBlank()?"ALL":type.toUpperCase(Locale.ROOT);
+        if(!"ALL".equals(requested)&&!TYPES.contains(requested))throw bad("Ungültiger Terminfilter.");
+        Instant cutoff=Instant.now().minus(Duration.ofDays(2));
+        return list(username,LocalDate.of(year,1,1),LocalDate.of(year,12,31))
+                .occurrences().stream().filter(o->!o.endAt().isAfter(cutoff))
+                .filter(o->"ALL".equals(requested)||requested.equals(o.type()))
+                .sorted(Comparator.comparing(OccurrenceView::startAt).reversed()).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Integer> archiveYears(String username) {
+        AppUser viewer=user(username);
+        Instant cutoff=Instant.now().minus(Duration.ofDays(2));
+        LocalDate oldest=LocalDate.now(ZONE).minusYears(30);
+        return events.findAll().stream().filter(e->e.isActive()&&visibleTo(e,viewer))
+                .filter(e->!e.getStartDate().isAfter(LocalDate.now(ZONE)))
+                .flatMap(e->occurrenceDates(e,e.getStartDate().isBefore(oldest)?oldest:e.getStartDate(),
+                   e.getEndDate().isAfter(LocalDate.now(ZONE))?LocalDate.now(ZONE):e.getEndDate()).stream()
+                   .filter(d->(e.isAllDay()?d.plusDays(1).atStartOfDay(ZONE).toInstant():
+                            d.atTime(e.getEndTime()).atZone(ZONE).toInstant()).isBefore(cutoff))
+                   .map(LocalDate::getYear))
+                .distinct().sorted(Comparator.reverseOrder()).toList();
     }
 
     @Transactional
