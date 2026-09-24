@@ -1,9 +1,9 @@
-const CACHE_NAME = "ffh-verwaltung-login-night-v7-20260924";
+const CACHE_NAME = "ffh-verwaltung-parent-notice-badges-20260924";
 const APP_SHELL = [
   "/",
   "/manifest.json",
   "/tabler-icons.js?v=menu-icon-fix-20260924",
-  "/menu-designer.js?v=menu-icon-fix-20260924",
+  "/menu-designer.js?v=parent-notice-badges-20260924",
   "/menu-designer.css?v=icon-only-v2",
   "/wehrleiter.js?v=qualification-a4-report-v4",
   "/wehrleiter.css?v=qualification-a4-report-v4",
@@ -16,7 +16,7 @@ const APP_SHELL = [
   "/print-templates.css?v=2",
   "/print-reports.js?v=attendance-print-20260924-v2",
   "/inspection-signature.js?v=1",
-  "/device-cycle-tasks.js?v=2",
+  "/device-cycle-tasks.js?v=parent-notice-badges-20260924",
   "/inspection-management.js?v=2",
   "/icons/menu/helmet.svg",
   "/icons/menu/engine.svg",
