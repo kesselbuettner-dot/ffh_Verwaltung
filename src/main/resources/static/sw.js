@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-devices-dropdowns-v55";
+const CACHE_NAME = "ffh-verwaltung-attendance-print-20260924-v2";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -12,9 +12,9 @@ const APP_SHELL = [
   "/design-system.js?v=1",
   "/page-templates.css?v=1",
   "/page-templates.js?v=2",
-  "/print-templates.js?v=2",
+  "/print-templates.js?v=attendance-print-20260924-v2",
   "/print-templates.css?v=2",
-  "/print-reports.js?v=1",
+  "/print-reports.js?v=attendance-print-20260924-v2",
   "/inspection-signature.js?v=1",
   "/device-cycle-tasks.js?v=2",
   "/inspection-management.js?v=2",
