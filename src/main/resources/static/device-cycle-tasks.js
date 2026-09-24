@@ -22,6 +22,7 @@
   try{
    const [items,members]=await Promise.all([api(URL+'?includeDone=true'),api(URL+'/assignees').catch(()=>null)]);
    loaded=items||[];eligible=members||[];isManager=members!==null;
+   root.setMenuNoticeCount?.('device-cycle-tasks',loaded.filter(pending).length);
    drawPage();
   }catch(error){content.replaceChildren(ui().page({title:'Geräteprüfung',children:[ui().empty({message:error.message||'Prüfaufgaben konnten nicht geladen werden.'})]}));}
  }
