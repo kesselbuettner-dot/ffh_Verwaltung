@@ -175,6 +175,7 @@ function renderNavigation(){
  renderQuickNav();
  applyStyle();
  if(typeof setActive==='function')setActive(window.currentPage||'dashboard');
+ window.refreshMenuHierarchyBadges?.();
  if(!iconReady&&!iconLoading)loadIcons();
 }
 function ensureDraft(){if(!draft)draft=normalized();}
