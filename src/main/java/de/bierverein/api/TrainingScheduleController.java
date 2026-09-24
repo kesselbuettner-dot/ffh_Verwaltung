@@ -19,6 +19,13 @@ public class TrainingScheduleController {
           .filter(x->"SERVICE".equals(x.type()) && x.registrationRequired() && x.canRespond() && x.response()==null)
           .toList();
     }
+    @GetMapping("/archive") public java.util.List<TrainingScheduleService.OccurrenceView> archive(
+          @RequestParam int year,@RequestParam(defaultValue="ALL") String type,Authentication auth){
+        return service.archive(auth.getName(),year,type);
+    }
+    @GetMapping("/archive/years") public java.util.List<Integer> archiveYears(Authentication auth){
+        return service.archiveYears(auth.getName());
+    }
     @GetMapping("/dashboard") public java.util.List<TrainingScheduleService.OccurrenceView> dashboard(Authentication auth){return service.dashboard(auth.getName());}
     @PostMapping @ResponseStatus(HttpStatus.CREATED) public TrainingScheduleService.EventView create(@RequestBody TrainingScheduleService.EventRequest request,Authentication auth){return service.create(auth.getName(),request);}
     @PutMapping("/{id}") public TrainingScheduleService.EventView update(@PathVariable Long id,@RequestBody TrainingScheduleService.EventRequest request,Authentication auth){return service.update(auth.getName(),id,request);}
