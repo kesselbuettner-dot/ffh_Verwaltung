@@ -135,6 +135,7 @@ public class TrainingScheduleService {
         String type = normalizeType(request == null ? null : request.type());
         require(user, type, "write");
         LocalDate originalDate = event.isRecurring() ? null : event.getStartDate();
+        if(!event.isRecurring())requireOpenOccurrence(event,event.getStartDate());
         apply(event, request, type);
         event.touch();
         EventView saved = eventView(events.save(event), user);
@@ -148,6 +149,7 @@ public class TrainingScheduleService {
         AppUser user = user(username);
         TrainingScheduleEvent event = find(id);
         require(user, event.getType(), "delete");
+        if(!event.isRecurring())requireOpenOccurrence(event,event.getStartDate());
         attendance.deleteByEventId(id);
         inspectionTasks.deleteByEventId(id);
         seriesExceptions.deleteBySeriesEventId(id);
@@ -161,6 +163,7 @@ public class TrainingScheduleService {
         TrainingScheduleEvent event=find(eventId);
         require(actor,event.getType(),"delete");
         if(date==null || !occursOn(event,date)) throw bad("Prüftermin ist nicht Teil dieser Terminserie.");
+        requireOpenOccurrence(event,date);
         if(!event.isRecurring()) { delete(username,eventId); return; }
         // detached_event_id is not nullable in existing production schemas: zero marks a cancelled occurrence.
         seriesExceptions.save(new TrainingSeriesException(eventId,date,0L));
@@ -178,6 +181,7 @@ public class TrainingScheduleService {
             throw bad("Dieser Einzeltermin gehört nicht zu einer aktiven Serie.");
         if (request == null || Boolean.TRUE.equals(request.recurring()))
             throw bad("Einzeltermine dürfen keine eigene Serie enthalten.");
+        requireOpenOccurrence(series,originalDate);
         String type = normalizeType(request.type());
         if (!series.getType().equals(type)) throw bad("Der Termintyp der Serie darf beim Einzeltermin nicht geändert werden.");
         TrainingScheduleEvent single = new TrainingScheduleEvent();
@@ -188,6 +192,13 @@ public class TrainingScheduleService {
         seriesExceptions.save(new TrainingSeriesException(seriesId, originalDate, single.getId()));
         moveResponsesAndTasks(seriesId, originalDate, single.getId(), single.getStartDate());
         return eventView(single, user);
+    }
+
+    private void requireOpenOccurrence(TrainingScheduleEvent event,LocalDate date){
+        Instant end=event.isAllDay()?date.plusDays(1).atStartOfDay(ZONE).toInstant()
+                :date.atTime(event.getEndTime()).atZone(ZONE).toInstant();
+        if(!end.isAfter(Instant.now()))throw new ResponseStatusException(
+                HttpStatus.CONFLICT,"Abgelaufene Kalendertermine sind schreibgeschützt.");
     }
 
     private void moveResponsesAndTasks(Long oldId, LocalDate oldDate, Long newId, LocalDate newDate) {
@@ -223,6 +234,7 @@ public class TrainingScheduleService {
         String status = requestedStatus == null ? "" : requestedStatus.trim().toUpperCase(Locale.ROOT);
         if (!Set.of("YES", "NO").contains(status)) throw bad("Bitte Zu- oder Absage auswählen.");
         if (date == null || !occursOn(event, date)) throw bad("Dieser Termin findet am gewählten Tag nicht statt.");
+        requireOpenOccurrence(event,date);
         if (!event.isRegistrationRequired()) throw bad("Für diesen Termin ist keine Anmeldung vorgesehen.");
         if (!audienceMatches(event, user) && !isResponsible(event, user)) throw forbidden("Dieser Termin ist nicht für deine Rolle freigegeben.");
         TrainingAttendance answer = attendance.findByEventIdAndOccurrenceDateAndUsername(id, date, username)
