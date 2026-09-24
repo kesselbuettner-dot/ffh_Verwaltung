@@ -79,7 +79,11 @@ function iconSrc(value){
 }
 function iconHtml(value){
  const tabler=String(value||'').startsWith('tabler:')?String(value).slice(7):'';
- if(tabler&&Object.prototype.hasOwnProperty.call(window.FWTablerIcons||{},tabler))return '<span class="menu-icon-tabler" aria-hidden="true">'+window.FWTablerIcons[tabler]+'</span>';
+ if(tabler){
+  const icons=window.FWTablerIcons||{};
+  const svg=Object.prototype.hasOwnProperty.call(icons,tabler)?icons[tabler]:icons['file-text'];
+  if(svg)return '<span class="menu-icon-tabler" aria-hidden="true">'+svg+'</span>';
+ }
  const src=iconSrc(value);
  if(src)return '<img class="menu-icon-image" src="'+safe(src)+'" alt="">';
  const glyph=String(value||'☰').replace(/^emoji:/,'');
