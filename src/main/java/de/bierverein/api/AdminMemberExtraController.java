@@ -69,6 +69,8 @@ public class AdminMemberExtraController {
   catch(Exception e){throw new IllegalStateException("Stammdatenfelder können nicht gelesen werden",e);}
  }
  private Profile profile(MemberExtra extra){return new Profile(extra.memberId,extra.birthDate,extra.joinedOn,parse(extra.customJson));}
+ @GetMapping("/overview") @Transactional(readOnly=true)
+ public List<Profile> overview(){return extras.findAll().stream().map(this::profile).toList();}
  @GetMapping("/fields") @Transactional(readOnly=true)
  public List<MemberCustomField> fields(){return fields.findAll().stream().filter(x->x.active).sorted(Comparator.comparing(x->x.title)).toList();}
  @PostMapping("/fields") @Transactional
