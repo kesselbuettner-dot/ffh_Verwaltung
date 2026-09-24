@@ -1547,7 +1547,7 @@ const calendarCardBase=trainingOccurrenceCard;
 trainingOccurrenceCard=function(item,source='module'){
  if(!calendarEventFinished(item))return calendarCardBase(item,source);
  // Never render actions or response controls for concluded entries.
- const markup=calendarCardBase({...item,canManage:false,canRespond:false,registrationRequired:false},source);
+ const markup=calendarCardBase({...item,canManage:false,canRespond:false},source);
  return markup.replace('class="training-event"','class="training-event calendar-finished"')
    .replace('</h3>','</h3><span class="badge">Abgelaufen · nur lesen</span>');
 };
