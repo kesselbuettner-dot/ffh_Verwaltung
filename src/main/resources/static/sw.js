@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-menu-icon-fix-20260924";
+const CACHE_NAME = "ffh-verwaltung-login-night-v7-20260924";
 const APP_SHELL = [
   "/",
   "/manifest.json",
