@@ -328,8 +328,119 @@ async function openCalendarSubscription(regenerate=false){try{if(regenerate&&!co
 function openCalendarFeed(){const input=document.getElementById('calendarFeedUrl');if(input?.value)location.href=input.value.replace(/^https?:/,'webcal:')}
 async function copyCalendarFeed(){const input=document.getElementById('calendarFeedUrl');if(!input)return;try{await navigator.clipboard.writeText(input.value);alert('Kalender-Link wurde kopiert.')}catch{input.select();document.execCommand('copy');alert('Kalender-Link wurde kopiert.')}}
 async function notifyNewestMessage(messages){if(!('Notification'in window)||Notification.permission!=='granted'||!messages.length)return;const newest=[...messages].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];const last=localStorage.getItem(messageNotifiedKey());if(!last){localStorage.setItem(messageNotifiedKey(),newest.createdAt);return}if(newest.createdAt<=last)return;localStorage.setItem(messageNotifiedKey(),newest.createdAt);const options={body:newest.body||'Eine neue Meldung ist verfügbar.',icon:'/icons/fw-cockpit-brand.svg',badge:'/icons/fw-cockpit-brand.svg',tag:'ffh-message-'+newest.id};try{const reg=await navigator.serviceWorker?.ready;if(reg)await reg.showNotification(newest.title,options);else new Notification(newest.title,options)}catch{}}
-async function membersPage(){content.innerHTML='<div class="title-row"><div><h1>Mitgliederübersicht</h1><span class="sub">Lesen: Mitglied und Kontostand. Stammdaten werden ausschließlich in der Administration verwaltet.</span></div><button class="btn secondary" onclick="FWPrintReports.memberOverview()">🖨 Mitgliederliste (A4 hoch)</button></div><div class="panel"><div class="toolbar"><input id="memberSearch" placeholder="🔎 Mitglied suchen…" oninput="renderMembers()"></div><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Rolle</th><th>Kontostand</th></tr></thead><tbody id="memberRows"></tbody></table></div></div>';try{members=await api('/api/members');renderMembers()}catch(e){memberRows.innerHTML='<tr><td colspan="3">'+esc(e.message)+'</td></tr>'}}
-function renderMembers(){const q=(document.getElementById('memberSearch')?.value||'').toLowerCase();memberRows.innerHTML=members.filter(m=>m.name.toLowerCase().includes(q)).map(m=>'<tr><td>'+esc(m.name)+'</td><td>'+esc(roleLabels[m.role]||m.role||'–')+'</td><td>'+money(m.balance)+'</td></tr>').join('')||'<tr><td colspan="3">Keine Mitglieder gefunden.</td></tr>'}
+const memberOverviewState={query:'',filterKey:'all',filterValue:'',members:[],profiles:new Map(),fields:[],filtered:[]};
+function memberOverviewValue(member,key){
+ const profile=memberOverviewState.profiles.get(Number(member.id))||{};
+ if(key==='name')return member.name||'';
+ if(key==='role')return roleLabels[member.role]||member.role||'–';
+ if(key==='email')return member.email||'';
+ if(key==='phone')return member.phone||'';
+ if(key==='address')return member.address||'';
+ if(key==='status')return member.active?'Aktiv':'Inaktiv';
+ if(key==='birthDate'||key==='joinedOn')return profile[key]||'';
+ if(key.startsWith('custom:'))return profile.custom?.[key.slice(7)]||'';
+ return '';
+}
+function memberOverviewFields(){
+ const base=[{key:'name',label:'Mitglied'},{key:'role',label:'Rolle'},{key:'email',label:'E-Mail'},{key:'phone',label:'Telefon'},{key:'address',label:'Adresse'},{key:'status',label:'Status'}];
+ if(role==='ADMIN')base.push({key:'birthDate',label:'Geburtsdatum'},{key:'joinedOn',label:'Eintrittsdatum'},...memberOverviewState.fields.map(f=>({key:'custom:'+f.code,label:f.title})));
+ return base;
+}
+function memberOverviewFiltered(){
+ const state=memberOverviewState,q=state.query.trim().toLocaleLowerCase('de'),term=state.filterValue.trim().toLocaleLowerCase('de'),all=memberOverviewFields();
+ return state.members.filter(m=>{
+  const text=key=>String(memberOverviewValue(m,key)).toLocaleLowerCase('de');
+  return (!q||all.some(f=>text(f.key).includes(q)))&&(!term||(state.filterKey==='all'?all.some(f=>text(f.key).includes(term)):text(state.filterKey).includes(term)));
+ }).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'de'));
+}
+function renderMembers(){
+ const host=document.getElementById('memberOverviewTable');if(!host)return;
+ const state=memberOverviewState,all=memberOverviewFields(),selected=all.find(f=>f.key===state.filterKey);
+ state.filtered=memberOverviewFiltered();
+ const columns=['name','role','email','phone','status'];
+ if(selected&&!columns.includes(selected.key))columns.push(selected.key);
+ const definitions=columns.map(key=>{const field=all.find(f=>f.key===key);return {key,label:field?.label||key,render:row=>memberOverviewValue(row,key)||'–'};});
+ host.replaceChildren(FWComponents.table({columns:definitions,rows:state.filtered,emptyMessage:'Keine Mitglieder gefunden.'}));
+ const counter=document.getElementById('memberOverviewCount');if(counter)counter.textContent=state.filtered.length+' von '+state.members.length+' Mitgliedern';
+}
+async function membersPage(){
+ content.innerHTML='<div class="panel"><div class="empty">Mitglieder werden geladen …</div></div>';
+ const state=memberOverviewState;state.query='';state.filterValue='';state.filterKey='all';state.profiles=new Map();state.fields=[];
+ try{
+  state.members=await api('/api/members');
+  if(role==='ADMIN'){
+   const [fields,profiles]=await Promise.all([api('/api/admin/member-profiles/fields'),api('/api/admin/member-profiles/overview')]);
+   state.fields=fields||[];state.profiles=new Map((profiles||[]).map(p=>[Number(p.memberId),p]));
+  }
+  const fieldOptions=[{value:'all',label:'Alle Stammdatenfelder'},...memberOverviewFields().map(f=>({value:f.key,label:f.label}))];
+  const page=FWPageTemplates.management({
+   title:'Mitgliederübersicht',description:'Mitgliederstammdaten – ohne Kontostände.',
+   listTitle:'Mitglieder',searchLabel:'Suche',searchPlaceholder:'Mitglied oder Stammdatum suchen',
+   onSearch:value=>{state.query=value;renderMembers()},
+   filters:[
+    {label:'Stammdatenfeld',name:'memberFilterKey',value:'all',options:fieldOptions,onChange:value=>{state.filterKey=value;renderMembers()}},
+    {label:'Filterwert',name:'memberFilterValue',placeholder:'Wert eingeben',onInput:value=>{state.filterValue=value;renderMembers()}}
+   ],
+   actions:[
+    {label:'🖨 Mitgliederliste',onClick:()=>FWPrintReports.memberOverview()},
+    ...(role==='ADMIN'||role==='VORSTAND'?[{label:'📋 Anwesenheitsliste',onClick:()=>openMemberAttendance()}]:[])
+   ],
+   columns:[{key:'name',label:'Mitglied'}],rows:state.members
+  });
+  content.replaceChildren(page);
+  const table=content.querySelector('.ds-table-wrap');if(table){table.id='memberOverviewTable';}
+  const count=document.createElement('p');count.id='memberOverviewCount';count.className='sub';count.style.margin='0 0 10px';
+  table?.parentNode?.insertBefore(count,table);
+  renderMembers();
+ }catch(e){content.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}
+}
+let memberAttendanceView=null,memberAttendanceEvents=[];
+async function openMemberAttendance(){
+ if(!['ADMIN','VORSTAND'].includes(role))return;
+ modalTitle.textContent='Anwesenheitsliste – Veranstaltung wählen';
+ modalBody.innerHTML='<div class="field"><label>Veranstaltung / Dienst / Schulung</label><select id="attendanceEventSelect"><option value="">Termine werden geladen …</option></select></div><p class="sub">Veranstaltung auswählen; Beginn und Ende werden aus dem Kalender übernommen.</p><div id="attendanceSelectError"></div><div class="quick"><button class="btn secondary" onclick="closeModal()">Abbrechen</button><button class="btn primary" onclick="loadMemberAttendance()">Anwesenheitsliste öffnen</button></div>';
+ modal.classList.remove('hidden');
+ try{
+  const from=new Date();from.setFullYear(from.getFullYear()-1);const until=new Date();until.setFullYear(until.getFullYear()+1);
+  const ymd=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+  const data=await api('/api/training/events?from='+ymd(from)+'&to='+ymd(until));
+  memberAttendanceEvents=data.occurrences||[];
+  const select=document.getElementById('attendanceEventSelect');if(!select)return;
+  select.replaceChildren(new Option('Bitte Termin auswählen',''),...memberAttendanceEvents.map(o=>new Option(new Date(o.startAt).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'})+' · '+o.title+' ('+trainingTypeLabel(o.type)+')',o.eventId+'|'+o.occurrenceDate)));
+ }catch(e){const el=document.getElementById('attendanceSelectError');if(el)el.textContent=e.message}
+}
+async function loadMemberAttendance(){
+ const value=document.getElementById('attendanceEventSelect')?.value;
+ if(!value){document.getElementById('attendanceSelectError').textContent='Bitte zuerst eine Veranstaltung wählen.';return}
+ const [id,date]=value.split('|');closeModal();setActive('members');
+ content.innerHTML='<div class="panel"><div class="empty">Anwesenheitsliste wird geladen …</div></div>';
+ try{memberAttendanceView=await api('/api/event-presence/'+encodeURIComponent(id)+'/'+encodeURIComponent(date));renderMemberAttendance();}
+ catch(e){content.innerHTML='<div class="message error">'+esc(e.message)+'</div>'}
+}
+function renderMemberAttendance(){
+ const view=memberAttendanceView;if(!view)return;
+ const fmt=iso=>iso?new Date(iso).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}):'–';
+ content.innerHTML='<div class="title-row"><div><h1>Anwesenheitsliste</h1><span class="sub">'+esc(view.title)+' · '+esc(trainingTypeLabel(view.type))+'</span><p class="sub">Beginn: '+fmt(view.startAt)+' · Ende: '+fmt(view.endAt)+'</p></div><div class="quick"><button class="btn secondary" onclick="membersPage()">← Mitglieder</button><button class="btn secondary" onclick="openMemberAttendance()">Veranstaltung wechseln</button><button class="btn primary" onclick="FWPrintReports.attendance(memberAttendanceView)">🖨 Anwesenheitsliste (A4 quer)</button></div></div><div class="panel"><div class="table-wrap"><table class="table"><thead><tr><th>Mitglied</th><th>Teilnahme</th><th>Von</th><th>Bis</th></tr></thead><tbody id="attendanceMemberRows"></tbody></table></div><div id="attendanceSaveMessage" class="sub">Änderungen werden nach der Auswahl automatisch gespeichert.</div></div>';
+ const rows=document.getElementById('attendanceMemberRows');
+ view.members.forEach(m=>{
+  const tr=document.createElement('tr');tr.dataset.memberId=String(m.memberId);
+  const name=document.createElement('td');name.textContent=m.name;
+  const statusCell=document.createElement('td'),status=document.createElement('select');status.setAttribute('aria-label','Teilnahme von '+m.name);
+  [['OPEN','Offen'],['YES','Ja'],['NO','Nein']].forEach(([code,label])=>status.add(new Option(label,code)));
+  status.value=m.participation||'OPEN';statusCell.append(status);
+  const makeTime=(value,label)=>{const td=document.createElement('td'),input=document.createElement('input');input.type='time';input.value=value?String(value).slice(0,5):'';input.setAttribute('aria-label',label+' '+m.name);input.disabled=status.value!=='YES';td.append(input);return [td,input]};
+  const [fromCell,from]=makeTime(m.arrivedAt,'Von'),[untilCell,until]=makeTime(m.leftAt,'Bis');
+  async function save(){from.disabled=until.disabled=status.value!=='YES';if(status.value!=='YES'){from.value='';until.value=''}if(from.value&&until.value&&until.value<from.value){document.getElementById('attendanceSaveMessage').textContent='Ende darf nicht vor Beginn liegen.';return}
+   const payload={participation:status.value,arrivedAt:from.value||null,leftAt:until.value||null};
+   status.disabled=true;from.disabled=true;until.disabled=true;
+   try{const updated=await api('/api/event-presence/'+view.eventId+'/'+view.date+'/'+m.memberId,{method:'PUT',body:JSON.stringify(payload)});Object.assign(m,updated);document.getElementById('attendanceSaveMessage').textContent='Gespeichert: '+m.name;}
+   catch(e){document.getElementById('attendanceSaveMessage').textContent='Speichern fehlgeschlagen: '+e.message;}
+   finally{status.disabled=false;from.disabled=until.disabled=status.value!=='YES'}
+  }
+  [status,from,until].forEach(input=>input.addEventListener('change',save));
+  tr.append(name,statusCell,fromCell,untilCell);rows.append(tr);
+ });
+}
 async function adminPage(){return adminSettingsPage('members')}
 function adminMembersPage(){return adminSettingsPage('members')}
 function adminUsersPage(){return adminSettingsPage('accounts')}
