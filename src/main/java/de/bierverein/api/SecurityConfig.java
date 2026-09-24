@@ -58,6 +58,7 @@ public class SecurityConfig {
                     "/design-system.js",
                     "/page-templates.js",
                     "/device-cycle-tasks.js",
+                    "/my-tasks.js",
                     "/inspection-signature.js",
                     "/inspection-management.js",
                     "/page-templates.css",
