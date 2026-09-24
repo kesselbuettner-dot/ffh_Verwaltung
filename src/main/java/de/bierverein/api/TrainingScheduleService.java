@@ -65,6 +65,21 @@ public class TrainingScheduleService {
         return new ModuleView(definitions, occurrences, canCreate, memberOptions, roleOptions,deviceOptions);
     }
 
+    /** All active occurrences for authorised leadership reports; does not apply the
+     * current user's event-audience filter. Ordinary calendar endpoints are unchanged. */
+    @Transactional(readOnly = true)
+    public List<OccurrenceView> leadershipOccurrences(String username, LocalDate from, LocalDate to) {
+        AppUser actor=user(username);
+        if(from==null||to==null||to.isBefore(from)||ChronoUnit.DAYS.between(from,to)>366)
+            throw bad("Ungültiger Auswertungszeitraum.");
+        Map<Long,Member> memberMap=members.findAll().stream()
+            .collect(Collectors.toMap(Member::getId,Function.identity()));
+        return events.findByActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(to,from)
+            .stream().flatMap(e->occurrenceDates(e,from,to).stream()
+                .map(d->occurrenceView(e,d,actor,memberMap)))
+            .sorted(Comparator.comparing(OccurrenceView::startAt)).toList();
+    }
+
     @Transactional(readOnly = true)
     public List<OccurrenceView> dashboard(String username) {
         LocalDate today = LocalDate.now(ZONE);
