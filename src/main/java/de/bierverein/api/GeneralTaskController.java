@@ -28,7 +28,7 @@ public class GeneralTaskController {
  public record Input(String title,String description,Long assigneeId,LocalDate dueOn,String status){}
  public record Person(Long id,String name){}
  public record View(Long id,String title,String description,Long assigneeId,String assigneeName,Long creatorId,String creatorName,LocalDate dueOn,String status,Instant createdAt,Instant updatedAt,Instant completedAt,boolean canEdit,boolean canChangeStatus){}
- public record Overview(boolean canCreate,List<Person> assignees,List<View> tasks){}
+ public record Overview(boolean canCreate,Long currentUserId,List<Person> assignees,List<View> tasks){}
  private ResponseStatusException error(HttpStatus status,String message){return new ResponseStatusException(status,message);}
  private AppUser actor(Authentication authentication){
   if(authentication==null)throw error(HttpStatus.UNAUTHORIZED,"Anmeldung erforderlich");
@@ -67,7 +67,7 @@ public class GeneralTaskController {
   List<Person> assignees=canCreate?users.findAll().stream().filter(this::eligible)
    .map(p->new Person(p.getId(),p.getMember().getName())).sorted(Comparator.comparing(Person::name,String.CASE_INSENSITIVE_ORDER)).toList():List.of();
   List<GeneralTask> own=tasks.findByAssigneeIdOrCreatorIdOrderByDueOnAscCreatedAtDesc(u.getId(),u.getId());
-  return new Overview(canCreate,assignees,own.stream().map(t->view(t,u)).toList());
+  return new Overview(canCreate,u.getId(),assignees,own.stream().map(t->view(t,u)).toList());
  }
  private void apply(GeneralTask t,Input input,boolean allowAssignee){
   if(input==null||input.title()==null||input.title().trim().isEmpty()||input.title().trim().length()>160)
