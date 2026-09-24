@@ -23,10 +23,26 @@
    body:t().table(['Artikel','Bestand','Warnwert','Einkauf','Letzter EK','Angebot'],rows)});
  }
  async function memberOverview(){
-  const q=(document.getElementById('memberSearch')?.value||'').toLocaleLowerCase('de');
-  const list=(await api('/api/members')).filter(m=>m.name.toLocaleLowerCase('de').includes(q)).sort((a,b)=>a.name.localeCompare(b.name,'de'));
-  return t().print({orientation:'portrait',title:'Mitgliederliste',subtitle:list.length+' Mitglieder'+(q?' · aktuelle Suchauswahl':''),
-    body:t().table(['Mitglied','Rolle','Kontostand'],list.map(m=>[m.name,roleLabels[m.role]||m.role||'–',money(m.balance)]))});
+  const state=memberOverviewState;
+  const selected=state.filtered||[];
+  const fields=memberOverviewFields();
+  const columns=['name','role','email','phone','status'];
+  const chosen=fields.find(f=>f.key===state.filterKey);
+  if(chosen&&!columns.includes(chosen.key))columns.push(chosen.key);
+  const labels=columns.map(key=>fields.find(f=>f.key===key)?.label||key);
+  const rows=selected.map(m=>columns.map(key=>memberOverviewValue(m,key)));
+  return t().print({orientation:'portrait',title:'Mitgliederliste',
+    subtitle:selected.length+' Mitglieder · aktuelle Filterauswahl',
+    body:t().table(labels,rows)});
+ }
+ async function attendance(view){
+  if(!view||!view.members)throw Error('Bitte zuerst eine Veranstaltung auswählen.');
+  const fmt=v=>v?new Date(v).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}):'–';
+  const subtitle='Veranstaltung: '+view.title+' · Beginn: '+fmt(view.startAt)+' · Ende: '+fmt(view.endAt);
+  const rows=view.members.map(m=>[m.name,m.participation==='YES'?'Ja':m.participation==='NO'?'Nein':'',
+    m.arrivedAt?String(m.arrivedAt).slice(0,5):'',m.leftAt?String(m.leftAt).slice(0,5):'']);
+  return t().print({orientation:'landscape',title:'Anwesenheitsliste',subtitle,
+    body:t().table(['Mitglied','Teilnahme Ja / Nein','Von (Uhrzeit)','Bis (Uhrzeit)'],rows)});
  }
  async function membersAdmin(){
   const q=(document.getElementById('memberSearch')?.value||'').toLocaleLowerCase('de');
@@ -101,7 +117,7 @@
  function invoke(method){
   return async(...args)=>{try{await method(...args);}catch(e){alert('Druckbericht konnte nicht erstellt werden: '+(e.message||e));}};
  }
- root.FWPrintReports={shopping:invoke(shopping),memberOverview:invoke(memberOverview),membersAdmin:invoke(membersAdmin),
+ root.FWPrintReports={shopping:invoke(shopping),memberOverview:invoke(memberOverview),attendance:invoke(attendance),membersAdmin:invoke(membersAdmin),
    devices:invoke(devices),inspectionHistory:invoke(inspectionHistory),checklist:invoke(checklist),
    signedSession:invoke(signedSession),refreshInspectionLocations,yearOptions,labelLocation};
 })(window);
