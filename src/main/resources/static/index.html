@@ -1640,9 +1640,9 @@ function wehrPieSvg(values){
  if(total<=0)return '<div class="empty">Für diese Auswahl liegen noch keine Daten vor.</div>';
  const radius=69,circumference=2*Math.PI*radius;
  let offset=0;
- const circles=values.filter(v=>v.count>0).map((item,i)=>{
+ const circles=values.map((item,i)=>({...item,colorIndex:i})).filter(v=>v.count>0).map(item=>{
   const length=Number(item.count)/total*circumference;
-  const segment='<circle cx="100" cy="100" r="'+radius+'" fill="none" stroke="'+wehrAnalyticsColors[i%wehrAnalyticsColors.length]+'" stroke-width="29" stroke-dasharray="'+length+' '+circumference+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 100 100)"><title>'+esc(item.label)+': '+item.count+'</title></circle>';
+  const segment='<circle cx="100" cy="100" r="'+radius+'" fill="none" stroke="'+wehrAnalyticsColors[item.colorIndex%wehrAnalyticsColors.length]+'" stroke-width="29" stroke-dasharray="'+length+' '+circumference+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 100 100)"><title>'+esc(item.label)+': '+item.count+'</title></circle>';
   offset+=length;return segment;
  }).join('');
  return '<div class="wehr-pie-layout"><svg class="wehr-pie" viewBox="0 0 200 200" role="img" aria-label="Kreisdiagramm: '+esc(values.map(v=>v.label+' '+v.count).join(', '))+'">'+circles+'<text x="100" y="100" text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="800" fill="currentColor">'+total+'</text></svg><div class="wehr-pie-legend">'+values.map((v,i)=>'<div><i style="background:'+wehrAnalyticsColors[i%wehrAnalyticsColors.length]+'"></i><span>'+esc(v.label)+'</span><strong>'+Number(v.count)+'</strong></div>').join('')+'</div></div>';
