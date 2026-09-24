@@ -13,6 +13,12 @@ public class TrainingScheduleController {
     public TrainingScheduleController(TrainingScheduleService service){this.service=service;}
 
     @GetMapping public TrainingScheduleService.ModuleView list(@RequestParam(required=false) LocalDate from,@RequestParam(required=false) LocalDate to,Authentication auth){return service.list(auth.getName(),from,to);}
+    @GetMapping("/reminders") public java.util.List<TrainingScheduleService.OccurrenceView> reminders(Authentication auth){
+        java.time.LocalDate today=java.time.LocalDate.now(java.time.ZoneId.of("Europe/Berlin"));
+        return service.list(auth.getName(),today,today.plusDays(5)).occurrences().stream()
+          .filter(x->"SERVICE".equals(x.type()) && x.registrationRequired() && x.canRespond() && x.response()==null)
+          .toList();
+    }
     @GetMapping("/dashboard") public java.util.List<TrainingScheduleService.OccurrenceView> dashboard(Authentication auth){return service.dashboard(auth.getName());}
     @PostMapping @ResponseStatus(HttpStatus.CREATED) public TrainingScheduleService.EventView create(@RequestBody TrainingScheduleService.EventRequest request,Authentication auth){return service.create(auth.getName(),request);}
     @PutMapping("/{id}") public TrainingScheduleService.EventView update(@PathVariable Long id,@RequestBody TrainingScheduleService.EventRequest request,Authentication auth){return service.update(auth.getName(),id,request);}
