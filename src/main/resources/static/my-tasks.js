@@ -25,7 +25,7 @@
   (Array.isArray(messages)?messages:[]).filter(x=>x.type==='MESSAGE'&&x.active&&!x.read).forEach(x=>items.push(
    row('MESSAGE',String(x.id),x.title,x.body||'',null,'OPEN',()=>openMobileMessages())));
   // Driving qualification module keeps its own proof/status rules; it is linked, not auto-closed.
-  if(root.myPermissions?.includes('fire.drivingcheck.read')||document.querySelector('[data-nav-id="my-driving"]')){
+  if(document.querySelector('[data-nav-id="my-driving"]')){
    items.push(row('DRIVING','personal','Meine Führerscheinkontrolle','Prüfstatus im Führerscheinmodul ansehen',null,'INFO',()=>WehrleiterUI.myDrivingPage()));
   }
   last={manual,items};return last;
@@ -48,7 +48,7 @@
   const active=items.filter(t=>!['DONE','INFO'].includes(t.status));
   const overdue=active.filter(t=>t.dueOn&&t.dueOn<today()).length;
   const inProgress=active.filter(t=>t.status==='IN_PROGRESS').length;
-  root.setMenuNoticeCount?.('my-tasks',active.length);
+  root.setMenuNoticeCount?.('my-tasks',items.filter(t=>t.source==='GENERAL'&&t.status!=='DONE'&&t.raw?.assigneeId===manual.currentUserId).length);
   const rows=items.filter(visible).sort((a,b)=>(a.status==='DONE')-(b.status==='DONE')||(a.dueOn||'9999').localeCompare(b.dueOn||'9999'));
   content.innerHTML='<section class="mytasks-page"><div class="title-row"><div><h1>Meine Aufgaben</h1><p class="sub">Alle persönlichen Aufgaben aus der Vereins- und Feuerwehrverwaltung</p></div>'+
    (manual.canCreate?'<button class="btn primary" id="mytasksCreate">＋ Aufgabe anlegen</button>':'')+'</div>'+
@@ -72,7 +72,7 @@
   catch(e){if(root.currentPage==='my-tasks')content.innerHTML='<div class="panel"><h1>Meine Aufgaben</h1><div class="message error">'+escHtml(e.message)+'</div></div>'}
  }
  function editTask(t){
-  const management=!t||t.canEdit,own=t&&t.canChangeStatus;
+  const management=!t||(t.canEdit&&t.status!=='DONE'),own=t&&t.canChangeStatus;
   if(!last||(!management&&!own))return;
   modalTitle.textContent=t?'Aufgabe · '+t.title:'Neue Vereinsaufgabe';
   const users=last.manual.assignees||[];
@@ -110,5 +110,5 @@
    finally{save.disabled=false}
   };
  }
- root.UnifiedTasks={page,refresh:async()=>{if(!root.token)return;try{const tasks=await api(BASE);const open=(tasks.tasks||[]).filter(t=>t.status!=='DONE'&&t.assigneeId===Number(root.localStorage.getItem('userId')||0));root.setMenuNoticeCount?.('my-tasks',open.length)}catch{}}};
+ root.UnifiedTasks={page,refresh:async()=>{if(typeof token==='undefined'||!token)return;try{const tasks=await api(BASE);const open=(tasks.tasks||[]).filter(t=>t.status!=='DONE'&&t.assigneeId===tasks.currentUserId);root.setMenuNoticeCount?.('my-tasks',open.length)}catch{}}};
 })(window);
