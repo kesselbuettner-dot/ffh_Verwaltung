@@ -1609,4 +1609,24 @@ function renderCalendarArchive(){
  }).join('')||'<tr><td colspan="4" class="empty">Keine archivierten Termine für diese Filterauswahl.</td></tr>';
 }
 
+/* Keep open calendar/dashboard views in sync when an event expires without
+ * requiring a manual reload. No server-side deletion or background job needed. */
+function calendarVisibleSignature(){
+ return (window.trainingModule?.occurrences||[]).filter(x=>!calendarEventArchived(x))
+    .map(x=>x.eventId+':'+x.occurrenceDate).join('|');
+}
+window.calendarLifecycleSignature=null;
+if(!window.ffhCalendarLifecycleTimer)window.ffhCalendarLifecycleTimer=setInterval(async()=>{
+ if(window.currentPage==='calendar'&&document.getElementById('trainingEventRows')){
+  const signature=calendarVisibleSignature();
+  if(window.calendarLifecycleSignature!==signature){
+   window.calendarLifecycleSignature=signature;
+   renderTrainingOccurrences();
+   if(document.getElementById('calendarArchiveYear'))await loadCalendarArchive();
+  }
+ }
+ if(window.currentPage==='dashboard'&&document.getElementById('dashboardTrainingDates'))
+  await loadDashboardTrainingEvents();
+},60000);
+
 </script></body></html>
