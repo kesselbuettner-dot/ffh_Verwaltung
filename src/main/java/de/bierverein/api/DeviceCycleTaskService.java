@@ -22,6 +22,7 @@ public class DeviceCycleTaskService {
  private final DeviceInspectionRepository inspections;
  private final DeviceInspectionWorkflowService workflow;
  private final ZoneId zone=ZoneId.of("Europe/Berlin");
+ @org.springframework.beans.factory.annotation.Autowired(required=false) private WebPushService taskPush;
  static final int WARNING_DAYS=30;
  @org.springframework.beans.factory.annotation.Autowired
  public DeviceCycleTaskService(DeviceRepository devices,DeviceCycleTaskRepository tasks,
@@ -128,7 +129,20 @@ public class DeviceCycleTaskService {
     throw error(HttpStatus.BAD_REQUEST,"Bitte ein aktives Mitglied mit freigegebenem Zugang wählen");
    task.assign(candidate.getId(),manager.getUsername());
   }
-  return view(tasks.save(task));
+  TaskView saved=view(tasks.save(task));
+  if(input.userId()!=null&&taskPush!=null){
+   Long assignee=input.userId();Long taskId=task.getId();
+   Runnable send=()->users.findById(assignee).filter(u->u.isEnabled()&&u.isRegistrationApproved())
+    .ifPresent(u->taskPush.sendToUser(u.getUsername(),"FW-Cockpit: Geräteprüfung zugewiesen",
+      "Eine Geräteprüfung wurde dir zugewiesen.","/?my-tasks=1","device-task-assigned-"+taskId+"-"+assignee));
+   if(org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive())
+    org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+     new org.springframework.transaction.support.TransactionSynchronization(){
+      @Override public void afterCommit(){send.run();}
+     });
+   else send.run();
+  }
+  return saved;
  }
  @Transactional(readOnly=true)
  public InspectionProof proof(Long id,Authentication auth){
