@@ -135,7 +135,7 @@ public class TrainingScheduleService {
         String type = normalizeType(request == null ? null : request.type());
         require(user, type, "write");
         LocalDate originalDate = event.isRecurring() ? null : event.getStartDate();
-        if(!event.isRecurring())requireOpenOccurrence(event,event.getStartDate());
+        requireOpenOccurrence(event,event.getStartDate());
         apply(event, request, type);
         event.touch();
         EventView saved = eventView(events.save(event), user);
@@ -149,7 +149,7 @@ public class TrainingScheduleService {
         AppUser user = user(username);
         TrainingScheduleEvent event = find(id);
         require(user, event.getType(), "delete");
-        if(!event.isRecurring())requireOpenOccurrence(event,event.getStartDate());
+        requireOpenOccurrence(event,event.getStartDate());
         attendance.deleteByEventId(id);
         inspectionTasks.deleteByEventId(id);
         seriesExceptions.deleteBySeriesEventId(id);
