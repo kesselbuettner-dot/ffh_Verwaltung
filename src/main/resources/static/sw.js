@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-parent-notice-badges-20260924";
+const CACHE_NAME = "ffh-verwaltung-unified-tasks-20260924-v1";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -17,6 +17,7 @@ const APP_SHELL = [
   "/print-reports.js?v=attendance-print-20260924-v2",
   "/inspection-signature.js?v=1",
   "/device-cycle-tasks.js?v=parent-notice-badges-20260924",
+  "/my-tasks.js?v=unified-v1",
   "/inspection-management.js?v=2",
   "/icons/menu/helmet.svg",
   "/icons/menu/engine.svg",
