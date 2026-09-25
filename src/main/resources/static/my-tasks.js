@@ -74,11 +74,12 @@
  }
  async function page(asIntegrated=integrated){
   integrated=!!asIntegrated;
+  if(integrated)root.ffhPersonalTab='tasks';
   const activePage=integrated?'my-profile':'my-tasks';
   setActive(activePage);closeMenu();closeProfileMenu();
   content.innerHTML=(integrated?PersonalOverview.tabs('tasks'):'')+'<div class="panel"><h1>Meine Aufgaben</h1><p class="sub">Aufgaben werden geladen …</p></div>';
-  try{await load();if(root.currentPage===activePage)render()}
-  catch(e){if(root.currentPage===activePage)content.innerHTML=(integrated?PersonalOverview.tabs('tasks'):'')+'<div class="panel"><h1>Meine Aufgaben</h1><div class="message error">'+escHtml(e.message)+'</div></div>'}
+  try{await load();if(root.currentPage===activePage&&(!integrated||root.ffhPersonalTab==='tasks'))render()}
+  catch(e){if(root.currentPage===activePage&&(!integrated||root.ffhPersonalTab==='tasks'))content.innerHTML=(integrated?PersonalOverview.tabs('tasks'):'')+'<div class="panel"><h1>Meine Aufgaben</h1><div class="message error">'+escHtml(e.message)+'</div></div>'}
  }
  function editTask(t){
   const management=!t||(t.canEdit&&t.status!=='DONE'),own=t&&t.canChangeStatus;
