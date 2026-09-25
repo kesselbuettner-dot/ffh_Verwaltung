@@ -43,7 +43,7 @@ async function page(){
  content.innerHTML='<div class="title-row"><div><h1>Dokumentenverwaltung</h1><p class="sub">Geschützte Ablage · Versionen, Volltext und Fristen</p></div><button type="button" class="btn primary" id="docNew" hidden>＋ Dokument hochladen</button></div>'+
  '<div class="doc-tools"><label>Dokumente durchsuchen<input id="docSearch" type="search" placeholder="Titel, Beschreibung und durchsuchbarer Dateiinhalt …" value="'+e(search)+'" autocomplete="off"></label><button class="btn secondary" id="docRefresh">↻ Aktualisieren</button></div>'+
  '<div id="documentResults" class="doc-list"><p class="empty">Dokumente werden geladen …</p></div>'+
- '<p class="sub">PDF, Word und Text werden nach enthaltenem Text durchsucht. Gescannte PDFs und Bilder sind ohne Texterkennung nur anhand ihrer Metadaten auffindbar.</p>';
+ '<p class="sub">PDF, Word und Text werden nach enthaltenem Text durchsucht. Gescannte PDFs und Bilder werden lokal durch OCR analysiert. Bei mehrseitigen Scans können nur die ersten Seiten erkannt werden. Angaben bitte immer kontrollieren.</p>';
  const input=document.getElementById('docSearch');
  input.oninput=()=>{search=input.value.trim();clearTimeout(timer);timer=setTimeout(refresh,320)};
  document.getElementById('docRefresh').onclick=refresh;
@@ -98,10 +98,12 @@ async function versions(id){
   modalBody.innerHTML='<div class="doc-revisions">'+data.map(v=>
    '<div class="doc-revision"><strong>Version '+v.version+'</strong> · '+e(v.fileName)+
    '<br><span class="doc-muted">'+e(new Date(v.uploadedAt).toLocaleString('de-DE'))+' · '+e(v.uploadedBy)+'</span>'+
-   '<br><button class="btn secondary" type="button" data-download="'+v.version+'">Öffnen / Herunterladen</button></div>').join('')+'</div>'+
+   '<br><button class="btn secondary" type="button" data-download="'+v.version+'">Öffnen / Herunterladen</button> <button class="btn secondary" type="button" data-analyze="'+v.version+'">Erkannte Daten prüfen</button>'+
+   '<div class="doc-muted">Erkennung: '+e(v.extractionMethod||'Noch nicht analysiert')+(v.extractionWarning?' · '+e(v.extractionWarning):'')+'</div></div>').join('')+'</div>'
    (doc?.canEdit?'<label class="doc-form">Neue Version hochladen<input type="file" id="docRevisionFile" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png"></label><button class="btn primary" type="button" id="docUploadVersion">Neue Version speichern</button>':'')+
    '<div id="docVersionError" role="alert"></div>';
   modalBody.querySelectorAll('[data-download]').forEach(b=>b.onclick=()=>download(id,Number(b.dataset.download)));
+  modalBody.querySelectorAll('[data-analyze]').forEach(b=>b.onclick=()=>analysis(id,Number(b.dataset.analyze)));
   const upload=document.getElementById('docUploadVersion');
   if(upload)upload.onclick=async()=>{
    const file=document.getElementById('docRevisionFile').files[0];if(!file){document.getElementById('docVersionError').textContent='Bitte Datei auswählen';return}
@@ -113,6 +115,43 @@ async function versions(id){
    }catch(err){document.getElementById('docVersionError').textContent=err.message}finally{upload.disabled=false}
   };
  }catch(err){modalBody.textContent='Versionen konnten nicht geladen werden: '+err.message}
+}
+async function analysis(id,version){
+ modalTitle.textContent='Dokumentenerkennung · Version '+version;
+ modalBody.textContent='Erkannte Daten werden geladen …';modal.classList.remove('hidden');
+ try{
+  const result=await api(BASE+'/'+id+'/versions/'+version+'/analysis');
+  const doc=last?.documents.find(d=>d.id===id),fields=result.suggestions;
+  const line=(title,value)=>'<div class="doc-analysis-field"><b>'+e(title)+'</b><span>'+e(value?.value||'Nicht eindeutig erkannt')+'</span>'+
+   (value?.evidence?'<small>Fundstelle: '+e(value.evidence)+'</small>':'')+'</div>';
+  const candidates=result.matchedDevices||[];
+  modalBody.innerHTML='<div class="doc-analysis">'+
+    (result.warning?'<p class="message warn">'+e(result.warning)+'</p>':'')+
+    '<p>Alle Angaben sind unverbindliche Vorschläge. Vor der Übernahme bitte mit dem Original vergleichen.</p>'+
+    line('Erkannte Kategorie',{value:labels[fields.category]||fields.category})+
+    line('Seriennummer',fields.serialNumber)+line('Hersteller',fields.manufacturer)+
+    line('Prüfdatum',fields.inspectionDate)+line('Nächster Prüftermin',fields.nextInspectionDate)+
+    '<p class="doc-muted">'+e(fields.note)+'</p>'+
+    '<h3>Passende Geräte</h3>'+(candidates.length?candidates.map(d=>'<p>'+e(d.name)+' · '+e(d.inventoryNumber||'')+
+      ' · Seriennummer '+e(d.serialNumber||'')+'</p>').join(''):'<p>Keine eindeutige Übereinstimmung gefunden oder kein Geräte-Leserecht vorhanden.</p>')+
+    (doc?.canEdit?'<label class="doc-confirm"><input type="checkbox" id="docAnalysisConfirm"> Ich habe die Angaben anhand des Originaldokuments geprüft.</label>'+
+      '<button class="btn primary" id="docAnalysisApply" disabled>Vorgeschlagene Kategorie und Frist übernehmen</button>':'')+
+    '<p class="doc-muted">Die Geräteverwaltung und abgeschlossene Prüfungen werden durch diese Funktion nicht geändert.</p>'+
+    '<button type="button" class="btn secondary" id="docAnalysisBack">Zur Versionsübersicht</button></div>';
+  document.getElementById('docAnalysisBack').onclick=()=>versions(id);
+  const confirm=document.getElementById('docAnalysisConfirm'),apply=document.getElementById('docAnalysisApply');
+  if(confirm&&apply){
+   confirm.onchange=()=>{apply.disabled=!confirm.checked};
+   apply.onclick=async()=>{
+    apply.disabled=true;try{
+     await api(BASE+'/'+id,{method:'PUT',body:JSON.stringify({
+      title:doc.title,description:doc.description,category:fields.category||doc.category,
+      visibility:doc.visibility,expiresOn:fields.nextInspectionDate?.value||doc.expiresOn||null})});
+     closeModal();await refresh();
+    }catch(err){apply.disabled=false;alert(err.message)}
+   };
+  }
+ }catch(err){modalBody.textContent='Die Analyse konnte nicht geladen werden: '+err.message}
 }
 async function download(id,version){
  const popup=window.open('','_blank');if(popup)popup.document.body.textContent='Datei wird geladen …';
