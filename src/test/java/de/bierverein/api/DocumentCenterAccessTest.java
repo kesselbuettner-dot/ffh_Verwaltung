@@ -17,6 +17,7 @@ class DocumentCenterAccessTest {
   AppUser u=new AppUser();ReflectionTestUtils.setField(u,"id",id);u.setUsername("test"+id);u.setRole(role);
   u.setEnabled(true);u.setRegistrationApproved(true);
   when(users.findByUsernameWithMember(u.getUsername())).thenReturn(Optional.of(u));
+  when(users.findByUsername(u.getUsername())).thenReturn(Optional.of(u));
   return u;
  }
  private Authentication auth(AppUser u){Authentication a=mock(Authentication.class);when(a.getName()).thenReturn(u.getUsername());return a;}
