@@ -16,7 +16,7 @@ import org.springframework.http.HttpStatus;
 /** Optional manually triggered OpenAI-compatible API. No network connection by default. */
 @Service
 public class ExternalDocumentReviewService {
- private final String endpoint,key,model;
+ private final String endpoint,key,model,allowedHost;
  private final ObjectMapper json;
  private final DocumentExternalReviewAuditRepository audits;
  private final HttpClient client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5))
@@ -25,14 +25,16 @@ public class ExternalDocumentReviewService {
    @Value("${app.document-ai.endpoint:}") String endpoint,
    @Value("${app.document-ai.key:}") String key,
    @Value("${app.document-ai.model:}") String model,
+   @Value("${app.document-ai.allowed-host:}") String allowedHost,
    ObjectMapper json,DocumentExternalReviewAuditRepository audits){
-  this.endpoint=endpoint;this.key=key;this.model=model;this.json=json;this.audits=audits;
+  this.endpoint=endpoint;this.key=key;this.model=model;this.allowedHost=allowedHost;this.json=json;this.audits=audits;
  }
  public boolean enabled(){
   try{
    URI uri=URI.create(endpoint);String host=uri.getHost();
    return "https".equalsIgnoreCase(uri.getScheme())&&uri.getUserInfo()==null&&uri.getPort()==-1
-    &&host!=null&&!host.isBlank()&&!host.equalsIgnoreCase("localhost")
+    &&host!=null&&!host.isBlank()&&!allowedHost.isBlank()&&host.equalsIgnoreCase(allowedHost)
+    &&!host.equalsIgnoreCase("localhost")
     &&!host.endsWith(".local")&&!host.matches("(?i)(?:127|10|192|169)\\..*")
     &&!key.isBlank()&&!model.isBlank();
   }catch(Exception ex){return false;}
