@@ -24,7 +24,8 @@
    const [list,reports]=await Promise.all([api(url+'/sessions'),api(url+'/reports')]);
    const host=document.getElementById('inspectionSessions');
    host.replaceChildren();
-   for(const item of list){
+   // Signed sessions belong exclusively in the report archive, not again in the planned list.
+   for(const item of list.filter(entry=>!entry.reportId)){
     const row=node('div');row.className='notice-item';
     const title=node('strong',fmt(item.date)+' · '+item.title);
     const meta=node('div',(item.locations||[]).join(', ')+' · '+(item.categories||[]).join(', ')+(item.total?' · '+item.completed+'/'+item.total+' bearbeitet':''));meta.className='sub';
@@ -35,7 +36,7 @@
      actions.append(button('Termin löschen',()=>removeSession(item.eventId,item.date),'danger'));
     row.append(title,meta,actions);host.append(row);
    }
-   if(!list.length)host.textContent='Keine geplanten Geräteprüftermine.';
+   if(!list.some(entry=>!entry.reportId))host.textContent='Keine offenen Geräteprüftermine. Unterzeichnete Termine stehen unten bei den Prüfprotokollen.';
    const reportsHost=document.getElementById('inspectionReports');reportsHost.replaceChildren();
    for(const r of reports){
     const row=node('div');row.className='notice-item';
