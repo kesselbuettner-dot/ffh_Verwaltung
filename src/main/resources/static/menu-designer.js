@@ -52,6 +52,15 @@ function normalized(){
   });
  }
  value.groups=tidy(value.groups,0);
+ // Upgrade previous default layouts without resetting individually arranged menus.
+ // A "Meine Daten" entry formerly in "Übersicht" now belongs under "Meine Aufgaben".
+ const overview=value.groups.find(g=>g.title==='Übersicht');
+ const tasks=value.groups.find(g=>g.title==='Meine Aufgaben');
+ if(overview&&tasks&&overview.children.includes('my-profile')){
+   overview.children=overview.children.filter(id=>id!=='my-profile');
+   const taskIndex=tasks.children.indexOf('my-tasks');
+   tasks.children.splice(taskIndex>=0?taskIndex+1:0,0,'my-profile');
+ }
  const missing=menuDefinitions.filter(x=>x.implemented!==false&&!seen.has(x.id));
  missing.forEach(item=>{
    let target=value.groups.find(g=>g.title===item.section);
@@ -60,6 +69,8 @@ function normalized(){
  });
  value.entries=Object.fromEntries(Object.entries(value.entries||{}).filter(([id,v])=>byId.has(id)&&v&&typeof v==='object')
   .map(([id,v])=>[id,{label:String(v.label||'').slice(0,60),icon:String(v.icon||'').slice(0,45),hidden:!!v.hidden}]));
+ // Update the former default caption; preserve custom labels chosen by the admin.
+ if(value.entries['my-profile']?.label==='Meine Daten')value.entries['my-profile'].label='Meine Daten / Übersicht';
  value.style={...DEFAULT_STYLE,...(value.style||{})};
  value.quickNav=Array.isArray(value.quickNav)?[...new Set(value.quickNav.filter(x=>x==='messages'||byId.has(x)))].slice(0,3):['dashboard','theke','messages'];
  return value;
