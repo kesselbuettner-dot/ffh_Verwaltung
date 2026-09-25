@@ -21,7 +21,7 @@
   const items=(manual.tasks||[]).map(t=>row('GENERAL',String(t.id),t.title,t.description,t.dueOn,t.status,
    ()=>editTask(t),{raw:t,canEdit:t.canEdit,canChangeStatus:t.canChangeStatus,assigneeName:t.assigneeName}));
   (Array.isArray(devices)?devices:[]).filter(x=>x.status==='OPEN').forEach(x=>items.push(row('DEVICE',String(x.id),x.deviceName,
-   [x.location,x.inventoryNumber].filter(Boolean).join(' · '),x.dueOn,'OPEN',()=>DeviceCycleTasks.page())));
+   [x.location,x.inventoryNumber].filter(Boolean).join(' · '),x.dueOn,'OPEN',()=>DeviceCycleTasks.page(Number(x.id)))));
   (Array.isArray(services)?services:[]).forEach(x=>items.push(row('SERVICE',x.eventId+':'+x.occurrenceDate,x.title,
    new Date(x.startAt).toLocaleString('de-DE'),x.occurrenceDate,'OPEN',()=>serviceRemindersPage())));
   (Array.isArray(messages)?messages:[]).filter(x=>x.type==='MESSAGE'&&x.active&&!x.read).forEach(x=>items.push(
