@@ -89,11 +89,16 @@ public class GeneralTaskController {
   List<GeneralTask> own=tasks.findByAssigneeIdOrCreatorIdOrderByDueOnAscCreatedAtDesc(u.getId(),u.getId());
   return new Overview(canCreate,u.getId(),allowedCategories(u),assignees,own.stream().map(t->view(t,u)).toList());
  }
- private void apply(GeneralTask t,Input input,boolean allowAssignee){
+ private void apply(GeneralTask t,Input input,AppUser actor,boolean creating){
   if(input==null||input.title()==null||input.title().trim().isEmpty()||input.title().trim().length()>160)
    throw error(HttpStatus.BAD_REQUEST,"Aufgabentitel fehlt oder ist zu lang");
   if(input.description()!=null&&input.description().length()>4000)throw error(HttpStatus.BAD_REQUEST,"Beschreibung zu lang");
-  if(allowAssignee){
+  String chosen=input.category()==null||input.category().isBlank()
+    ?(creating?allowedCategories(actor).get(0):category(t)):input.category().trim().toUpperCase(Locale.ROOT);
+  if(!ALL_CATEGORIES.contains(chosen)||!allowedCategories(actor).contains(chosen))
+   throw error(HttpStatus.FORBIDDEN,"Aufgaben dürfen nur im eigenen Zuständigkeitsbereich vergeben werden");
+  t.category=chosen;
+  {
    AppUser selected=users.findById(Objects.requireNonNullElse(input.assigneeId(),-1L))
      .orElseThrow(()->error(HttpStatus.BAD_REQUEST,"Bitte ein Mitglied auswählen"));
    if(!eligible(selected))throw error(HttpStatus.BAD_REQUEST,"Das Mitglied hat keinen freigeschalteten aktiven Zugang");
@@ -105,13 +110,13 @@ public class GeneralTaskController {
  @PostMapping @ResponseStatus(HttpStatus.CREATED) @Transactional
  public View create(@RequestBody Input input,Authentication auth){
   AppUser u=actor(auth);if(!creator(u))throw error(HttpStatus.FORBIDDEN,"Aufgaben anlegen dürfen nur Vorstand, Administration und Fachverantwortliche");
-  GeneralTask t=new GeneralTask("","",u.getId(),u.getId(),null);apply(t,input,true);
+  GeneralTask t=new GeneralTask("","",u.getId(),u.getId(),null);apply(t,input,u,true);
   t=tasks.save(t);notifyAfterCommit(t,"Neue Aufgabe");return view(t,u);
  }
  @PutMapping("/{id}") @Transactional
  public View edit(@PathVariable Long id,@RequestBody Input input,Authentication auth){
   AppUser u=actor(auth);GeneralTask t=visible(id,u);
-  if(!creator(u)||!(Objects.equals(t.creatorId,u.getId())||u.getRole()==Role.ADMIN||u.getRole()==Role.VORSTAND))
+  if(!canManage(u,t))
    throw error(HttpStatus.FORBIDDEN,"Keine Berechtigung zum Bearbeiten");
   if("DONE".equals(t.status))throw error(HttpStatus.CONFLICT,"Abgeschlossene Aufgabe kann nicht bearbeitet werden");
   Long former=t.assigneeId;apply(t,input,true);t=tasks.save(t);
@@ -121,7 +126,7 @@ public class GeneralTaskController {
  @PatchMapping("/{id}/status") @Transactional
  public View status(@PathVariable Long id,@RequestBody Input input,Authentication auth){
   AppUser u=actor(auth);GeneralTask t=visible(id,u);
-  boolean canEdit=creator(u)&&(Objects.equals(t.creatorId,u.getId())||u.getRole()==Role.ADMIN||u.getRole()==Role.VORSTAND);
+  boolean canEdit=canManage(u,t);
   if(!Objects.equals(t.assigneeId,u.getId())&&!canEdit)throw error(HttpStatus.FORBIDDEN,"Keine Berechtigung für diese Aufgabe");
   String status=input==null?null:input.status();
   if(!STATUSES.contains(status))throw error(HttpStatus.BAD_REQUEST,"Ungültiger Status");
