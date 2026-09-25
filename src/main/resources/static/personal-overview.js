@@ -16,6 +16,9 @@
  function section(title,body,side=''){
   return '<section class="self-panel"><div class="self-panel-heading"><h2>'+safe(title)+'</h2>'+side+'</div>'+body+'</section>';
  }
+ function tabs(selected){return '<nav class="quick" aria-label="Meine Daten und Aufgaben" style="margin:14px 0;flex-wrap:wrap">'+
+  '<button type="button" class="btn '+(selected==='data'?'primary':'secondary')+'" onclick="PersonalOverview.page()" aria-current="'+(selected==='data'?'page':'false')+'">Meine Daten / Übersicht</button>'+
+  '<button type="button" class="btn '+(selected==='tasks'?'primary':'secondary')+'" onclick="UnifiedTasks.page(true)" aria-current="'+(selected==='tasks'?'page':'false')+'">Meine Aufgaben</button></nav>';}
  function wire(){
   content.querySelectorAll('[data-self-page]').forEach(b=>{
    b.onclick=()=>target(b.dataset.selfPage);
@@ -23,13 +26,14 @@
   document.getElementById('self-refresh')?.addEventListener('click',page);
  }
  async function page(){
+  root.ffhPersonalTab='data';
   setActive('my-profile');closeMenu();closeProfileMenu();
-  content.innerHTML='<div class="self-shell"><div class="self-wait">Meine Daten werden geladen …</div></div>';
+  content.innerHTML=tabs('data')+'<div class="self-shell"><div class="self-wait">Meine Daten werden geladen …</div></div>';
   try{
    const data=await api('/api/me/overview');
-   if(root.currentPage!=='my-profile')return;
+   if(root.currentPage!=='my-profile'||root.ffhPersonalTab!=='data')return;
    if(!data.linked){
-    content.innerHTML='<div class="self-shell">'+section('Meine Daten',
+    content.innerHTML=tabs('data')+'<div class="self-shell">'+section('Meine Daten',
      '<p>Deinem Benutzerkonto ist noch kein Mitglied zugeordnet. Bitte lasse die Zuordnung in der Mitgliederverwaltung von der Administration prüfen.</p>')+'</div>';
     return;
    }
@@ -81,17 +85,17 @@
     '<p class="self-muted">Die Bestellübersicht zeigt Buchungen, nicht sämtliche Guthabenaufladungen.</p>',
     action('theke','Zur Kasse'));
    const warnings=(data.warnings||[]).map(x=>'<p class="self-warning">'+safe(x)+'</p>').join('');
-   content.innerHTML='<div class="self-shell">'+intro+warnings+'<div class="self-grid">'+
+   content.innerHTML=tabs('data')+'<div class="self-shell">'+intro+warnings+'<div class="self-grid">'+
      personal+qualifications+appointments+duties+account+
      section('Meine Aufgaben','<p>Offene Vereinsaufgaben, Geräteprüfungen und Dienst-Rückmeldungen findest du in deiner Aufgabenübersicht.</p>'+
-       action('my-tasks','Meine Aufgaben öffnen'))+'</div></div>';
+       '<button type="button" class="btn secondary" onclick="UnifiedTasks.page(true)">Meine Aufgaben öffnen</button>')+'</div></div>';
    wire();
   }catch(err){
-   if(root.currentPage==='my-profile')
-    content.innerHTML='<div class="self-shell"><div class="self-panel"><h1>Meine Daten</h1>'+
+   if(root.currentPage==='my-profile'&&root.ffhPersonalTab==='data')
+    content.innerHTML=tabs('data')+'<div class="self-shell"><div class="self-panel"><h1>Meine Daten</h1>'+
       '<p class="self-warning">Die persönlichen Daten konnten nicht geladen werden: '+safe(err.message)+'</p>'+
       '<button type="button" class="btn secondary" onclick="PersonalOverview.page()">Erneut versuchen</button></div></div>';
   }
  }
- root.PersonalOverview=Object.freeze({page});
+ root.PersonalOverview=Object.freeze({page,tabs});
 })(window);

@@ -5,7 +5,7 @@
  const escHtml=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const date=v=>v?new Date(String(v).length===10?v+'T12:00:00':v).toLocaleDateString('de-DE'):'Keine Frist';
  const today=()=>new Date().toLocaleDateString('sv-SE');
- let last=null,showDone=false,filter='ALL',search='';
+ let last=null,showDone=false,filter='ALL',search='',integrated=false;
  const categories={GENERAL:'Vereinsaufgabe',DEVICE:'Geräteprüfung',SERVICE:'Dienst-Rückmeldung',DRIVING:'Führerscheinkontrolle',MESSAGE:'Nachricht'};
  const manualCategories={GENERAL:'Allgemeine Vereinsaufgabe',FIRE:'Feuerwehr / Organisation',TRAINING:'Dienst / Schulung',DEVICE:'Gerätewesen',CATERING:'Getränke / Versorgung',FINANCE:'Finanzen'};
  function row(source,id,title,description,dueOn,status,action,extra={}){
@@ -55,9 +55,9 @@
   const active=items.filter(t=>!['DONE','INFO'].includes(t.status));
   const overdue=active.filter(t=>t.dueOn&&t.dueOn<today()).length;
   const inProgress=active.filter(t=>t.status==='IN_PROGRESS').length;
-  root.setMenuNoticeCount?.('my-tasks',items.filter(t=>t.source==='GENERAL'&&t.status!=='DONE'&&t.raw?.assigneeId===manual.currentUserId).length);
+  root.setMenuNoticeCount?.('my-profile',items.filter(t=>t.source==='GENERAL'&&t.status!=='DONE'&&t.raw?.assigneeId===manual.currentUserId).length);
   const rows=filteredRows();
-  content.innerHTML='<section class="mytasks-page"><div class="title-row"><div><h1>Meine Aufgaben</h1><p class="sub">Alle persönlichen Aufgaben aus der Vereins- und Feuerwehrverwaltung</p></div>'+
+  content.innerHTML=(integrated?PersonalOverview.tabs('tasks'):'')+'<section class="mytasks-page"><div class="title-row"><div><h1>Meine Aufgaben</h1><p class="sub">Alle persönlichen Aufgaben aus der Vereins- und Feuerwehrverwaltung</p></div>'+
    (manual.canCreate?'<button class="btn primary" id="mytasksCreate">＋ Aufgabe anlegen</button>':'')+'</div>'+
    '<div class="mytasks-metrics"><div><b>'+active.length+'</b><span>Offen</span></div><div><b>'+overdue+'</b><span>Überfällig</span></div><div><b>'+inProgress+'</b><span>In Bearbeitung</span></div></div>'+
    '<div class="mytasks-toolbar"><input id="mytasksSearch" aria-label="Aufgaben suchen" placeholder="Aufgaben suchen …" value="'+escHtml(search)+'"><select id="mytasksFilter" aria-label="Aufgabenart filtern">'+
@@ -72,11 +72,14 @@
   document.getElementById('mytasksShowDone').onchange=e=>{showDone=e.target.checked;render()};
   wireTaskRows(rows);
  }
- async function page(){
-  setActive('my-tasks');closeMenu();
-  content.innerHTML='<div class="panel"><h1>Meine Aufgaben</h1><p class="sub">Aufgaben werden geladen …</p></div>';
-  try{await load();if(root.currentPage==='my-tasks')render()}
-  catch(e){if(root.currentPage==='my-tasks')content.innerHTML='<div class="panel"><h1>Meine Aufgaben</h1><div class="message error">'+escHtml(e.message)+'</div></div>'}
+ async function page(asIntegrated=integrated){
+  integrated=!!asIntegrated;
+  if(integrated)root.ffhPersonalTab='tasks';
+  const activePage=integrated?'my-profile':'my-tasks';
+  setActive(activePage);closeMenu();closeProfileMenu();
+  content.innerHTML=(integrated?PersonalOverview.tabs('tasks'):'')+'<div class="panel"><h1>Meine Aufgaben</h1><p class="sub">Aufgaben werden geladen …</p></div>';
+  try{await load();if(root.currentPage===activePage&&(!integrated||root.ffhPersonalTab==='tasks'))render()}
+  catch(e){if(root.currentPage===activePage&&(!integrated||root.ffhPersonalTab==='tasks'))content.innerHTML=(integrated?PersonalOverview.tabs('tasks'):'')+'<div class="panel"><h1>Meine Aufgaben</h1><div class="message error">'+escHtml(e.message)+'</div></div>'}
  }
  function editTask(t){
   const management=!t||(t.canEdit&&t.status!=='DONE'),own=t&&t.canChangeStatus;
@@ -120,5 +123,5 @@
    finally{save.disabled=false}
   };
  }
- root.UnifiedTasks={page,refresh:async()=>{if(typeof token==='undefined'||!token)return;try{const tasks=await api(BASE);const open=(tasks.tasks||[]).filter(t=>t.status!=='DONE'&&t.assigneeId===tasks.currentUserId);root.setMenuNoticeCount?.('my-tasks',open.length)}catch{}}};
+ root.UnifiedTasks={page,refresh:async()=>{if(typeof token==='undefined'||!token)return;try{const tasks=await api(BASE);const open=(tasks.tasks||[]).filter(t=>t.status!=='DONE'&&t.assigneeId===tasks.currentUserId);root.setMenuNoticeCount?.('my-profile',open.length)}catch{}}};
 })(window);
