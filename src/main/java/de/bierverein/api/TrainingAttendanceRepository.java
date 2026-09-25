@@ -7,5 +7,6 @@ import java.util.*;
 public interface TrainingAttendanceRepository extends JpaRepository<TrainingAttendance, Long> {
     List<TrainingAttendance> findByEventIdAndOccurrenceDate(Long eventId, LocalDate occurrenceDate);
     Optional<TrainingAttendance> findByEventIdAndOccurrenceDateAndUsername(Long eventId, LocalDate occurrenceDate, String username);
+    List<TrainingAttendance> findTop25ByUsernameOrderByOccurrenceDateDesc(String username);
     void deleteByEventId(Long eventId);
 }
