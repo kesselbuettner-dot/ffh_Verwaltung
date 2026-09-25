@@ -99,11 +99,16 @@ async function versions(id){
    '<div class="doc-revision"><strong>Version '+v.version+'</strong> · '+e(v.fileName)+
    '<br><span class="doc-muted">'+e(new Date(v.uploadedAt).toLocaleString('de-DE'))+' · '+e(v.uploadedBy)+'</span>'+
    '<br><button class="btn secondary" type="button" data-download="'+v.version+'">Öffnen / Herunterladen</button> <button class="btn secondary" type="button" data-analyze="'+v.version+'">Erkannte Daten prüfen</button>'+
-   '<div class="doc-muted">Erkennung: '+e(v.extractionMethod||'Noch nicht analysiert')+(v.extractionWarning?' · '+e(v.extractionWarning):'')+'</div></div>').join('')+'</div>'
+   '<div class="doc-muted">Erkennung: '+e(v.extractionMethod||'Noch nicht analysiert')+(v.extractionWarning?' · '+e(v.extractionWarning):'')+'</div>'+((doc?.canEdit&&v.extractionMethod==='FAILED')?'<button class="btn secondary" type="button" data-retry="'+v.version+'">OCR erneut ausführen</button>':'')+'</div>').join('')+'</div>'
    (doc?.canEdit?'<label class="doc-form">Neue Version hochladen<input type="file" id="docRevisionFile" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png"></label><button class="btn primary" type="button" id="docUploadVersion">Neue Version speichern</button>':'')+
-   '<div id="docVersionError" role="alert"></div>';
+   '<button type="button" class="btn secondary" id="docVersionsReload">↻ Status aktualisieren</button><div id="docVersionError" role="alert"></div>';
+  document.getElementById('docVersionsReload').onclick=()=>versions(id);
   modalBody.querySelectorAll('[data-download]').forEach(b=>b.onclick=()=>download(id,Number(b.dataset.download)));
   modalBody.querySelectorAll('[data-analyze]').forEach(b=>b.onclick=()=>analysis(id,Number(b.dataset.analyze)));
+  modalBody.querySelectorAll('[data-retry]').forEach(b=>b.onclick=async()=>{
+   b.disabled=true;try{await api(BASE+'/'+id+'/versions/'+Number(b.dataset.retry)+'/reanalyze',{method:'POST'});await versions(id)}
+   catch(err){document.getElementById('docVersionError').textContent=err.message;b.disabled=false}
+  });
   const upload=document.getElementById('docUploadVersion');
   if(upload)upload.onclick=async()=>{
    const file=document.getElementById('docRevisionFile').files[0];if(!file){document.getElementById('docVersionError').textContent='Bitte Datei auswählen';return}
