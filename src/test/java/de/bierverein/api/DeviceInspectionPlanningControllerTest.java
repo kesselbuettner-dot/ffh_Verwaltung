@@ -132,4 +132,20 @@ class DeviceInspectionPlanningControllerTest {
         assertEquals(1, result.size());
         assertEquals(0, result.get(0).total());
     }
+ @Test void openingAlreadySignedAppointmentDoesNotRegenerateCheckItems(){
+  LocalDate today=LocalDate.now();
+  TrainingScheduleEvent event=appointment(today);
+  when(events.findById(23L)).thenReturn(Optional.of(event));
+  when(exceptions.existsBySeriesEventIdAndOccurrenceDate(23L,today)).thenReturn(false);
+  DeviceInspectionSessionReport signed=mock(DeviceInspectionSessionReport.class);
+  when(signed.getId()).thenReturn(123L);
+  when(reports.findByEventIdAndOccurrenceDate(23L,today)).thenReturn(Optional.of(signed));
+  when(tasks.findByEventIdAndOccurrenceDateOrderByDeviceNameAsc(23L,today)).thenReturn(List.of());
+  var detail=controller.session(23L,today);
+  assertEquals(123L,detail.session().reportId());
+  assertTrue(detail.tasks().isEmpty());
+  verify(devices,never()).findByActiveTrueOrderByNameAsc();
+  verify(tasks,never()).save(any(DeviceInspectionTask.class));
+ }
+
 }
