@@ -14,6 +14,7 @@ public class GeneralTask {
  public Long id;
  @Column(nullable=false,length=160) public String title;
  @Column(length=4000) public String description;
+ @Column(length=24) public String category="GENERAL";
  @Column(name="assignee_id",nullable=false) public Long assigneeId;
  @Column(name="creator_id",nullable=false) public Long creatorId;
  @Column(name="due_on") public LocalDate dueOn;
