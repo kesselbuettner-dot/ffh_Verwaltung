@@ -119,7 +119,7 @@ public class GeneralTaskController {
   if(!canManage(u,t))
    throw error(HttpStatus.FORBIDDEN,"Keine Berechtigung zum Bearbeiten");
   if("DONE".equals(t.status))throw error(HttpStatus.CONFLICT,"Abgeschlossene Aufgabe kann nicht bearbeitet werden");
-  Long former=t.assigneeId;apply(t,input,true);t=tasks.save(t);
+  Long former=t.assigneeId;apply(t,input,u,false);t=tasks.save(t);
   if(!Objects.equals(former,t.assigneeId))notifyAfterCommit(t,"Zuweisung");
   return view(t,u);
  }
