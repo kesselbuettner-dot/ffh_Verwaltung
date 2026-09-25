@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FW-Cockpit · Wachendisplay</title><link rel="icon" href="/icons/fw-cockpit-brand.svg">
+<style>
+:root{--zoom:1;color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#050b14;color:#f2f6ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+body{min-height:100svh;overflow:hidden;background:radial-gradient(circle at 85% 12%,#48121d88,transparent 29%),radial-gradient(circle at 8% 75%,#063464a8,transparent 40%),linear-gradient(120deg,#02060d,#091625 48%,#230910)}
+.screen{width:100%;height:100svh;display:flex;flex-direction:column;gap:clamp(10px,1.4vh,20px);padding:clamp(14px,2vw,34px);font-size:calc(clamp(15px,1.25vw,27px)*var(--zoom))}
+.head{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:clamp(64px,11vh,120px);border-bottom:1px solid #ffffff32;padding-bottom:12px}
+.brand{display:flex;align-items:center;gap:clamp(12px,2vw,26px);min-width:0}.brand img{width:clamp(56px,7vh,100px);height:clamp(56px,7vh,100px);object-fit:contain}.brand strong{display:block;font-size:1.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.brand small{color:#a8bdcb}.clock{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.clock strong{font-size:clamp(30px,4vw,76px);letter-spacing:.01em}.clock small{display:block;color:#c6d6e3}
+.panels{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:clamp(12px,1.3vw,24px);min-height:0;flex:1}
+.panel{min-height:0;display:flex;flex-direction:column;border:1px solid #8ca0b32c;background:linear-gradient(145deg,#10243aaf,#12151ed9);border-radius:20px;overflow:hidden;box-shadow:0 15px 35px #0008;backdrop-filter:blur(18px)}
+.panel h2{margin:0;padding:clamp(12px,1.8vw,26px);font-size:1.18em;border-bottom:1px solid #ffffff20;display:flex;align-items:center;gap:12px}
+.dot{background:#ca2339;display:inline-block;width:11px;height:11px;border-radius:100%;box-shadow:0 0 19px #e83456}
+.items{overflow:hidden;flex:1;padding:0 clamp(12px,1.6vw,25px)}.entry{padding:clamp(13px,2.1vh,27px) 0;border-bottom:1px solid #ffffff20}.entry strong{font-size:1.12em;display:block;line-height:1.23;overflow-wrap:anywhere}.entry p{color:#c4d1de;font-size:.84em;line-height:1.28;margin:8px 0 0;white-space:pre-line;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.entry .date{color:#90cbff;font-size:.83em;margin-bottom:5px;display:block}.empty{color:#aebecb;text-align:center;padding:clamp(28px,6vh,90px);font-size:1em}
+.foot{display:flex;gap:18px;align-items:center;justify-content:space-between;color:#aec1d0;font-size:.74em;border-top:1px solid #ffffff2c;padding-top:9px}.foot #status{white-space:nowrap}.screen.offline #status{color:#ffb2bb}
+.settings-toggle{position:fixed;right:12px;bottom:12px;z-index:9;width:42px;height:42px;border-radius:50%;border:1px solid #dbe7f955;background:#21344aa9;color:#fff;opacity:.28;cursor:pointer}.settings-toggle:focus-visible,.settings-toggle:hover{opacity:1}
+.settings{position:fixed;right:12px;bottom:60px;z-index:10;padding:16px;border:1px solid #ffffff45;border-radius:14px;background:#0e1929;color:#fff;box-shadow:0 15px 40px #000b;display:grid;gap:13px;width:min(290px,90vw)}
+.settings[hidden]{display:none}.settings label{display:grid;gap:5px}.settings button,.settings select{padding:9px;background:#223a53;border:1px solid #7894ae;border-radius:8px;color:#fff}
+@media(max-aspect-ratio: 1/1){body{overflow:auto}.screen{height:auto;min-height:100svh}.panels{grid-template-columns:1fr}.panel{min-height:34vh}.screen{font-size:calc(17px*var(--zoom))}.brand strong{font-size:1.05em}}
+@media(max-height:500px) and (orientation:landscape){.head{min-height:48px}.entry{padding:9px 0}.panel h2{padding:9px}.brand img{width:40px;height:40px}}
+</style></head>
+<body><div id="screen" class="screen">
+<header class="head"><div class="brand"><img src="/icons/fw-cockpit-brand.svg" alt=""><div><strong id="organisation">Wachendisplay</strong><small>FW-Cockpit · Dienste und Mitteilungen</small></div></div><div class="clock"><strong id="time">--:--</strong><small id="date"></small></div></header>
+<main class="panels"><section class="panel"><h2><span class="dot"></span> Wichtige Mitteilungen</h2><div id="messages" class="items"><p class="empty">Mitteilungen werden geladen …</p></div></section><section class="panel"><h2><span class="dot"></span> Die nächsten Termine</h2><div id="events" class="items"><p class="empty">Termine werden geladen …</p></div></section></main>
+<footer class="foot"><span>FW-Cockpit · Gerätehaus</span><span id="status">Wird aktualisiert …</span></footer></div>
+<button class="settings-toggle" id="settingsButton" aria-label="Displayeinstellungen" aria-controls="settingsPanel" aria-expanded="false">⚙</button>
+<div class="settings" id="settingsPanel" hidden><strong>Display-Einstellungen</strong><label>Größe <input id="zoom" type="range" min="75" max="125" value="100"></label><label>Aktualisieren <select id="refresh"><option value="15">15 Sekunden</option><option value="30" selected>30 Sekunden</option><option value="60">60 Sekunden</option><option value="120">120 Sekunden</option></select></label><button id="fullscreen">Vollbild</button><button id="settingsClose">Schließen</button><a href="/index.html" style="color:#a5d6ff">Zur Verwaltung</a></div>
+<script>
+(()=>{
+'use strict';
+const el=id=>document.getElementById(id),esc=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let pending=false,latestEvents=[],latestMessages=[],interval=null;
+const fmt={dateStyle:'medium',timeStyle:'short'};
+function clock(){let n=new Date();el('time').textContent=n.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});el('date').textContent=n.toLocaleDateString('de-DE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+async function api(url){let token=localStorage.getItem('token');if(!token){location.replace('/index.html?wallboard=1');throw Error('Anmeldung fehlt')}const r=await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store'});if(r.status===401){localStorage.removeItem('token');location.replace('/index.html?wallboard=1');throw Error('Sitzung abgelaufen')}if(!r.ok)throw Error('HTTP '+r.status);return r.json()}
+function entries(list,target,isDate){const limit=window.matchMedia('(max-height: 750px) and (orientation:landscape)').matches?3:5;
+ let shown=list.slice(0,limit);el(target).innerHTML=shown.length?shown.map(x=>'<article class="entry">'+(isDate?'<span class="date">'+esc(new Date(x.startAt||x.eventAt).toLocaleString('de-DE',fmt))+'</span>':'')+'<strong>'+esc(x.title)+'</strong>'+(!isDate&&x.body?'<p>'+esc(x.body).slice(0,600)+'</p>':'')+'</article>').join(''):'<p class="empty">'+(isDate?'Keine bevorstehenden Termine':'Keine aktuellen Mitteilungen')+'</p>'}
+async function update(){if(pending)return;pending=true;try{
+ const now=Date.now(),response=await Promise.all([api('/api/dashboard/messages/wallboard'),fetch('/api/settings/imprint',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}))]);
+ latestMessages=(Array.isArray(response[0])?response[0]:[]).filter(x=>x.type==='MESSAGE').sort((a,b)=>(b.priority||0)-(a.priority||0));
+ latestEvents=(Array.isArray(response[0])?response[0]:[]).filter(x=>x.type==='APPOINTMENT'&&x.eventAt&&Date.parse(x.eventAt)>=now).sort((a,b)=>Date.parse(a.eventAt)-Date.parse(b.eventAt));
+ el('organisation').textContent=response[1].organizationName||'Feuerwehr und Verein';entries(latestMessages,'messages',false);entries(latestEvents,'events',true);
+ el('screen').classList.remove('offline');el('status').textContent='Aktualisiert '+new Date().toLocaleTimeString('de-DE');}
+ catch(err){el('screen').classList.add('offline');el('status').textContent='Offline – letzte Daten sichtbar';if(!latestMessages.length&&!latestEvents.length){el('messages').innerHTML='<p class="empty">Verbindung erforderlich</p>';el('events').innerHTML='<p class="empty">Bitte anmelden oder Verbindung prüfen</p>';}}
+ finally{pending=false}}
+function schedule(){clearInterval(interval);interval=setInterval(update,Number(el('refresh').value)*1000)}
+el('settingsButton').onclick=()=>{let n=el('settingsPanel');n.hidden=!n.hidden;el('settingsButton').setAttribute('aria-expanded',String(!n.hidden))};
+el('settingsClose').onclick=()=>{el('settingsPanel').hidden=true;el('settingsButton').setAttribute('aria-expanded','false')};
+el('fullscreen').onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()};
+el('zoom').oninput=()=>{document.documentElement.style.setProperty('--zoom',(Number(el('zoom').value)/100).toString())};
+el('refresh').onchange=()=>{schedule();update()};
+clock();setInterval(clock,1000);update();schedule();document.addEventListener('visibilitychange',()=>{if(!document.hidden)update()});
+})();
+</script></body></html>

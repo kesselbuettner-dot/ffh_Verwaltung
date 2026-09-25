@@ -50,6 +50,9 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- Extract selectable text from uploaded PDFs (scans require separate OCR). -->
+        <dependency><groupId>org.apache.pdfbox</groupId><artifactId>pdfbox</artifactId><version>3.0.5</version></dependency>
+
         <!-- Validierung -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
