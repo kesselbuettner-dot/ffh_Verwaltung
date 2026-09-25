@@ -97,15 +97,18 @@ public class DocumentCenterController {
   String name=original.toLowerCase(Locale.ROOT);
   if(name.endsWith(".pdf")&&data.length>4&&new String(data,0,Math.min(5,data.length),StandardCharsets.ISO_8859_1).startsWith("%PDF-"))return "application/pdf";
   if(name.endsWith(".docx")&&data.length>3&&data[0]==0x50&&data[1]==0x4b)return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if((name.endsWith(".jpg")||name.endsWith(".jpeg"))&&data.length>3&&(data[0]&255)==255&&(data[1]&255)==216&&(data[2]&255)==255)return "image/jpeg";
+  if(name.endsWith(".png")&&data.length>7&&(data[0]&255)==137&&data[1]==80&&data[2]==78&&data[3]==71)return "image/png";
   if(name.endsWith(".txt")&&"text/plain".equalsIgnoreCase(declared)&&!new String(data,StandardCharsets.UTF_8).contains("\uFFFD"))return "text/plain";
-  throw error(HttpStatus.BAD_REQUEST,"Datei muss PDF, DOCX oder UTF-8 TXT sein");
+  throw error(HttpStatus.BAD_REQUEST,"Datei muss PDF, DOCX, JPG, PNG oder UTF-8 TXT sein");
  }
  private String index(byte[] data,String mime){
   try{
    String result=switch(mime){
     case "application/pdf" -> {try(var pdf=Loader.loadPDF(data)){yield new PDFTextStripper().getText(pdf);}}
     case "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> {try(var doc=new XWPFDocument(new ByteArrayInputStream(data));var extractor=new XWPFWordExtractor(doc)){yield extractor.getText();}}
-    default -> new String(data,StandardCharsets.UTF_8);
+    case "text/plain" -> new String(data,StandardCharsets.UTF_8);
+    default -> "";
    };
    return result.length()>21000?result.substring(0,21000):result;
   }catch(Exception e){return "";} // A scan without selectable text stays searchable by title/metadata.
