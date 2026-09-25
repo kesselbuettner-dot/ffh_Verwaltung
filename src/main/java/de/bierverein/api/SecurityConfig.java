@@ -59,6 +59,8 @@ public class SecurityConfig {
                     "/page-templates.js",
                     "/device-cycle-tasks.js",
                     "/my-tasks.js",
+                    "/personal-overview.js",
+                    "/personal-overview.css",
                     "/document-center.js",
                     "/document-center.css",
                     "/display.html",
