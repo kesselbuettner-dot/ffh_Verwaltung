@@ -26,11 +26,12 @@
   document.getElementById('self-refresh')?.addEventListener('click',page);
  }
  async function page(){
+  root.ffhPersonalTab='data';
   setActive('my-profile');closeMenu();closeProfileMenu();
   content.innerHTML=tabs('data')+'<div class="self-shell"><div class="self-wait">Meine Daten werden geladen …</div></div>';
   try{
    const data=await api('/api/me/overview');
-   if(root.currentPage!=='my-profile')return;
+   if(root.currentPage!=='my-profile'||root.ffhPersonalTab!=='data')return;
    if(!data.linked){
     content.innerHTML=tabs('data')+'<div class="self-shell">'+section('Meine Daten',
      '<p>Deinem Benutzerkonto ist noch kein Mitglied zugeordnet. Bitte lasse die Zuordnung in der Mitgliederverwaltung von der Administration prüfen.</p>')+'</div>';
@@ -90,7 +91,7 @@
        '<button type="button" class="btn secondary" onclick="UnifiedTasks.page(true)">Meine Aufgaben öffnen</button>')+'</div></div>';
    wire();
   }catch(err){
-   if(root.currentPage==='my-profile')
+   if(root.currentPage==='my-profile'&&root.ffhPersonalTab==='data')
     content.innerHTML=tabs('data')+'<div class="self-shell"><div class="self-panel"><h1>Meine Daten</h1>'+
       '<p class="self-warning">Die persönlichen Daten konnten nicht geladen werden: '+safe(err.message)+'</p>'+
       '<button type="button" class="btn secondary" onclick="PersonalOverview.page()">Erneut versuchen</button></div></div>';
