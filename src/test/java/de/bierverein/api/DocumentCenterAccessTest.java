@@ -12,7 +12,7 @@ class DocumentCenterAccessTest {
  private final ArchiveDocumentRevisionRepository revisions=mock(ArchiveDocumentRevisionRepository.class);
  private final AppUserRepository users=mock(AppUserRepository.class);
  private final EffectivePermissionService permissions=mock(EffectivePermissionService.class);
- private final DocumentCenterController controller=new DocumentCenterController(docs,revisions,users,permissions,new DocumentTextRecognitionService(),new DocumentSuggestionsService(),mock(DeviceRepository.class),"/tmp/document-test-private");
+ private final DocumentCenterController controller=new DocumentCenterController(docs,revisions,users,permissions,new DocumentTextRecognitionService(),new DocumentSuggestionsService(),mock(DeviceRepository.class),mock(ExternalDocumentReviewService.class),"/tmp/document-test-private");
  private AppUser user(long id,Role role){
   AppUser u=new AppUser();ReflectionTestUtils.setField(u,"id",id);u.setUsername("test"+id);u.setRole(role);
   u.setEnabled(true);u.setRegistrationApproved(true);
@@ -41,6 +41,27 @@ class DocumentCenterAccessTest {
   var confidential=new DocumentCenterController.Input("Protected","","GENERAL","RESTRICTED",null);
   assertThrows(ResponseStatusException.class,()->controller.create(confidential,null,auth(member)));
   verifyNoInteractions(revisions);
+ }
+ @Test void externalReviewMustBeFromBoardAndCannotTransferConfidentialDocuments(){
+  AppUser board=user(5L,Role.VORSTAND),member=user(6L,Role.MEMBER);
+  when(permissions.hasPermission(6L,"documents.read")).thenReturn(true);
+  ArchiveDocument privateDoc=new ArchiveDocument("Confidential","", "RESTRICTED","GENERAL",null,"test5");
+  privateDoc.id=55L;
+  when(docs.findById(55L)).thenReturn(Optional.of(privateDoc));
+  var approved=new DocumentCenterController.ExternalReviewRequest(true,"Nonconfidential excerpt");
+  assertThrows(ResponseStatusException.class,()->controller.externalReview(55L,1,approved,auth(board)));
+  assertThrows(ResponseStatusException.class,()->controller.externalReview(55L,1,approved,auth(member)));
+  verify(revisions,never()).findByDocumentIdAndVersionNumber(eq(55L),anyInt());
+ }
+ @Test void externalReviewRequiresExplicitAffirmation(){
+  AppUser board=user(5L,Role.VORSTAND);
+  ArchiveDocument ordinary=new ArchiveDocument("Non-confidential","", "MEMBERS","GENERAL",null,"test5");
+  ordinary.id=56L;
+  when(docs.findById(56L)).thenReturn(Optional.of(ordinary));
+  var revision=new ArchiveDocumentRevision(56L,1,"manual.pdf","storage","application/pdf",5L,"text","test5");
+  when(revisions.findByDocumentIdAndVersionNumber(56L,1)).thenReturn(Optional.of(revision));
+  assertThrows(ResponseStatusException.class,()->controller.externalReview(56L,1,
+    new DocumentCenterController.ExternalReviewRequest(false,"text"),auth(board)));
  }
  @Test void onlyApprovedMessagesAreShownOnTheTelevision(){
   var messages=mock(DashboardMessageRepository.class);
