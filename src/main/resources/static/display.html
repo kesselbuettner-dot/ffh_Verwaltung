@@ -37,10 +37,10 @@ async function api(url){let token=localStorage.getItem('token');if(!token){locat
 function entries(list,target,isDate){const limit=window.matchMedia('(max-height: 750px) and (orientation:landscape)').matches?3:5;
  let shown=list.slice(0,limit);el(target).innerHTML=shown.length?shown.map(x=>'<article class="entry">'+(isDate?'<span class="date">'+esc(new Date(x.startAt||x.eventAt).toLocaleString('de-DE',fmt))+'</span>':'')+'<strong>'+esc(x.title)+'</strong>'+(!isDate&&x.body?'<p>'+esc(x.body).slice(0,600)+'</p>':'')+'</article>').join(''):'<p class="empty">'+(isDate?'Keine bevorstehenden Termine':'Keine aktuellen Mitteilungen')+'</p>'}
 async function update(){if(pending)return;pending=true;try{
- const now=Date.now(),response=await Promise.all([api('/api/dashboard/messages/wallboard'),api('/api/training/events/dashboard'),fetch('/api/settings/imprint',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}))]);
- latestMessages=(Array.isArray(response[0])?response[0]:[]).filter(x=>x.type==='MESSAGE'&&x.active&&(!x.publishFrom||Date.parse(x.publishFrom)<=now)&&(!x.publishUntil||Date.parse(x.publishUntil)>=now)).sort((a,b)=>(b.priority||0)-(a.priority||0));
- latestEvents=(Array.isArray(response[1])?response[1]:[]).filter(x=>x.startAt&&Date.parse(x.startAt)>=now).sort((a,b)=>Date.parse(a.startAt)-Date.parse(b.startAt));
- el('organisation').textContent=response[2].organizationName||'Feuerwehr und Verein';entries(latestMessages,'messages',false);entries(latestEvents,'events',true);
+ const now=Date.now(),response=await Promise.all([api('/api/dashboard/messages/wallboard'),fetch('/api/settings/imprint',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}))]);
+ latestMessages=(Array.isArray(response[0])?response[0]:[]).filter(x=>x.type==='MESSAGE').sort((a,b)=>(b.priority||0)-(a.priority||0));
+ latestEvents=(Array.isArray(response[0])?response[0]:[]).filter(x=>x.type==='APPOINTMENT'&&x.eventAt&&Date.parse(x.eventAt)>=now).sort((a,b)=>Date.parse(a.eventAt)-Date.parse(b.eventAt));
+ el('organisation').textContent=response[1].organizationName||'Feuerwehr und Verein';entries(latestMessages,'messages',false);entries(latestEvents,'events',true);
  el('screen').classList.remove('offline');el('status').textContent='Aktualisiert '+new Date().toLocaleTimeString('de-DE');}
  catch(err){el('screen').classList.add('offline');el('status').textContent='Offline – letzte Daten sichtbar';if(!latestMessages.length&&!latestEvents.length){el('messages').innerHTML='<p class="empty">Verbindung erforderlich</p>';el('events').innerHTML='<p class="empty">Bitte anmelden oder Verbindung prüfen</p>';}}
  finally{pending=false}}
