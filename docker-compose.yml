@@ -54,6 +54,7 @@ services:
       APP_UPDATER_TOKEN: ${UPDATER_TOKEN}
     volumes:
       - app_data:/app/data
+      - private_docs:/app/private-documents
     ports:
       - "8080:8080"
     depends_on:
@@ -111,6 +112,7 @@ services:
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.org}
     volumes:
       - app_data:/app/data
+      - private_docs:/app/private-documents
     command: ["java", "-jar", "/app/app.jar", "--worker"]
     depends_on:
       postgres:
@@ -119,6 +121,7 @@ services:
         condition: service_healthy
 
 volumes:
+  private_docs:
   app_data:
   postgres_data:
   redis_data:
