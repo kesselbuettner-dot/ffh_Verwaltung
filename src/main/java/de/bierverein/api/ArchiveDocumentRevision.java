@@ -11,6 +11,8 @@ public class ArchiveDocumentRevision {
  @Column(nullable=false,length=120) public String contentType;
  @Column(nullable=false) public long sizeBytes;
  @Column(length=22000) public String extractedText="";
+ @Column(length=24) public String extractionMethod="PENDING";
+ @Column(length=260) public String extractionWarning;
  @Column(nullable=false,length=100) public String uploadedBy;
  @Column(nullable=false) public Instant uploadedAt=Instant.now();
  protected ArchiveDocumentRevision(){}
