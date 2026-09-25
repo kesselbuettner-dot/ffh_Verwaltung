@@ -31,15 +31,23 @@ public class DocumentCenterController {
  private final ArchiveDocumentRevisionRepository revisions;
  private final AppUserRepository users;
  private final EffectivePermissionService permissions;
+ private final DocumentTextRecognitionService recognition;
+ private final DocumentSuggestionsService suggestions;
+ private final DeviceRepository devices;
  private final Path storage;
  public DocumentCenterController(ArchiveDocumentRepository d,ArchiveDocumentRevisionRepository r,AppUserRepository u,
-    EffectivePermissionService p,@Value("${app.private-documents.path:/app/private-documents}") String dir){
-  docs=d;revisions=r;users=u;permissions=p;storage=Paths.get(dir).toAbsolutePath().normalize();
+    EffectivePermissionService p,DocumentTextRecognitionService recognition,DocumentSuggestionsService suggestions,
+    DeviceRepository devices,@Value("${app.private-documents.path:/app/private-documents}") String dir){
+  docs=d;revisions=r;users=u;permissions=p;this.recognition=recognition;this.suggestions=suggestions;this.devices=devices;
+  storage=Paths.get(dir).toAbsolutePath().normalize();
  }
  public record Input(String title,String description,String category,String visibility,LocalDate expiresOn){}
  public record DocumentView(Long id,String title,String description,String category,String visibility,LocalDate expiresOn,
    String owner,Instant createdAt,Instant updatedAt,int version,boolean canEdit,boolean canDelete){}
- public record RevisionView(int version,String fileName,String contentType,long sizeBytes,Instant uploadedAt,String uploadedBy){}
+ public record RevisionView(int version,String fileName,String contentType,long sizeBytes,Instant uploadedAt,
+   String uploadedBy,String extractionMethod,String extractionWarning){}
+ public record DeviceCandidate(Long id,String name,String inventoryNumber,String serialNumber){}
+ public record AnalysisView(int version,String extractionMethod,String warning,DocumentSuggestionsService.SuggestedFields suggestions,List<DeviceCandidate> matchedDevices){}
  public record Overview(boolean canWrite,boolean canDelete,List<DocumentView> documents){}
  private ResponseStatusException error(HttpStatus code,String message){return new ResponseStatusException(code,message);}
  private AppUser actor(Authentication auth){
@@ -91,7 +99,24 @@ public class DocumentCenterController {
  public List<RevisionView> versions(@PathVariable Long id,Authentication auth){
   accessible(id,actor(auth));
   return revisions.findByDocumentIdOrderByVersionNumberDesc(id).stream()
-    .map(v->new RevisionView(v.versionNumber,v.originalName,v.contentType,v.sizeBytes,v.uploadedAt,v.uploadedBy)).toList();
+    .map(v->new RevisionView(v.versionNumber,v.originalName,v.contentType,v.sizeBytes,v.uploadedAt,v.uploadedBy,v.extractionMethod,v.extractionWarning)).toList();
+ }
+ /** Read-only suggestions. Requires document read rights, and does not change a device or inspection. */
+ @GetMapping("/{id}/versions/{version}/analysis") @ResponseBody @Transactional(readOnly=true)
+ public AnalysisView analysis(@PathVariable Long id,@PathVariable int version,Authentication auth){
+  AppUser u=actor(auth);accessible(id,u);
+  ArchiveDocumentRevision rev=revisions.findByDocumentIdAndVersionNumber(id,version)
+    .orElseThrow(()->error(HttpStatus.NOT_FOUND,"Version unbekannt"));
+  var fields=suggestions.suggest(rev.extractedText,rev.originalName);
+  List<DeviceCandidate> matches=List.of();
+  if(board(u)||permissions.hasPermission(u.getId(),"fire.devices.read")){
+   var found=new LinkedHashMap<Long,Device>();
+   if(fields.serialNumber()!=null)devices.findFirstBySerialNumberAndActiveTrue(fields.serialNumber().value())
+     .ifPresent(d->found.put(d.getId(),d));
+   // Conservative: do not match vague free text. Inventory numbers are suggested in a later release.
+   matches=found.values().stream().map(d->new DeviceCandidate(d.getId(),d.getName(),d.getInventoryNumber(),d.getSerialNumber())).toList();
+  }
+  return new AnalysisView(version,rev.extractionMethod,rev.extractionWarning,fields,matches);
  }
  private String detected(byte[] data,String original,String declared){
   String name=original.toLowerCase(Locale.ROOT);
@@ -122,7 +147,10 @@ public class DocumentCenterController {
   Files.createDirectories(storage);
   String stored=UUID.randomUUID().toString();
   Files.write(storage.resolve(stored),data,StandardOpenOption.CREATE_NEW);
-  return revisions.save(new ArchiveDocumentRevision(id,version,original,stored,type,data.length,index(data,type),username));
+  DocumentTextRecognitionService.Result result=recognition.extract(data,type);
+  ArchiveDocumentRevision rev=new ArchiveDocumentRevision(id,version,original,stored,type,data.length,result.text(),username);
+  rev.extractionMethod=result.method();rev.extractionWarning=result.warning();
+  return revisions.save(rev);
  }
  @PostMapping(consumes=MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseBody @Transactional
  public DocumentView create(@RequestPart("metadata") Input input,@RequestPart("file") MultipartFile file,Authentication auth)throws IOException{
