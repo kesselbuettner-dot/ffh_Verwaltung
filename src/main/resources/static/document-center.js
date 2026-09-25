@@ -138,6 +138,34 @@ async function analysis(id,version){
       '<button class="btn primary" id="docAnalysisApply" disabled>Vorgeschlagene Kategorie und Frist übernehmen</button>':'')+
     '<p class="doc-muted">Die Geräteverwaltung und abgeschlossene Prüfungen werden durch diese Funktion nicht geändert.</p>'+
     '<button type="button" class="btn secondary" id="docAnalysisBack">Zur Versionsübersicht</button></div>';
+  if(doc?.visibility==='MEMBERS'&&typeof role!=='undefined'&&['ADMIN','VORSTAND'].includes(role)){
+   try{
+    const state=await api(BASE+'/'+id+'/versions/'+version+'/external-status');
+    if(state.available){
+     const section=document.createElement('section');
+     section.className='doc-external-review';
+     section.innerHTML='<h3>Optionale KI-Auswertung</h3>'+
+       '<p>Es wird nur der nachfolgende, von dir kontrollierte Text an den konfigurierten externen Dienst übertragen. Keine Originaldatei und kein vertrauliches Dokument.</p>'+
+       '<label>Text vor der Übertragung prüfen und ggf. anonymisieren<textarea id="docExternalText" rows="6" maxlength="6000">'+e(result.reviewedTextPreview||'')+'</textarea></label>'+
+       '<label class="doc-confirm"><input id="docExternalConsent" type="checkbox"> Ich habe diesen Text geprüft: keine vertraulichen oder personenbezogenen Angaben. Ich genehmige diese einmalige Übertragung.</label>'+
+       '<button type="button" class="btn secondary" id="docExternalSend" disabled>Einmalig extern analysieren</button><div id="docExternalResult" aria-live="polite"></div>';
+     modalBody.querySelector('.doc-analysis')?.appendChild(section);
+     const consent=section.querySelector('#docExternalConsent'),send=section.querySelector('#docExternalSend'),text=section.querySelector('#docExternalText');
+     const check=()=>{send.disabled=!consent.checked||!text.value.trim()||text.value.length>6000};
+     consent.onchange=check;text.oninput=check;
+     send.onclick=async()=>{
+      send.disabled=true;section.querySelector('#docExternalResult').textContent='Externe Auswertung wird ausgeführt …';
+      try{
+       const response=await api(BASE+'/'+id+'/versions/'+version+'/external-review',{method:'POST',
+        body:JSON.stringify({approvedNonConfidential:true,reviewedExcerpt:text.value})});
+       section.querySelector('#docExternalResult').textContent='Unverbindliche KI-Vorschläge: '+response.suggestion+
+        ' – Bitte sämtliche Angaben anhand des Originals prüfen.';
+      }catch(err){section.querySelector('#docExternalResult').textContent='Externe Auswertung fehlgeschlagen: '+err.message}
+      finally{check()}
+     };
+    }
+   }catch(err){console.warn('Externe Analyse nicht verfügbar:',err.message)}
+  }
   document.getElementById('docAnalysisBack').onclick=()=>versions(id);
   const confirm=document.getElementById('docAnalysisConfirm'),apply=document.getElementById('docAnalysisApply');
   if(confirm&&apply){
