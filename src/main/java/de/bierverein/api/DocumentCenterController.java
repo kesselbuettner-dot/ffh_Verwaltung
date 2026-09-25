@@ -117,7 +117,7 @@ public class DocumentCenterController {
    // Conservative: do not match vague free text. Inventory numbers are suggested in a later release.
    matches=found.values().stream().map(d->new DeviceCandidate(d.getId(),d.getName(),d.getInventoryNumber(),d.getSerialNumber())).toList();
   }
-  return new AnalysisView(version,rev.extractionMethod,rev.extractionWarning,fields,matches,board(u)?rev.extractedText.substring(0,Math.min(6000,rev.extractedText.length())):null);
+  return new AnalysisView(version,rev.extractionMethod,rev.extractionWarning,fields,matches,board(u)?Objects.toString(rev.extractedText,"").substring(0,Math.min(6000,Objects.toString(rev.extractedText,"").length())):null);
  }
  /** Only board users can submit a specifically reviewed, manually redacted excerpt.
   * Confidential documents are categorically blocked even if a checkbox was sent. */
@@ -126,8 +126,8 @@ public class DocumentCenterController {
  @GetMapping("/{id}/versions/{version}/external-status") @ResponseBody @Transactional(readOnly=true)
  public Map<String,Boolean> externalStatus(@PathVariable Long id,@PathVariable int version,Authentication auth){
   AppUser u=actor(auth);ArchiveDocument d=accessible(id,u);
-  revisions.findByDocumentIdAndVersionNumber(id,version).orElseThrow(()->error(HttpStatus.NOT_FOUND,"Version unbekannt"));
-  return Map.of("available",board(u)&&"MEMBERS".equals(d.visibility)&&external.enabled());
+  ArchiveDocumentRevision rev=revisions.findByDocumentIdAndVersionNumber(id,version).orElseThrow(()->error(HttpStatus.NOT_FOUND,"Version unbekannt"));
+  return Map.of("available",board(u)&&"MEMBERS".equals(d.visibility)&&external.enabled()&&!"PENDING".equals(rev.extractionMethod));
  }
  @PostMapping("/{id}/versions/{version}/external-review") @ResponseBody
  public ExternalReviewResponse externalReview(@PathVariable Long id,@PathVariable int version,
@@ -169,9 +169,8 @@ public class DocumentCenterController {
   Files.createDirectories(storage);
   String stored=UUID.randomUUID().toString();
   Files.write(storage.resolve(stored),data,StandardOpenOption.CREATE_NEW);
-  DocumentTextRecognitionService.Result result=recognition.extract(data,type);
-  ArchiveDocumentRevision rev=new ArchiveDocumentRevision(id,version,original,stored,type,data.length,result.text(),username);
-  rev.extractionMethod=result.method();rev.extractionWarning=result.warning();
+  ArchiveDocumentRevision rev=new ArchiveDocumentRevision(id,version,original,stored,type,data.length,"",username);
+  rev.extractionMethod="PENDING";rev.extractionWarning="Lokale Texterkennung läuft im Hintergrund.";
   return revisions.save(rev);
  }
  @PostMapping(consumes=MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseBody @Transactional
