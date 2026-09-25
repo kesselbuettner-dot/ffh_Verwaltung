@@ -1,12 +1,14 @@
 package de.bierverein.api;
 
 import java.util.List;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,17 +44,37 @@ public class SecurityConfig {
                 s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(a -> a
+                .requestMatchers(HttpMethod.GET, "/api/settings/logo", "/api/settings/imprint").permitAll()
                 .requestMatchers(
                     "/",
                     "/index.html",
                     "/manifest.json",
                     "/sw.js",
+                    "/tabler-icons.js",
+                    "/menu-designer.js",
+                    "/menu-designer.css",
+                    "/ui-theme.css",
+                    "/design-system.css",
+                    "/design-system.js",
+                    "/page-templates.js",
+                    "/device-cycle-tasks.js",
+                    "/my-tasks.js",
+                    "/inspection-signature.js",
+                    "/inspection-management.js",
+                    "/page-templates.css",
+                    "/wehrleiter.js",
+                    "/wehrleiter.css",
+                    "/print-templates.js",
+                    "/print-templates.css",
+                    "/print-reports.js",
                     "/favicon.ico",
                     "/icons/**",
                     "/css/**",
                     "/js/**",
                     "/images/**",
+                    "/uploads/articles/**",
                     "/api/auth/**",
+                    "/api/calendar/feed/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**"
@@ -83,19 +105,24 @@ public class SecurityConfig {
     }
 
     @Bean
-    JwtAuthenticationConverter jwtAuthenticationConverter() {
-
-        JwtAuthenticationConverter converter =
-                new JwtAuthenticationConverter();
-
+    JwtAuthenticationConverter jwtAuthenticationConverter(AppUserRepository users) {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            String role = jwt.getClaimAsString("role");
-            if (role == null || role.isBlank()) {
-                return List.of();
+            Object claim = jwt.getClaim("userId");
+            if (!(claim instanceof Number id)) {
+                throw new InvalidBearerTokenException("Benutzerkennung im Token fehlt.");
             }
-            return List.of(new SimpleGrantedAuthority("ROLE_" + role));
+            AppUser user = users.findById(id.longValue())
+                    .orElseThrow(() -> new InvalidBearerTokenException("Benutzerkonto existiert nicht."));
+            // Resolve the current account and legacy role on EACH request.
+            // Revocations, deactivation and role changes must take effect even
+            // while an older, otherwise valid JWT is still held by the browser.
+            if (!user.isEnabled() || !user.isRegistrationApproved() ||
+                    user.getRole() == null) {
+                throw new InvalidBearerTokenException("Benutzerkonto nicht freigeschaltet.");
+            }
+            return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
         });
-
         return converter;
     }
 }

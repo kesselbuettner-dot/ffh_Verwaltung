@@ -52,6 +52,12 @@ public class ManagedUserRoleAdminController {
         List<ManagedUserRole> previous = assignments.findByUserId(id);
         boolean wasAdmin = previous.stream().anyMatch(a -> isAdmin(a.getRole()));
         boolean willBeAdmin = selected.stream().anyMatch(ManagedUserRoleAdminController::isAdmin);
+        // Legacy endpoint authorization uses AppUser.role while device and vehicle
+        // endpoints use managed assignments. Reject inconsistent ADMIN grants.
+        if (willBeAdmin && user.getRole() != Role.ADMIN) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Zuerst die Hauptrolle des Benutzers in der Benutzerverwaltung auf Administrator ändern.");
+        }
         if (wasAdmin && !willBeAdmin && assignments.countByRoleCodeAndUserEnabled("ADMIN", true) <= 1) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Letzter aktiver Administrator darf nicht entfernt werden");
         }

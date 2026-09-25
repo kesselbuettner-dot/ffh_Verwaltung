@@ -17,13 +17,15 @@ public class AuthController {
     private final MemberRepository members;
     private final PasswordEncoder encoder;
     private final JwtService jwt;
+    private final PrimaryRoleSyncService primaryRoles;
 
     public AuthController(AppUserRepository users, MemberRepository members,
-                          PasswordEncoder encoder, JwtService jwt) {
+                          PasswordEncoder encoder, JwtService jwt, PrimaryRoleSyncService primaryRoles) {
         this.users = users;
         this.members = members;
         this.encoder = encoder;
         this.jwt = jwt;
+        this.primaryRoles = primaryRoles;
     }
 
     @PostConstruct
@@ -133,6 +135,7 @@ public class AuthController {
 
         m.setUser(u);
         users.save(u);
+        primaryRoles.sync(u, null);
 
         return new RegistrationResponse(
                 "Registrierung erfolgreich. Nach der Freischaltung durch den Administrator kannst du dich anmelden.");

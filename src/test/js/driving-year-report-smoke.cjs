@@ -1,0 +1,25 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const js=fs.readFileSync('src/main/resources/static/wehrleiter.js','utf8');
+const html=fs.readFileSync('src/main/resources/static/index.html','utf8');
+const sw=fs.readFileSync('src/main/resources/static/sw.js','utf8');
+const reports=fs.readFileSync('src/main/resources/static/print-reports.js','utf8');
+const print=fs.readFileSync('src/main/resources/static/print-templates.js','utf8');
+const css=fs.readFileSync('src/main/resources/static/print-templates.css','utf8');
+for(const [name,code] of [['wehrleiter.js',js],['print-reports.js',reports],['print-templates.js',print]])new vm.Script(code,{filename:name});
+assert(js.includes('id="drivingReportYear"')&&js.includes('printDrivingYear'),'Annual driver check year picker missing');
+assert(js.includes("BASE+'/driving/report?year='+year"),'Driver audit must come from authorized backend');
+assert(js.includes('FWPrintTemplates.print({orientation:\'landscape\''),'Driver report must use shared landscape format');
+assert(js.includes('printDrivingDate(c.checkedAt)'), 'Driver audit must use actual timestamps');
+assert(print.includes('s.organizationName||s.appName||'), 'Print letterhead must have only one canonical name');
+assert(print.includes("logoAvailable?'/api/settings/logo?print='"), 'Uploaded fire station logo must be used first');
+assert(print.includes("const FALLBACK='/icons/fw-cockpit-brand.svg'"), 'Application logo fallback missing');
+assert(css.includes('@page ffh-report-portrait')&&css.includes('@page ffh-report-landscape'),'Both paper templates missing');
+assert(css.includes('.ffh-print-header')&&css.includes('.ffh-print-footer'),'Shared header/footer missing');
+assert(html.includes("['print-templates','🖨 Druckvorlagen']")&&html.includes('adminPrintTemplatesPage'),'Central admin template gallery missing');
+for(const asset of ['print-templates.js?v=2','print-templates.css?v=2','print-reports.js?v=1'])
+ assert(html.includes('/'+asset)&&sw.includes('/'+asset),'Template asset not loaded and precached: '+asset);
+assert(html.includes('/wehrleiter.js?v=7')&&sw.includes('/wehrleiter.js?v=7'),'Driver report script not refreshed');
+assert(reports.includes('inspectionHistory:invoke(inspectionHistory)')&&reports.includes('signedSession:invoke(signedSession)'),'Device protocols must use the same template');
+assert(html.includes('FWPrintReports.shopping()')&&html.includes('FWPrintReports.devices()')&&html.includes('FWPrintReports.membersAdmin()'),'Print buttons missing');
+assert(html.includes('deviceReportYear')&&html.includes('deviceReportLocation'),'Device inventory report filters missing');
+console.log('PASS canonical organization name, fire logo fallback, both print formats, driver and device audit, shopping and member links, PWA assets');

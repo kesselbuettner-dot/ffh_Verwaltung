@@ -1,0 +1,54 @@
+name: Menu Designer 577 CI
+on:
+  push:
+    branches:
+      - feature/menu-designer-on-577e741
+  pull_request:
+    branches:
+      - codex/mobile-paypal-article-images
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check external JavaScript
+        run: |
+          node --check src/main/resources/static/menu-designer.js
+          node --check src/main/resources/static/sw.js
+      - name: Check all inline scripts and designer bindings
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const vm=require('node:vm');
+          const html=fs.readFileSync('src/main/resources/static/index.html','utf8');
+          const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+          for(let i=0;i<scripts.length;i++)new vm.Script(scripts[i][1],{filename:'index-inline-'+i+'.js'});
+          if(!html.includes('function renderOriginalNavigation()')||!html.includes('function renderNavigation()')||!html.includes('menu-designer.js'))throw Error('Fallback missing');
+          console.log('PASS inline JS and navigation fallback:',scripts.length,'script blocks');
+          NODE
+      - name: Run menu and permission smoke tests
+        run: node src/test/js/menu-designer-smoke.cjs
+      - name: Verify public menu assets are loadable without JWT
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          security=Path('src/main/java/de/bierverein/api/SecurityConfig.java').read_text()
+          html=Path('src/main/resources/static/index.html').read_text()
+          sw=Path('src/main/resources/static/sw.js').read_text()
+          for asset in ('menu-designer.js','menu-designer.css'):
+              assert f'"/{asset}"' in security, f'Browser fetch for /{asset} would be denied without a JWT'
+              assert f'/{asset}?v=' in html, f'Missing {asset} reference'
+          assert 'ffh-verwaltung-menu577-imprint-v34' in sw, 'Old PWA cache could mask the new code'
+          print('PASS static menu assets are permitted and cache is versioned')
+          PY
+      - name: Compile and run permission tests
+        run: mvn -B -ntp test

@@ -1,0 +1,155 @@
+/* Wehrleitung pages follow docs/DESIGN_SYSTEM.md and docs/UI_KOMPONENTEN.md. */
+.wehr-member-row{display:grid;grid-template-columns:minmax(145px,220px) minmax(0,1fr);gap:12px;padding:14px 0;border-bottom:1px solid var(--ui-border,var(--line))}
+.wehr-member-title{font-weight:750;font-size:16px;overflow-wrap:anywhere}
+.wehr-card-list{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.wehr-card{display:grid;align-content:start;gap:8px;min-width:185px;max-width:290px;flex:1 1 205px;background:var(--ui-surface,var(--panel));color:var(--ui-text,var(--ink));border:1px solid var(--ui-border,var(--line));border-radius:12px;padding:12px}
+.wehr-card-heading{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.wehr-card-data{font-size:12px;color:var(--ui-subtle,var(--muted))}
+.wehr-card .btn{justify-self:start}
+.wehr-my-check{max-width:680px;padding:14px 0;display:grid;gap:12px}
+.wehr-my-check input[type=file]{display:block;max-width:100%;margin-top:8px}
+.wehr-dashboard{border-left:4px solid var(--ui-warning,var(--warn));}
+.wehr-dashboard .btn{margin-top:8px}
+.wehr-member-row .badge,.wehr-card .badge{white-space:nowrap}
+@media(max-width:700px){.wehr-member-row{display:block}.wehr-card-list{margin-top:12px}.wehr-card{max-width:none;min-width:0;flex:1 1 100%}}
+
+/* Qualifikationskacheln: kleine nebeneinanderliegende Kürzel; Status erkennbar auch ohne Farbe. */
+.wehr-member-row{grid-template-columns:minmax(150px,215px) minmax(0,1fr);align-items:center;gap:10px;padding:10px 0}
+.wehr-member-title{display:flex;align-items:center;gap:10px;min-width:0}
+.wehr-member-title strong{overflow-wrap:anywhere;font-size:14px}
+.member-avatar{width:36px;height:36px;min-width:36px;border-radius:50%;background:var(--ui-secondary,#e9eef5);
+ color:var(--ui-secondary-text,#152435);display:grid;place-items:center;font-size:12px;overflow:hidden;border:1px solid var(--ui-border,#d7e1ea)}
+.member-avatar img{width:100%;height:100%;object-fit:cover}
+.wehr-card-list{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.wehr-tile{--tile-color:#275b93;min-width:48px;width:56px;max-width:56px;height:43px;flex:0 0 56px;
+ display:inline-flex;justify-content:center;align-items:center;border:1px solid color-mix(in srgb,var(--tile-color),black 22%);
+ color:#fff;background:var(--tile-color);border-radius:8px;padding:4px;line-height:1;box-sizing:border-box;
+ font-weight:800;font-size:12px;text-align:center;letter-spacing:.01em;overflow-wrap:anywhere}
+.wehr-tile:where(button){cursor:pointer;font:inherit;font-weight:800;font-size:12px}
+.wehr-tile:where(button):focus-visible{outline:3px solid var(--ui-focus,#1479e9);outline-offset:2px}
+.wehr-tile.q-tone-0{--tile-color:#245c9a}.wehr-tile.q-tone-1{--tile-color:#176c61}
+.wehr-tile.q-tone-2{--tile-color:#8a4c17}.wehr-tile.q-tone-3{--tile-color:#704b9b}
+.wehr-tile.q-tone-4{--tile-color:#a13c56}.wehr-tile.q-tone-5{--tile-color:#396c7c}
+.wehr-tile.q-tone-6{--tile-color:#65642a}.wehr-tile.q-tone-7{--tile-color:#475c8a}
+.wehr-tile.is-DUE{background:repeating-linear-gradient(135deg,
+ var(--tile-color) 0,var(--tile-color) 7px,
+ color-mix(in srgb,var(--tile-color),white 27%) 7px,
+ color-mix(in srgb,var(--tile-color),white 27%) 11px);border:2px dashed #f6f6f6;outline:1px solid var(--tile-color)}
+.wehr-tile.is-OVERDUE,.wehr-tile.is-INACTIVE{background:#818995;border-color:#626c79;color:#fff}
+.wehr-tile.is-OVERDUE{box-shadow:inset 0 0 0 2px #fff8}
+.wehr-tile.is-UNSCHEDULED{border:2px dotted currentColor}
+.wehr-legend{display:flex;gap:15px;flex-wrap:wrap;padding:6px 0 12px;font-size:12px;color:var(--ui-subtle,var(--muted))}
+.wehr-legend-item{display:inline-flex;align-items:center;gap:6px}
+.wehr-legend-swatch{width:16px;height:13px;border-radius:3px;display:inline-block;background:#245c9a}
+.wehr-legend-swatch.is-DUE{background:repeating-linear-gradient(135deg,#245c9a 0,#245c9a 4px,#aac4df 4px,#aac4df 7px)}
+.wehr-legend-swatch.is-OVERDUE{background:#818995}
+.wehr-empty{font-size:13px}
+@media(max-width:700px){.wehr-member-row{display:grid;grid-template-columns:minmax(115px,34%) minmax(0,1fr);gap:8px}
+.wehr-member-title{gap:6px}.wehr-member-title strong{font-size:12px}.member-avatar{width:28px;height:28px;min-width:28px;font-size:10px}
+.wehr-card-list{margin-top:0;gap:5px}.wehr-tile{width:49px;max-width:49px;min-width:49px;flex-basis:49px;height:40px;font-size:11px}}
+@media print{.sidebar,.topbar,.mobile-nav,.wehr-card .btn,#drivingExport,#drivingPrint{display:none!important}.main{margin:0!important}.wehr-card{break-inside:avoid}body{background:white!important}}
+
+/* Three equally spaced category columns plus a fixed member/name column. */
+.wehr-table-scroll{width:100%;overflow-x:auto}
+.wehr-overview-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.wehr-overview-table thead th{font-size:13px;text-align:left;padding:10px 12px;border-bottom:2px solid var(--ui-border,var(--line));background:var(--ui-secondary,#f1f4f8);color:var(--ui-text,var(--ink));white-space:normal}
+.wehr-overview-table th:first-child{width:215px}
+.wehr-overview-table tbody th,.wehr-overview-table tbody td{padding:10px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--ui-border,var(--line))}
+.wehr-overview-table tbody tr:last-child th,.wehr-overview-table tbody tr:last-child td{border-bottom:0}
+.wehr-overview-table .wehr-name-cell{font-size:14px;font-weight:650}
+.wehr-overview-table .wehr-name-cell .member-avatar{display:inline-grid;vertical-align:middle;margin-right:9px}
+.wehr-overview-table .wehr-name-cell strong{vertical-align:middle;overflow-wrap:anywhere}
+.wehr-overview-table .wehr-card-list{gap:5px;align-items:center}
+.wehr-overview-table .wehr-tile{break-inside:avoid;page-break-inside:avoid}
+.wehr-legend-swatch.is-UNSCHEDULED{background:#245c9a;border:2px dotted white;outline:1px solid #245c9a}
+.wehr-print-report{display:none}
+@media(max-width:850px){
+ .wehr-overview-table{min-width:650px}
+ .wehr-overview-table th:first-child{width:145px}
+ .wehr-overview-table thead th,.wehr-overview-table tbody th,.wehr-overview-table tbody td{padding:9px 7px}
+}
+@media print{
+ @page{size:A4 landscape;margin:12mm}
+ html,body{background:#fff!important;overflow:visible!important}
+ body > *:not(#wehrPrintReport):not(#drivingPrintReport):not(.ffh-print-root):not(#inspectionPrintReport){display:none!important}
+ body > #wehrPrintReport{display:block!important;position:static!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;color:#172435!important;font-family:Arial,sans-serif!important;font-size:10pt!important}
+ .wehr-print-report h1{font-size:17pt;margin:0 0 4mm}
+ .wehr-report-date{font-size:9pt;margin:0 0 4mm;color:#273a4b}
+ .wehr-print-report .wehr-overview-table{table-layout:fixed;border-collapse:collapse;width:100%;min-width:0!important}
+ .wehr-print-report .wehr-overview-table th:first-child{width:24%}
+ .wehr-print-report .wehr-overview-table th,.wehr-print-report .wehr-overview-table td{border:1px solid #bac7d4!important;padding:5px 7px!important;vertical-align:middle!important}
+ .wehr-print-report .wehr-overview-table thead{display:table-header-group}
+ .wehr-print-report .wehr-overview-table tr{break-inside:avoid;page-break-inside:avoid}
+ .wehr-print-report .wehr-card-list{display:flex!important;flex-wrap:wrap!important;gap:4px!important}
+ .wehr-print-report .wehr-tile{width:45px!important;min-width:45px!important;max-width:45px!important;flex:0 0 45px!important;height:30px!important;padding:2px!important;font-size:9pt!important;line-height:1!important}
+ .wehr-print-report .wehr-legend{display:flex!important;gap:10px;flex-wrap:wrap;margin:0 0 5mm;padding:0;color:#273a4b!important}
+ .wehr-print-report .wehr-legend-item{font-size:9pt}
+ .wehr-print-report .wehr-print-note{margin-top:5mm;font-size:8pt;color:#435365}
+ .wehr-print-report,.wehr-print-report *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
+
+/* Shared qualification symbols: icon above abbreviated label, including print view. */
+.wehr-tile{flex-direction:column;gap:1px}
+.wehr-tile .q-symbol{display:inline-flex;align-items:center;justify-content:center;height:17px;max-width:100%;line-height:1}
+.wehr-tile .q-symbol .menu-icon-tabler,.wehr-tile .q-symbol .menu-icon-image{height:17px;width:17px;min-width:17px}
+.wehr-tile .q-symbol .menu-icon-tabler svg{width:100%;height:100%;stroke:currentColor}
+.wehr-tile .q-short{font-weight:800;line-height:1.1;max-width:100%;overflow:hidden}
+.wehr-type-icon{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:27px;height:27px;min-width:27px}
+.wehr-type-icon .menu-icon-tabler,.wehr-type-icon .menu-icon-image{width:24px;height:24px;min-width:24px}
+.wehr-icon-picker{display:flex;align-items:center;gap:10px}
+.wehr-icon-picker select{flex:1;min-width:0}
+.wehr-icon-picker .wehr-type-icon{border:1px solid var(--line);border-radius:8px;width:46px;height:46px;flex:0 0 46px}
+.wehr-print-report .wehr-tile .q-symbol,.wehr-print-report .wehr-tile .q-symbol .menu-icon-tabler,.wehr-print-report .wehr-tile .q-symbol .menu-icon-image{width:12px!important;height:12px!important;min-width:12px!important}
+.wehr-print-report .wehr-tile .q-short{font-size:8pt}
+
+
+/* Jahresprotokoll Führerscheinkontrolle: nur das eigens erzeugte Dokument drucken. */
+.driving-year-picker{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;font-weight:650}
+.driving-year-picker select{border:1px solid var(--ui-border,#b8c4ce);border-radius:8px;padding:8px;background:var(--ui-surface,#fff);color:var(--ui-text,#172435);font:inherit}
+.driving-print-report{display:none}
+@media print {
+ @page {size:A4 landscape;margin:12mm}
+ body > #drivingPrintReport{display:block!important;position:static!important;max-width:none!important;width:100%!important;
+   margin:0!important;padding:0!important;background:#fff!important;color:#142333!important;font:10pt Arial,sans-serif!important}
+ .driving-print-report,.driving-print-report *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ .driving-print-header{display:grid;grid-template-columns:32mm 1fr;gap:6mm;align-items:center;
+   border-bottom:2px solid #bb2835;padding:0 0 5mm;margin:0 0 6mm}
+ .driving-print-logo{display:block;width:30mm;height:25mm;object-fit:contain}
+ .driving-print-header h1{font-size:16pt;line-height:1.2;margin:0 0 2mm}
+ .driving-print-header div{line-height:1.4}
+ .driving-print-title{margin:0 0 5mm}
+ .driving-print-title h2{font-size:14pt;margin:0 0 2mm}
+ .driving-print-title div{font-size:9pt;color:#364b5c}
+ .driving-print-table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:auto!important}
+ .driving-print-table th,.driving-print-table td{border:1px solid #aabac9!important;padding:2.2mm 2.8mm!important;
+   text-align:left!important;vertical-align:top!important;overflow-wrap:anywhere}
+ .driving-print-table th{background:#eaf0f5!important;font-weight:700}
+ .driving-print-table thead{display:table-header-group}
+ .driving-print-table tr{break-inside:avoid;page-break-inside:avoid}
+ .driving-print-report footer{border-top:1px solid #c9d1da;padding-top:3mm;margin-top:6mm;color:#47586a;font-size:8pt}
+}
+
+/* The qualification builder reuses the menu's shared visual icon picker. */
+.wehr-icon-picker .wehr-icon-trigger{width:56px;height:52px;min-width:56px;flex:0 0 56px}
+.wehr-icon-picker .wehr-icon-trigger .menu-icon-tabler,.wehr-icon-picker .wehr-icon-trigger .menu-icon-image,.wehr-icon-picker .wehr-icon-trigger .menu-icon-glyph{width:31px;height:31px;min-width:31px}
+
+/* Qualification overview in the shared A4 landscape organisation print template. */
+.ffh-print-root .wehr-print-content{width:100%;min-width:0}
+.ffh-print-root .wehr-legend{gap:9px;padding:1mm 0 3mm;flex-wrap:wrap;font-size:8pt}
+.ffh-print-root .wehr-legend-item{gap:4px}
+.ffh-print-root .wehr-overview-table{table-layout:fixed;width:100%;min-width:0!important;border-collapse:collapse;font-size:9pt}
+.ffh-print-root .wehr-overview-table th:first-child{width:24%}
+.ffh-print-root .wehr-overview-table th,.ffh-print-root .wehr-overview-table td{border:1px solid #b2c0ce;padding:2mm;vertical-align:middle;overflow-wrap:anywhere}
+.ffh-print-root .wehr-overview-table thead th{background:#ecf2f7;color:#152332;font-size:9pt}
+.ffh-print-root .wehr-overview-table thead{display:table-header-group}
+.ffh-print-root .wehr-overview-table tr{break-inside:avoid;page-break-inside:avoid}
+.ffh-print-root .wehr-overview-table .wehr-card-list{display:flex;flex-wrap:wrap;gap:3px}
+.ffh-print-root .wehr-overview-table .wehr-tile{width:45px;min-width:45px;max-width:45px;flex:0 0 45px;height:32px;padding:2px;font-size:9pt;break-inside:avoid;page-break-inside:avoid}
+.ffh-print-root .wehr-tile .q-symbol,.ffh-print-root .wehr-tile .q-symbol .menu-icon-tabler,.ffh-print-root .wehr-tile .q-symbol .menu-icon-image{width:13px;height:13px;min-width:13px}
+.ffh-print-root .wehr-tile .q-short{font-size:8pt}
+@media print{
+ .ffh-print-root .wehr-overview-table{min-width:0!important}
+ .ffh-print-root .wehr-overview-table th:first-child{width:24%!important}
+ .ffh-print-root .wehr-overview-table th,.ffh-print-root .wehr-overview-table td{padding:2mm!important}
+ .ffh-print-root .wehr-print-content,.ffh-print-root .wehr-print-content *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}

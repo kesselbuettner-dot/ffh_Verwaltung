@@ -154,3 +154,38 @@ Marktguru-Angebotspreise werden für den Vergleich auf **Preis pro Stück** norm
 ### Kasse, Einzelgröße und Einkaufsgebinde
 
 Die Kasse verkauft ausschließlich einzelne Stücke. In `Kasse / Theke` wird die **Einzelgröße** (`sizeVolume + sizeUnitShortName`) angezeigt, aber niemals das Einkaufsgebinde. Der Bestand wird bei einem Verkauf um die tatsächlich verkaufte Stückzahl reduziert. Einkaufsgebinde bleiben auf Einkauf/Wareneingang und Marktguru beschränkt.
+
+## Interaktive Fahrzeugbeladung V2
+
+Die vorhandene Fahrzeugverwaltung verwendet weiterhin `fire_vehicles`, `vehicle_compartments` und `devices`. Ergänzt wurde ausschließlich die untergeordnete Tabelle `vehicle_compartment_elements` für Regalboden, Schublade, Auszug, Halterung, Trennwand, Gerätekasten und freie Ablage.
+
+- Die Ansichten Fahrerseite, Heck, Beifahrerseite, Front, Mannschaftsraum und Dach basieren auf skalierbarem SVG.
+- Geräteräume liegen innerhalb der Fahrzeugzeichnung und öffnen ihren Rollladen durch Antippen.
+- Die Detailansicht besitzt einen getrennten Bearbeitungsmodus. Dadurch können Geräte im normalen Ansichtsmodus nicht versehentlich verschoben werden.
+- Position, Größe, Drehwinkel, Ebene, Gruppe und Ablageelement werden pro Gerät serverseitig gespeichert.
+- Geräteraumelemente werden ebenfalls mit relativer Position, Größe, Drehwinkel und Ebene gespeichert.
+- Gruppierte Geräte bleiben einzelne Gerätedatensätze. Die Gruppe wird lediglich über eine gemeinsame Gruppierungs-ID dargestellt.
+- Prüfpflicht und Defektstatus verwenden weiterhin die vorhandene Geräte- und Prüfverwaltung. Es gibt keine zweite Defektdatenbank.
+- Schreibende Funktionen benötigen weiterhin `fire.vehicles.write` und bei Geräteänderungen zusätzlich `fire.devices.write`.
+
+Bestehende Gerätezuordnungen bleiben erhalten. Neue Felder sind nullable und werden nach dem Hibernate-Schema-Update durch `LegacySchemaBackfill` mit sicheren Standardwerten ergänzt.
+
+### Version 2.0.5: Stammdaten bearbeiten und entfernen
+
+- Geräte: Daten bearbeiten, Zuordnung lösen und Geräte archivieren. Archivierte Geräte bleiben mit ihren Prüfungen und Defektangaben gespeichert.
+- Fahrzeuge: Name, Funkrufname, Feuerwehrrelevanz und Bemerkung ändern; Fahrzeuge ohne aktive Geräte archivieren.
+- Geräteräume: Bezeichnung, Ansicht, Position und Größe ändern; leere Geräteräume löschen. Ein Fach mit zugeordneten Geräten kann zum Schutz der Zuordnung nicht gelöscht werden.
+- Standorte: gespeicherte Standorte bearbeiten oder entfernen, wenn keine aktiven Geräte darauf verweisen. Automatisch aus Geräten übernommene Standortnamen besitzen keinen eigenen Datensatz.
+- Unterlagen: Titel und Beschreibung bearbeiten; Löschen war bereits vorhanden.
+
+Die Aktionen werden nur bei passender Rollenberechtigung eingeblendet und auch serverseitig geprüft. Buchungen und andere Bestandsbewegungen bleiben als Buchungshistorie erhalten.
+
+### Version 2.0.6: Excel-Import für Geräte
+
+Unter **Geräte → Excel-Import** die Vorlage herunterladen, im ersten Tabellenblatt „Geräte“ eine Zeile pro Gerät ausfüllen und die `.xlsx`-Datei hochladen. Eine Vorschau zeigt neue, vorhandene und fehlerhafte Geräte. Der Import ist nur mit dem Recht `fire.devices.write` möglich; die Vorlage mit `fire.devices.read`. Bestehende Geräte bleiben unverändert. Der Abgleich nutzt Inventarnummer, Barcode und Seriennummer. Mindestens eine dieser Kennungen muss je Gerät ausgefüllt sein. Bei einem Fehler in der Datei werden keine Zeilen gespeichert. Fahrzeug und Fach müssen zusammen angegeben werden und bereits existieren. Maximal 1000 Geräte und 5 MB pro Upload.
+
+### Version 2.0.7: Terminserien und Gerätefilter
+
+Beim Anlegen eines Serientermins kann optional „Serientermine als einzelne Termine speichern“ gewählt werden. Dann wird jede Wiederholung als eigenständiger Termin erzeugt (maximal 400 Einzeltermine). Bestehende Serien lassen sich als Ganzes bearbeiten. Über „Einzeltermin bearbeiten“ wird genau ein Vorkommen herausgelöst; der neue Termin kann auch ein anderes Datum erhalten. Bereits abgegebene Zu- und Absagen sowie Geräteprüfpositionen werden diesem Einzeltermin zugeordnet. Ein herausgelöster Termin bleibt eigenständig, auch wenn die ursprüngliche Serie gelöscht wird. Die Ausnahme wird in der Tabelle `training_series_exceptions` gespeichert und von Dienstkalender und Prüfplanung berücksichtigt. Rechte für Bearbeitung und Löschung werden wie bisher am Terminbereich geprüft.
+
+Unter **Geräte** lässt sich die Tabelle nach Suchtext (auch Barcode, Seriennummer und Ablageort), Kategorie, Fahrzeug, Zustand und Prüfpflicht filtern. „Zurücksetzen“ leert alle Filter.

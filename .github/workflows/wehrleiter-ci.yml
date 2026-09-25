@@ -1,0 +1,91 @@
+name: Wehrleiter Qualifications V1 CI
+on:
+  push:
+    branches: [feature/wehrleiter-qualifications-v1]
+  pull_request:
+    branches: [feature/design-system-member-admin]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript
+        run: |
+          node --check src/main/resources/static/wehrleiter.js
+          node src/test/js/menu-designer-smoke.cjs
+          node src/test/js/admin-layout-smoke.cjs
+      - name: Build and test Java
+        run: mvn -B -ntp test
+      - name: Build deployment image with local OCR
+        run: docker build --progress=plain -t fw-cockpit-ocr-test .
+      - name: Verify runtime image contains German and English OCR
+        run: |
+          docker run --rm --entrypoint tesseract fw-cockpit-ocr-test --version
+          docker run --rm --entrypoint tesseract fw-cockpit-ocr-test --list-langs | tee /tmp/ocr-langs.txt
+          grep -qx 'deu' /tmp/ocr-langs.txt
+          grep -qx 'eng' /tmp/ocr-langs.txt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: OCR a synthetic license-like image over stdin without writing a photo file
+        run: |
+          python -m pip install --quiet Pillow==11.3.0
+          python - <<'PY' | docker run --rm -i --entrypoint tesseract fw-cockpit-ocr-test stdin stdout -l deu+eng --psm 11 > /tmp/ocr-sample-result.txt
+          from PIL import Image,ImageDraw,ImageFont
+          import sys
+          image=Image.new('RGB',(1500,420),'white')
+          draw=ImageDraw.Draw(image)
+          font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',74)
+          draw.text((80,55),'MAX MUSTER',fill='black',font=font)
+          draw.text((80,215),'L123456789',fill='black',font=font)
+          image.save(sys.stdout.buffer,format='PNG')
+          PY
+          grep -qi 'MUSTER' /tmp/ocr-sample-result.txt
+          grep -q '123456789' /tmp/ocr-sample-result.txt
+          rm -f /tmp/ocr-sample-result.txt
+      - name: Start the actual app with isolated Postgres/Redis and verify new schema
+        run: |
+          set -euo pipefail
+          docker network create fw-cockpit-ci
+          docker run -d --name fw-cockpit-ci-db --network fw-cockpit-ci \
+            -e POSTGRES_USER=ci -e POSTGRES_DB=ci -e POSTGRES_PASSWORD=ci_test_only postgres:16-alpine
+          docker run -d --name fw-cockpit-ci-redis --network fw-cockpit-ci redis:7-alpine
+          for i in $(seq 1 45); do
+            if docker exec fw-cockpit-ci-db pg_isready -U ci -d ci >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker run -d --name fw-cockpit-ci-app --network fw-cockpit-ci -p 127.0.0.1:18080:8080 \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://fw-cockpit-ci-db:5432/ci \
+            -e SPRING_DATASOURCE_USERNAME=ci -e SPRING_DATASOURCE_PASSWORD=ci_test_only \
+            -e SPRING_DATA_REDIS_HOST=fw-cockpit-ci-redis \
+            -e JWT_SECRET=ci_only_long_test_secret_never_use_in_production_123456 \
+            fw-cockpit-ocr-test
+          ready=0
+          for i in $(seq 1 90); do
+            if curl --silent --fail http://127.0.0.1:18080/index.html > /dev/null; then ready=1; break; fi
+            if ! docker inspect --format='{{.State.Running}}' fw-cockpit-ci-app | grep -qx true; then break; fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            docker logs --tail 120 fw-cockpit-ci-app
+            exit 1
+          fi
+          for name in fire_qualification_types fire_member_qualifications fire_qualification_checks fire_qualification_reminders member_extra member_custom_fields; do
+            actual=$(docker exec fw-cockpit-ci-db psql -U ci -d ci -Atc "select to_regclass('public.$name')")
+            [ "$actual" = "$name" ] || { echo "Required DB table $name was not created"; exit 1; }
+          done
+          curl --silent --fail http://127.0.0.1:18080/wehrleiter.js > /dev/null
+          curl --silent --fail http://127.0.0.1:18080/wehrleiter.css > /dev/null
+          echo 'PASS: Spring Boot starts, new PostgreSQL tables exist, public menu assets load'
+
+
+

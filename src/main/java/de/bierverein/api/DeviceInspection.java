@@ -16,7 +16,23 @@ public class DeviceInspection {
     @Column(length=2000) private String defects;
     @Column(length=2000) private String measures;
     @Column(length=2000) private String notes;
+    @Column(length=100000) private String signatureData;
+    private java.time.Instant signedAt;
+    private Long cycleTaskId;
+    private Long sessionTaskId;
+    private Long sessionReportId;
+    @Column(length=150) private String deviceNameSnapshot;
+    @Column(length=150) private String locationSnapshot;
+    @Column(length=80) private String inventorySnapshot;
 
+    public String getSignatureData(){return signatureData;} public void setSignatureData(String x){signatureData=x;}
+    public java.time.Instant getSignedAt(){return signedAt;} public void setSignedAt(java.time.Instant x){signedAt=x;}
+    public Long getCycleTaskId(){return cycleTaskId;} public void setCycleTaskId(Long x){cycleTaskId=x;}
+    public Long getSessionTaskId(){return sessionTaskId;} public void setSessionTaskId(Long x){sessionTaskId=x;}
+    public Long getSessionReportId(){return sessionReportId;} public void setSessionReportId(Long x){sessionReportId=x;}
+    public String getDeviceNameSnapshot(){return deviceNameSnapshot;} public void setDeviceNameSnapshot(String x){deviceNameSnapshot=x;}
+    public String getLocationSnapshot(){return locationSnapshot;} public void setLocationSnapshot(String x){locationSnapshot=x;}
+    public String getInventorySnapshot(){return inventorySnapshot;} public void setInventorySnapshot(String x){inventorySnapshot=x;}
     public DeviceInspection(){}
     public Long getId(){return id;}
     public Device getDevice(){return device;} public void setDevice(Device v){device=v;}

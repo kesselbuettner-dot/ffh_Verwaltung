@@ -30,10 +30,29 @@ public class AppSettings {
     private String accentColor = "#1479e9";
 
     @Column(nullable = false, length = 1000)
-    private String menuOrder = "dashboard,members,theke,shopping,purchase,inventory,articles,devices,drivebook,devicebook,material,events,firewehr,training,finance,documents,calendar,donations,admin,admin-members,admin-users,admin-settings";
+    private String menuOrder = "services,dashboard,members,theke,shopping,purchase,inventory,articles,devices,device-inspection-plans,vehicles,device-settings,training-documents,calendar,admin,admin-members,admin-users,admin-settings";
 
     @Column(nullable = false, length = 1000)
     private String hiddenMenuItems = "";
+
+    @Column(length = 500)
+    private String dashboardWidgets = "messages,dates,stats,stock,finance,quick,offers,status,system";
+
+    @Column(length = 500)
+    private String dashboardWidgetOrder = "messages,dates,stats,stock,finance,quick,offers,status,system";
+
+    @Column(columnDefinition = "TEXT")
+    private String dashboardWidgetRoles;
+
+    @Column(length = 500)
+    private String messageEditorRoles = "ADMIN,VORSTAND";
+
+    @Column(columnDefinition = "TEXT")
+    private String menuLayout;
+
+    /** Strictly validated, shared design tokens. Existing settings are untouched. */
+    @Column(columnDefinition = "TEXT")
+    private String designTokens = "{}";
 
     @Lob
     @Basic(fetch = FetchType.LAZY)
@@ -42,6 +61,19 @@ public class AppSettings {
     @Column(length = 100)
     private String logoContentType;
 
+    @Column(length = 160) private String organizationName;
+    @Column(length = 160) private String street;
+    @Column(length = 20) private String postalCode;
+    @Column(length = 120) private String city;
+    @Column(length = 2) private String federalState = "SN";
+    @Column(length = 160) private String contactEmail;
+    @Column(length = 60) private String contactPhone;
+    @Column(length = 160) private String legalRepresentative;
+
+    public String getDesignTokens() { return designTokens; }
+    public void setDesignTokens(String designTokens) { this.designTokens = designTokens; }
+    public String getMenuLayout() { return menuLayout; }
+    public void setMenuLayout(String menuLayout) { this.menuLayout = menuLayout; }
     public Long getId() { return id; }
     public String getAppName() { return appName; }
     public void setAppName(String appName) { this.appName = appName; }
@@ -55,8 +87,24 @@ public class AppSettings {
     public void setMenuOrder(String menuOrder) { this.menuOrder = menuOrder; }
     public String getHiddenMenuItems() { return hiddenMenuItems; }
     public void setHiddenMenuItems(String hiddenMenuItems) { this.hiddenMenuItems = hiddenMenuItems; }
+    public String getDashboardWidgets() { return dashboardWidgets; }
+    public void setDashboardWidgets(String dashboardWidgets) { this.dashboardWidgets = dashboardWidgets; }
+    public String getDashboardWidgetOrder() { return dashboardWidgetOrder; }
+    public void setDashboardWidgetOrder(String dashboardWidgetOrder) { this.dashboardWidgetOrder = dashboardWidgetOrder; }
+    public String getDashboardWidgetRoles() { return dashboardWidgetRoles; }
+    public void setDashboardWidgetRoles(String dashboardWidgetRoles) { this.dashboardWidgetRoles = dashboardWidgetRoles; }
+    public String getMessageEditorRoles() { return messageEditorRoles; }
+    public void setMessageEditorRoles(String messageEditorRoles) { this.messageEditorRoles = messageEditorRoles; }
     public byte[] getLogoData() { return logoData; }
     public void setLogoData(byte[] logoData) { this.logoData = logoData; }
     public String getLogoContentType() { return logoContentType; }
     public void setLogoContentType(String logoContentType) { this.logoContentType = logoContentType; }
+    public String getOrganizationName(){return organizationName;} public void setOrganizationName(String v){organizationName=v;}
+    public String getStreet(){return street;} public void setStreet(String v){street=v;}
+    public String getPostalCode(){return postalCode;} public void setPostalCode(String v){postalCode=v;}
+    public String getCity(){return city;} public void setCity(String v){city=v;}
+    public String getFederalState(){return federalState;} public void setFederalState(String v){federalState=v;}
+    public String getContactEmail(){return contactEmail;} public void setContactEmail(String v){contactEmail=v;}
+    public String getContactPhone(){return contactPhone;} public void setContactPhone(String v){contactPhone=v;}
+    public String getLegalRepresentative(){return legalRepresentative;} public void setLegalRepresentative(String v){legalRepresentative=v;}
 }

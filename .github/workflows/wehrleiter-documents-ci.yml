@@ -1,0 +1,56 @@
+name: Wehrleiter Documents and License Classes CI
+on:
+  push:
+    branches: [feature/wehrleiter-documents-license-classes]
+  pull_request:
+    branches: [feature/wehrleiter-compact-avatars]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript, menu, administration and Wehrleiter regression
+        run: |
+          node --check src/main/resources/static/wehrleiter.js
+          node src/test/js/menu-designer-smoke.cjs
+          node src/test/js/admin-layout-smoke.cjs
+          node src/test/js/wehrleiter-compact-avatar-smoke.cjs
+          node src/test/js/wehrleiter-documents-smoke.cjs
+      - name: Java build and tests
+        run: mvn -B -ntp test
+      - name: Build deployment image
+        run: docker build -t fw-documents-ci .
+      - name: Start app with isolated database and verify added columns
+        run: |
+          set -euo pipefail
+          docker network create fw-docs-ci
+          docker run -d --name fw-docs-db --network fw-docs-ci -e POSTGRES_USER=ci -e POSTGRES_DB=ci -e POSTGRES_PASSWORD=ci postgres:16-alpine
+          docker run -d --name fw-docs-redis --network fw-docs-ci redis:7-alpine
+          for i in $(seq 1 40); do docker exec fw-docs-db pg_isready -U ci -d ci >/dev/null 2>&1 && break; sleep 2; done
+          docker run -d --name fw-docs-app --network fw-docs-ci -p 127.0.0.1:18080:8080 \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://fw-docs-db:5432/ci \
+            -e SPRING_DATASOURCE_USERNAME=ci -e SPRING_DATASOURCE_PASSWORD=ci \
+            -e SPRING_DATA_REDIS_HOST=fw-docs-redis \
+            -e JWT_SECRET=ci_only_long_test_secret_never_use_in_production_123456 fw-documents-ci
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:18080/index.html >/dev/null; then ready=1; break; fi
+            if ! docker inspect -f '{{.State.Running}}' fw-docs-app | grep -qx true; then break; fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then docker logs --tail 150 fw-docs-app; exit 1; fi
+          for spec in 'fire_qualification_types:category' 'fire_member_qualifications:license_classes' 'fire_vehicles:required_license_class' 'fire_qualification_attachments:bytes'; do
+            table="${spec%%:*}"; column="${spec#*:}"
+            value=$(docker exec fw-docs-db psql -U ci -d ci -Atc "select column_name from information_schema.columns where table_name='$table' and column_name='$column'")
+            [ "$value" = "$column" ] || { echo "Missing $table.$column"; exit 1; }
+          done
+          echo 'PASS: app boots with new columns, attachment table, vehicle field'

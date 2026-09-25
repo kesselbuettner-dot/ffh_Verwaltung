@@ -25,21 +25,15 @@ public class EffectivePermissionService {
     }
 
     @Transactional(readOnly = true)
-    public boolean hasPermission(Long userId, String permissionKey) {
-        if (userId == null || permissionKey == null ||
-                !PermissionCatalog.keys().contains(permissionKey)) {
-            return false;
-        }
+    public Set<String> permissionsFor(Long userId) {
+        if (userId == null) return Set.of();
         AppUser user = users.findById(userId).orElse(null);
-        if (user == null || !user.isEnabled() || !user.isRegistrationApproved()) {
-            return false;
-        }
+        if (user == null || !user.isEnabled() || !user.isRegistrationApproved()) return Set.of();
         var userRoles = assignments.findByUserId(userId);
-        // ADMIN is a protected system role. Its assignment is read from the
-        // database, never from a stale JWT or the legacy AppUser.role field.
+        // Keep the protected system ADMIN role as the explicit administrative override.
         if (userRoles.stream().anyMatch(a ->
                 a.getRole().isSystemRole() && "ADMIN".equals(a.getRole().getCode()))) {
-            return true;
+            return Set.copyOf(PermissionCatalog.keys());
         }
         Set<String> granted = new HashSet<>();
         for (ManagedUserRole assignment : userRoles) {
@@ -48,14 +42,21 @@ public class EffectivePermissionService {
                 granted.add(permission.getPermissionKey());
             }
         }
-        // A write or delete grant includes the ability to read that area.
-        // This is evaluated dynamically, so a role cannot accidentally have
-        // write access while its read-only UI is hidden.
-        if (permissionKey.endsWith(".read")) {
-            String area = permissionKey.substring(0, permissionKey.length() - 5);
-            return granted.contains(permissionKey) || granted.contains(area + ".write")
-                || granted.contains(area + ".delete");
+        // A write or delete grant implies read, but never the reverse.
+        Set<String> effective = new HashSet<>(granted);
+        for (String key : granted) {
+            if (key.endsWith(".write") || key.endsWith(".delete")) {
+                effective.add(key.substring(0, key.lastIndexOf('.')) + ".read");
+            }
         }
-        return granted.contains(permissionKey);
+        effective.retainAll(PermissionCatalog.keys());
+        return Set.copyOf(effective);
     }
+
+    @Transactional(readOnly = true)
+    public boolean hasPermission(Long userId, String permissionKey) {
+        return permissionKey != null && PermissionCatalog.keys().contains(permissionKey)
+                && permissionsFor(userId).contains(permissionKey);
+    }
+
 }

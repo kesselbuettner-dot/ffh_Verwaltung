@@ -2,6 +2,7 @@
   "name": "FFH Verwaltung",
   "short_name": "FFH Verwaltung",
   "description": "Vereins- und Feuerwehrverwaltung",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -15,19 +16,25 @@
   ],
   "icons": [
     {
-      "src": "/icons/fw-cockpit-192.png",
+      "src": "/icons/fw-cockpit-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/fw-cockpit-512.png",
+      "src": "/icons/fw-cockpit-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/fw-cockpit-logo.svg",
+      "src": "/icons/fw-cockpit-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/fw-cockpit-brand.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
@@ -40,9 +47,9 @@
       "url": "/?page=theke"
     },
     {
-      "name": "Mitglieder",
-      "short_name": "Mitglieder",
-      "url": "/?page=members"
+      "name": "Meldungen",
+      "short_name": "Meldungen",
+      "url": "/?messages=1"
     }
   ]
 }

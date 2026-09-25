@@ -1,0 +1,98 @@
+/* FW-Cockpit Design Tokens — docs/DESIGN_SYSTEM.md
+   Existing app CSS remains authoritative for layout; these semantic tokens
+   standardize new actions without silently restyling every legacy module. */
+:root{
+ --ui-page:var(--bg,#eef2f6);--ui-surface:var(--panel,#fff);
+ --ui-text:var(--ink,#102033);--ui-subtle:var(--muted,#64748b);
+ --ui-border:var(--line,#dce4ec);
+ --ui-primary:var(--accent,#c51f2d);--ui-primary-text:#fff;
+ --ui-secondary:#eef1f4;--ui-secondary-text:#102033;
+ --ui-warning:#9a6000;--ui-warning-text:#fff;
+ --ui-danger:#a51f2b;--ui-danger-text:#fff;
+ --ui-success:#117645;--ui-success-text:#fff;
+ --ui-focus:#1479e9;
+}
+body.dark{
+ --ui-page:var(--bg);--ui-surface:var(--panel);
+ --ui-text:var(--ink);--ui-subtle:var(--muted);--ui-border:var(--line);
+ --ui-secondary:#263747;--ui-secondary-text:#f5f8fb;
+ --ui-warning:#f1b95d;--ui-warning-text:#171b22;
+ --ui-danger:#bd3144;--ui-danger-text:#fff;
+ --ui-success:#2c965e;--ui-success-text:#fff;
+ --ui-focus:#94c7ff;
+}
+.btn.primary{background:var(--ui-primary);color:var(--ui-primary-text)}
+.btn.secondary{background:var(--ui-secondary);color:var(--ui-secondary-text)}
+.btn.danger{background:var(--ui-danger);color:var(--ui-danger-text)}
+.btn.warning{background:var(--ui-warning);color:var(--ui-warning-text)}
+.btn.success{background:var(--ui-success);color:var(--ui-success-text)}
+.btn:focus-visible,.settings-tab:focus-visible,.table button:focus-visible{
+ outline:3px solid var(--ui-focus);outline-offset:2px;
+}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.danger:hover:not(:disabled){filter:brightness(1.1)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.09)}
+.btn.secondary:hover:not(:disabled){filter:brightness(.96)}
+.ui-theme-presets{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.ui-theme-preset{border:1px solid var(--ui-border);background:var(--ui-surface);
+ color:var(--ui-text);border-radius:10px;padding:10px;min-height:44px;display:flex;align-items:center;gap:7px}
+.ui-theme-preset .swatch{width:18px;height:18px;border-radius:50%;background:var(--swatch);border:1px solid #8884}
+.ui-theme-preset:focus-visible{outline:3px solid var(--ui-focus);outline-offset:2px}
+.ui-theme-preset[aria-pressed=true]{border:2px solid var(--ui-focus)}
+
+/* Shared filter/sort toolbar for all future tables, lists and member tile overviews.
+   See docs/UI_KOMPONENTEN.md. Existing module toolbars can opt in to ui-filterbar. */
+.ui-filterbar{display:grid;grid-template-columns:minmax(190px,1.5fr) repeat(3,minmax(145px,1fr)) auto;align-items:end;gap:10px;margin:0 0 12px}
+.ui-filterfield{display:grid;gap:5px;min-width:0;font-size:12px;font-weight:650;color:var(--ui-subtle,var(--muted))}
+.ui-filterfield > input,.ui-filterfield > select{box-sizing:border-box;display:block;width:100%;max-width:100%;min-width:0;min-height:42px;
+ border:1px solid var(--ui-border,var(--line));border-radius:9px;background:var(--ui-surface,var(--panel));color:var(--ui-text,var(--ink));padding:8px 10px;font:inherit;font-size:14px}
+.ui-filterfield > input:focus-visible,.ui-filterfield > select:focus-visible{outline:2px solid var(--ui-focus,#1479e9);outline-offset:2px}
+.ui-filter-actions{display:flex;flex-wrap:wrap;align-items:end;gap:7px;min-width:0}
+.ui-filter-actions .btn{min-height:42px;white-space:normal}
+@media(max-width:1250px){.ui-filterbar{grid-template-columns:repeat(2,minmax(0,1fr))}.ui-filter-actions{grid-column:1/-1}}
+@media(max-width:600px){.ui-filterbar{grid-template-columns:1fr 1fr;gap:9px}.ui-filter-search,.ui-filter-actions{grid-column:1/-1}.ui-filter-actions .btn{flex:1 1 auto}}
+
+.member-avatar-input-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.member-avatar-preview{width:64px;height:64px;min-width:64px;font-size:18px}
+.member-avatar-input input[type=file]{min-width:0;max-width:100%;flex:1 1 180px}
+
+/* Five field slots when a category selector is present in a responsive member overview. */
+.ui-filterbar:has(#wehrCategory){grid-template-columns:minmax(170px,1.4fr) repeat(4,minmax(125px,1fr)) auto}
+@media(max-width:1400px){.ui-filterbar:has(#wehrCategory){grid-template-columns:repeat(3,minmax(0,1fr))}.ui-filterbar:has(#wehrCategory) .ui-filter-actions{grid-column:1/-1}}
+@media(max-width:700px){.ui-filterbar:has(#wehrCategory){grid-template-columns:repeat(2,minmax(0,1fr))}.ui-filterbar:has(#wehrCategory) .ui-filter-search,.ui-filterbar:has(#wehrCategory) .ui-filter-actions{grid-column:1/-1}}
+.wehr-license-classes{display:flex;gap:9px;flex-wrap:wrap;margin:7px 0}.wehr-license-classes label{display:inline-flex;gap:5px;align-items:center;min-width:55px;padding:7px 10px;border:1px solid var(--ui-border,var(--line));border-radius:9px;cursor:pointer}.wehr-license-classes input{width:auto!important}
+
+/* Geräteverwaltung: dieselben Kopf-, Filter- und Tabellenabstände wie die Wehrleitung. */
+.device-overview-head{align-items:center}
+.device-overview-head .sub{display:block;margin:7px 0 0}
+.device-overview-head .quick{justify-content:flex-end}
+.device-overview-panel{min-width:0}
+.device-overview-filters{grid-template-columns:minmax(190px,1.5fr) repeat(3,minmax(145px,1fr)) auto}
+.device-overview-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:3px 0 13px;font-size:12px;color:var(--ui-subtle,var(--muted))}
+.device-overview-scroll{overflow-x:auto}
+.device-overview-table{min-width:890px;width:100%;border-collapse:collapse;table-layout:auto}
+.device-overview-table thead th{text-align:left;padding:11px 12px;border-bottom:2px solid var(--ui-border,var(--line));background:var(--ui-secondary,#f1f4f8);color:var(--ui-text,var(--ink));font-size:12px;white-space:normal}
+.device-overview-table tbody td{padding:13px 12px;vertical-align:middle;border-bottom:1px solid var(--ui-border,var(--line));white-space:normal}
+.device-overview-table tbody tr:last-child td{border-bottom:0}
+.device-overview-table tbody td:first-child{min-width:165px}
+.device-overview-table tbody td:first-child strong{font-size:14px}
+.device-overview-table tbody td:first-child small{display:block;margin-top:3px;font-size:11px}
+.device-overview-row{cursor:pointer;transition:background .12s}
+.device-overview-row:hover,.device-overview-row:focus-visible{background:var(--ui-secondary,#eef3f8);outline:2px solid var(--ui-focus,#1479e9);outline-offset:-2px}
+.device-overview-table .badge{white-space:nowrap}
+@media(max-width:1250px){.device-overview-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.device-overview-filters .ui-filter-actions{grid-column:1/-1}}
+@media(max-width:700px){.device-overview-head{align-items:flex-start}.device-overview-head .quick{justify-content:flex-start}.device-overview-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.device-overview-filters .ui-filter-search,.device-overview-filters .ui-filter-actions{grid-column:1/-1}.device-overview-table{min-width:800px}.device-overview-table thead th,.device-overview-table tbody td{padding:9px 8px}}
+
+/* Geräte page: match the Wehrleitung's labeled, equal-height filter fields. */
+.device-current-filters{grid-template-columns:minmax(190px,1.45fr) repeat(3,minmax(145px,1fr)) minmax(120px,.7fr) auto;align-items:end}
+.device-current-filters .ui-filterfield{min-width:0;gap:6px;font-size:12px;font-weight:650}
+.device-current-filters .ui-filterfield>input,.device-current-filters .ui-filterfield>select,.device-current-report-filter .ui-filterfield>select{width:100%;height:46px;min-height:46px;padding:9px 12px;max-width:100%;min-width:0;border:1px solid var(--ui-border,var(--line));border-radius:10px;background:var(--ui-surface,var(--panel));color:var(--ui-text,var(--ink));font:inherit;font-size:14px}
+.device-current-filters .ui-filter-actions .btn{min-height:46px;white-space:nowrap}
+.device-current-check-line{display:flex;align-items:center;gap:9px;height:46px;min-height:46px;padding:0 11px;border:1px solid var(--ui-border,var(--line));border-radius:10px;background:var(--ui-surface,var(--panel));color:var(--ui-text,var(--ink));font-size:14px;white-space:nowrap}
+.device-current-check-line input{width:17px;height:17px;min-width:17px;margin:0;accent-color:var(--ds-brand,var(--accent))}
+.device-current-report-filter{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:12px 0 14px}
+.device-current-report-filter .ui-filterfield{width:min(220px,100%);min-width:160px}
+.device-current-report-filter .sub{padding-bottom:11px}
+@media(max-width:1550px){.device-current-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.device-current-filters .ui-filter-actions{grid-column:auto}}
+@media(max-width:850px){.device-current-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.device-current-filters .ui-filter-search,.device-current-filters .ui-filter-actions{grid-column:1/-1}}
+@media(max-width:560px){.device-current-filters{grid-template-columns:1fr 1fr}.device-current-filters .ui-filter-search,.device-current-filters .ui-filter-actions{grid-column:1/-1}.device-current-filters .ui-filter-actions .btn{flex:1 1 auto;white-space:normal}.device-current-report-filter .ui-filterfield{flex:1 1 145px;min-width:0}}

@@ -1,0 +1,54 @@
+name: Wehrleiter Compact UI and Avatars
+on:
+  push:
+    branches: [feature/wehrleiter-compact-avatars]
+  pull_request:
+    branches: [feature/wehrleiter-qualifications-v1]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax, previous menu and administration regression
+        run: |
+          node --check src/main/resources/static/wehrleiter.js
+          node src/test/js/menu-designer-smoke.cjs
+          node src/test/js/admin-layout-smoke.cjs
+          node src/test/js/wehrleiter-compact-avatar-smoke.cjs
+      - name: Compile Java and run all tests
+        run: mvn -B -ntp test
+      - name: Build and run app with PostgreSQL/Redis and verify avatar column
+        run: |
+          set -euo pipefail
+          docker build -t fw-compact-ci .
+          docker network create fw-compact-ci
+          docker run -d --name fw-compact-db --network fw-compact-ci -e POSTGRES_USER=ci -e POSTGRES_DB=ci -e POSTGRES_PASSWORD=test postgres:16-alpine
+          docker run -d --name fw-compact-redis --network fw-compact-ci redis:7-alpine
+          for i in $(seq 1 40); do docker exec fw-compact-db pg_isready -U ci -d ci >/dev/null 2>&1 && break; sleep 2; done
+          docker run -d --name fw-compact-app --network fw-compact-ci -p 127.0.0.1:18080:8080 \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://fw-compact-db:5432/ci \
+            -e SPRING_DATASOURCE_USERNAME=ci -e SPRING_DATASOURCE_PASSWORD=test \
+            -e SPRING_DATA_REDIS_HOST=fw-compact-redis \
+            -e JWT_SECRET=ci_only_long_test_secret_never_use_in_production_123456 fw-compact-ci
+          ready=0
+          for i in $(seq 1 90); do if curl -fsS http://127.0.0.1:18080/index.html >/dev/null; then ready=1; break; fi
+            if ! docker inspect -f '{{.State.Running}}' fw-compact-app | grep -qx true; then break; fi; sleep 2; done
+          if [ "$ready" != 1 ]; then docker logs --tail 130 fw-compact-app; exit 1; fi
+          for name in avatar_data avatar_mime; do
+            value=$(docker exec fw-compact-db psql -U ci -d ci -Atc "SELECT column_name FROM information_schema.columns WHERE table_name='member_extra' AND column_name='$name'")
+            [ "$value" = "$name" ] || { echo "Missing member_extra.$name"; exit 1; }
+          done
+          value=$(docker exec fw-compact-db psql -U ci -d ci -Atc "SELECT column_name FROM information_schema.columns WHERE table_name='fire_qualification_types' AND column_name='short_label'")
+          [ "$value" = short_label ]
+          curl -fsS http://127.0.0.1:18080/wehrleiter.js >/dev/null
+          curl -fsS http://127.0.0.1:18080/ui-theme.css >/dev/null
+          echo 'PASS: JVM starts, avatar and abbreviation columns exist, and new static assets load'
