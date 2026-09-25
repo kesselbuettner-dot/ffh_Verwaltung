@@ -136,7 +136,7 @@ public class GeneralTaskController {
  @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) @Transactional
  public void delete(@PathVariable Long id,Authentication auth){
   AppUser u=actor(auth);GeneralTask t=visible(id,u);
-  if(!creator(u)||!(Objects.equals(t.creatorId,u.getId())||u.getRole()==Role.ADMIN||u.getRole()==Role.VORSTAND))
+  if(!canManage(u,t))
    throw error(HttpStatus.FORBIDDEN,"Keine Berechtigung zum Löschen");
   tasks.delete(t);
  }
