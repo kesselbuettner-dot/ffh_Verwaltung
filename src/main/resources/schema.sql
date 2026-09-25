@@ -11,5 +11,5 @@ BEGIN
     ALTER COLUMN on_wallboard SET DEFAULT FALSE,
     ALTER COLUMN on_wallboard SET NOT NULL;
  END IF;
-END
-$$^^
+END;
+$^^
