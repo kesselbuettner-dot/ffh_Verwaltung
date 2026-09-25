@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-inspection-sync-20260925";
+const CACHE_NAME = "ffh-verwaltung-member-dashboard-20260925";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -18,6 +18,8 @@ const APP_SHELL = [
   "/inspection-signature.js?v=1",
   "/device-cycle-tasks.js?v=inspection-sync-20260925",
   "/my-tasks.js?v=inspection-sync-20260925",
+  "/personal-overview.js?v=20260925-v1",
+  "/personal-overview.css?v=20260925-v1",
   "/document-center.js?v=20260925-v1",
   "/document-center.css?v=20260925-v1",
   "/display.html",
