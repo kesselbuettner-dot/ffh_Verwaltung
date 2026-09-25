@@ -33,7 +33,7 @@ class DocumentRecognitionTest {
    var page=new PDPage(PDRectangle.A4);pdf.addPage(page);
    try(var stream=new PDPageContentStream(pdf,page)){
     stream.beginText();stream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA),12);
-    stream.newLineAtOffset(50,750);stream.showText("Fire equipment inspection document with readable searchable text");
+    stream.newLineAtOffset(50,750);stream.showText("Fire equipment inspection document with readable searchable text and additional reference notes for extraction and testing");
     stream.endText();
    }
    pdf.save(output);
