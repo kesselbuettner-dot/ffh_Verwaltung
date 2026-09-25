@@ -145,4 +145,39 @@ class DeviceCycleTaskServiceTest {
   assertEquals("DEFECTIVE",d.getOperationalStatus());
   verify(inspections).save(argThat(i->"MIT_MANGEL".equals(i.getResult())&&"Schlauch porös".equals(i.getDefects())));
  }
+ @Test void anExistingSignedGroupProofReconcilesAnOpenCycleTaskWithoutReinspection(){
+  LocalDate today=LocalDate.now(ZoneId.of("Europe/Berlin"));
+  Device device=device(3L,today.minusDays(3));
+  DeviceCycleTask open=job(8L,device);
+  DeviceInspection signed=new DeviceInspection();
+  ReflectionTestUtils.setField(signed,"id",33L);
+  signed.setInspectionDate(today.minusDays(2));
+  signed.setNextInspectionDate(today.plusMonths(6));
+  signed.setInspector("geraetewart");signed.setResult("BESTANDEN");
+  signed.setSignedAt(Instant.now());signed.setSignatureData("signed-png-proof");
+  when(tasks.findByStatusInOrderByDueOnAsc(List.of("OPEN"))).thenReturn(List.of(open));
+  when(inspections.findByDeviceIdOrderByInspectionDateDesc(3L)).thenReturn(List.of(signed));
+  assertEquals(1,service.reconcileSignedInspections());
+  assertEquals("DONE",open.getStatus());
+  assertEquals(33L,open.getInspectionId());
+  verify(tasks).save(open);
+  verify(inspections,never()).save(any());
+ }
+
+ @Test void anOldProofCannotCloseANewerScheduledInspection(){
+  LocalDate today=LocalDate.now(ZoneId.of("Europe/Berlin"));
+  Device device=device(3L,today.plusDays(15));
+  DeviceCycleTask open=job(8L,device);
+  DeviceInspection previous=new DeviceInspection();
+  previous.setInspectionDate(today.minusMonths(7));
+  previous.setNextInspectionDate(today.plusDays(15));
+  previous.setInspector("geraetewart");previous.setResult("BESTANDEN");
+  previous.setSignedAt(Instant.now());previous.setSignatureData("signed-png-proof");
+  when(tasks.findByStatusInOrderByDueOnAsc(List.of("OPEN"))).thenReturn(List.of(open));
+  when(inspections.findByDeviceIdOrderByInspectionDateDesc(3L)).thenReturn(List.of(previous));
+  assertEquals(0,service.reconcileSignedInspections());
+  assertEquals("OPEN",open.getStatus());
+  verify(tasks,never()).save(open);
+ }
+
 }

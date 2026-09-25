@@ -16,14 +16,31 @@
   host.replaceChildren(n('p',isError?'ds-task-message is-error':'ds-task-message',value));
  }
  function assigned(entry){return entry.assignedName||'Gerätewart (Rollenpostfach)';}
- async function page(){
+ async function page(focusTaskId=null){
   setActive('device-cycle-tasks');
   content.replaceChildren(ui().page({title:'Geräteprüfung',description:'Prüfaufgaben aus den Prüfzylussen deiner Geräte werden geladen …'}));
   try{
    const [items,members]=await Promise.all([api(URL+'?includeDone=true'),api(URL+'/assignees').catch(()=>null)]);
    loaded=items||[];eligible=members||[];isManager=members!==null;
    root.setMenuNoticeCount?.('device-cycle-tasks',loaded.filter(pending).length);
+   if(focusTaskId!=null){
+    search='';status='OPEN';
+   }
    drawPage();
+   if(focusTaskId!=null){
+    const selected=loaded.find(entry=>entry.id===focusTaskId);
+    if(selected&&pending(selected)&&(isManager||selected.assignedUserId))openComplete(selected);
+    else if(selected?.inspectionId)openProtocol(selected);
+    else if(selected){
+     const hint=n('p','ds-task-message is-error',
+       'Die Prüfung ist nicht dir zugewiesen. Bitte den Gerätewart kontaktieren.');
+     content.prepend(hint);
+    }else{
+     const hint=n('p','ds-task-message',
+       'Die Prüfaufgabe wurde inzwischen abgeschlossen oder ist nicht mehr verfügbar.');
+     content.prepend(hint);
+    }
+   }
   }catch(error){content.replaceChildren(ui().page({title:'Geräteprüfung',children:[ui().empty({message:error.message||'Prüfaufgaben konnten nicht geladen werden.'})]}));}
  }
  function rowMatches(entry){

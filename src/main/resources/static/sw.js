@@ -1,4 +1,4 @@
-const CACHE_NAME = "ffh-verwaltung-document-center-wallboard-20260925-v1";
+const CACHE_NAME = "ffh-verwaltung-inspection-sync-20260925";
 const APP_SHELL = [
   "/",
   "/manifest.json",
@@ -16,8 +16,8 @@ const APP_SHELL = [
   "/print-templates.css?v=2",
   "/print-reports.js?v=attendance-print-20260924-v2",
   "/inspection-signature.js?v=1",
-  "/device-cycle-tasks.js?v=parent-notice-badges-20260924",
-  "/my-tasks.js?v=scope-search-20260925",
+  "/device-cycle-tasks.js?v=inspection-sync-20260925",
+  "/my-tasks.js?v=inspection-sync-20260925",
   "/document-center.js?v=20260925-v1",
   "/document-center.css?v=20260925-v1",
   "/display.html",

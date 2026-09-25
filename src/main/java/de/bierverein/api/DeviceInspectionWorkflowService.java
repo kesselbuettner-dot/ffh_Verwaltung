@@ -90,7 +90,8 @@ public class DeviceInspectionWorkflowService {
   // An individual proof can satisfy a matching appointment without a second inspection.
   LocalDate upper="BESTANDEN".equals(result)?device.getNextInspectionDate():today.plusDays(30);
   for(DeviceInspectionTask pending:sessionTasks.findByDeviceIdAndInspectionIdIsNull(device.getId())){
-   if(!pending.getOccurrenceDate().isBefore(today)&&pending.getOccurrenceDate().isBefore(upper)){
+   // A recently passed group appointment can also be satisfied by the signed individual proof.
+   if(!pending.getOccurrenceDate().isBefore(today.minusDays(DeviceCycleTaskService.WARNING_DAYS))&&pending.getOccurrenceDate().isBefore(upper)){
     pending.setInspectionId(saved.getId());
     pending.setStatus("BESTANDEN".equals(result)?"INSPECTED":
       "NICHT_PRUEFBAR".equals(result)?"NOT_INSPECTABLE":"DEFECTIVE");
