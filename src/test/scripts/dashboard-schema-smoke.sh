@@ -3,10 +3,12 @@ set -euo pipefail
 name="ffh-dashboard-schema-$$"
 trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
 docker run -d --name "$name" -e POSTGRES_PASSWORD=test -e POSTGRES_DB=ffh_schema_test postgres:16-alpine >/dev/null
-for i in $(seq 1 35); do
-  if docker exec "$name" pg_isready -U postgres -d ffh_schema_test >/dev/null 2>&1; then break; fi
+ready=false
+for i in $(seq 1 45); do
+  if docker exec "$name" psql -U postgres -d ffh_schema_test -tAc 'SELECT 1' >/dev/null 2>&1; then ready=true; break; fi
   sleep 1
 done
+test "$ready" = "true"
 grep -Fq 'spring.sql.init.separator=^^' src/main/resources/application.properties
 # Start from an existing populated installation that predates the TV flag.
 docker exec "$name" psql -U postgres -d ffh_schema_test -v ON_ERROR_STOP=1 -c \
