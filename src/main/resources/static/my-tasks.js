@@ -7,6 +7,7 @@
  const today=()=>new Date().toLocaleDateString('sv-SE');
  let last=null,showDone=false,filter='ALL',search='';
  const categories={GENERAL:'Vereinsaufgabe',DEVICE:'Geräteprüfung',SERVICE:'Dienst-Rückmeldung',DRIVING:'Führerscheinkontrolle',MESSAGE:'Nachricht'};
+ const manualCategories={GENERAL:'Allgemeine Vereinsaufgabe',FIRE:'Feuerwehr / Organisation',TRAINING:'Dienst / Schulung',DEVICE:'Gerätewesen',CATERING:'Getränke / Versorgung',FINANCE:'Finanzen'};
  function row(source,id,title,description,dueOn,status,action,extra={}){
   return {source,id,title,description,dueOn,status,action,...extra};
  }
@@ -45,7 +46,7 @@
   return !search||[task.title,task.description,task.assigneeName,categories[task.source]].some(v=>String(v||'').toLocaleLowerCase('de').includes(search));
  }
  function filteredRows(){return last?last.items.filter(visible).sort((a,b)=>(a.status==='DONE')-(b.status==='DONE')||(a.dueOn||'9999').localeCompare(b.dueOn||'9999')):[];}
- function taskListMarkup(rows){return (rows.length?rows.map((t,i)=>'<article class="mytasks-item"><div class="mytasks-item-top"><small>'+escHtml(categories[t.source]||t.source)+'</small>'+badge(t)+'</div><strong>'+escHtml(t.title)+'</strong><p>'+escHtml(t.description||'')+'</p><div class="mytasks-item-bottom"><span>'+escHtml(date(t.dueOn))+(t.assigneeName?' · '+escHtml(t.assigneeName):'')+'</span><button type="button" class="btn secondary" data-task-open="'+i+'">'+(t.source==='GENERAL'?'Bearbeiten':'Öffnen')+' →</button></div></article>').join(''):'<p class="empty">Für diese Auswahl liegen keine Aufgaben vor.</p>');}
+ function taskListMarkup(rows){return (rows.length?rows.map((t,i)=>'<article class="mytasks-item"><div class="mytasks-item-top"><small>'+escHtml(t.source==='GENERAL'?(manualCategories[t.raw?.category]||'Vereinsaufgabe'):(categories[t.source]||t.source))+'</small>'+badge(t)+'</div><strong>'+escHtml(t.title)+'</strong><p>'+escHtml(t.description||'')+'</p><div class="mytasks-item-bottom"><span>'+escHtml(date(t.dueOn))+(t.assigneeName?' · '+escHtml(t.assigneeName):'')+'</span><button type="button" class="btn secondary" data-task-open="'+i+'">'+(t.source==='GENERAL'?'Bearbeiten':'Öffnen')+' →</button></div></article>').join(''):'<p class="empty">Für diese Auswahl liegen keine Aufgaben vor.</p>');}
  function wireTaskRows(rows){content.querySelectorAll('[data-task-open]').forEach(button=>button.onclick=()=>rows[Number(button.dataset.taskOpen)].action());}
  function refreshTaskList(){const list=content.querySelector('.mytasks-list');if(!list||!last)return;const rows=filteredRows();list.innerHTML=taskListMarkup(rows);wireTaskRows(rows);}
  function render(){
@@ -83,9 +84,12 @@
   modalTitle.textContent=t?'Aufgabe · '+t.title:'Neue Vereinsaufgabe';
   const users=last.manual.assignees||[];
   const select=users.map(p=>'<option value="'+p.id+'"'+(t&&t.assigneeId===p.id?' selected':'')+'>'+escHtml(p.name)+'</option>').join('');
+  const categoriesAllowed=last.manual.allowedCategories||[];
+  const categorySelect=categoriesAllowed.map(value=>'<option value="'+escHtml(value)+'"'+(t?.category===value?' selected':'')+'>'+escHtml(manualCategories[value]||value)+'</option>').join('');
   const form='<form id="mytasksEditForm" class="mytasks-edit">'+
    (management?'<label>Titel *<input name="title" required maxlength="160" value="'+escHtml(t?.title||'')+'"></label>'+
     '<label>Beschreibung<textarea name="description" rows="3" maxlength="4000">'+escHtml(t?.description||'')+'</textarea></label>'+
+    '<label>Aufgabenbereich<select name="category" required>'+categorySelect+'</select></label>'+
     '<label>Zuständiges Mitglied<select name="assigneeId" required>'+select+'</select></label>'+
     '<label>Fällig am<input type="date" name="dueOn" value="'+escHtml(t?.dueOn||'')+'"></label>':
     '<p>'+escHtml(t.title)+'</p><p>'+escHtml(t.description||'')+'</p>')+
@@ -105,7 +109,7 @@
    const status=f.elements.status?.value;
    try{
     if(management){
-     const data={title:f.elements.title.value,description:f.elements.description.value,assigneeId:Number(f.elements.assigneeId.value),
+     const data={title:f.elements.title.value,description:f.elements.description.value,category:f.elements.category.value,assigneeId:Number(f.elements.assigneeId.value),
       dueOn:f.elements.dueOn.value||null};
      if(!t)await api(BASE,{method:'POST',body:JSON.stringify(data)});
      else await api(BASE+'/'+t.id,{method:'PUT',body:JSON.stringify(data)});
