@@ -12,7 +12,7 @@ class DocumentCenterAccessTest {
  private final ArchiveDocumentRevisionRepository revisions=mock(ArchiveDocumentRevisionRepository.class);
  private final AppUserRepository users=mock(AppUserRepository.class);
  private final EffectivePermissionService permissions=mock(EffectivePermissionService.class);
- private final DocumentCenterController controller=new DocumentCenterController(docs,revisions,users,permissions,"/tmp/document-test-private");
+ private final DocumentCenterController controller=new DocumentCenterController(docs,revisions,users,permissions,new DocumentTextRecognitionService(),new DocumentSuggestionsService(),mock(DeviceRepository.class),"/tmp/document-test-private");
  private AppUser user(long id,Role role){
   AppUser u=new AppUser();ReflectionTestUtils.setField(u,"id",id);u.setUsername("test"+id);u.setRole(role);
   u.setEnabled(true);u.setRegistrationApproved(true);
