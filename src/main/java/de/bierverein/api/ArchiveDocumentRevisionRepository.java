@@ -4,4 +4,6 @@ import java.util.*;
 public interface ArchiveDocumentRevisionRepository extends JpaRepository<ArchiveDocumentRevision,Long>{
  List<ArchiveDocumentRevision> findByDocumentIdOrderByVersionNumberDesc(Long documentId);
  Optional<ArchiveDocumentRevision> findByDocumentIdAndVersionNumber(Long documentId,int versionNumber);
+ List<ArchiveDocumentRevision> findTop3ByExtractionMethodOrderByUploadedAtAsc(String method);
+ List<ArchiveDocumentRevision> findTop3ByExtractionMethodIsNullOrderByUploadedAtAsc();
 }
