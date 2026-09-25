@@ -34,11 +34,12 @@ public class DocumentCenterController {
  private final DocumentTextRecognitionService recognition;
  private final DocumentSuggestionsService suggestions;
  private final DeviceRepository devices;
+ private final ExternalDocumentReviewService external;
  private final Path storage;
  public DocumentCenterController(ArchiveDocumentRepository d,ArchiveDocumentRevisionRepository r,AppUserRepository u,
     EffectivePermissionService p,DocumentTextRecognitionService recognition,DocumentSuggestionsService suggestions,
-    DeviceRepository devices,@Value("${app.private-documents.path:/app/private-documents}") String dir){
-  docs=d;revisions=r;users=u;permissions=p;this.recognition=recognition;this.suggestions=suggestions;this.devices=devices;
+    DeviceRepository devices,ExternalDocumentReviewService external,@Value("${app.private-documents.path:/app/private-documents}") String dir){
+  docs=d;revisions=r;users=u;permissions=p;this.recognition=recognition;this.suggestions=suggestions;this.devices=devices;this.external=external;
   storage=Paths.get(dir).toAbsolutePath().normalize();
  }
  public record Input(String title,String description,String category,String visibility,LocalDate expiresOn){}
@@ -47,7 +48,7 @@ public class DocumentCenterController {
  public record RevisionView(int version,String fileName,String contentType,long sizeBytes,Instant uploadedAt,
    String uploadedBy,String extractionMethod,String extractionWarning){}
  public record DeviceCandidate(Long id,String name,String inventoryNumber,String serialNumber){}
- public record AnalysisView(int version,String extractionMethod,String warning,DocumentSuggestionsService.SuggestedFields suggestions,List<DeviceCandidate> matchedDevices){}
+ public record AnalysisView(int version,String extractionMethod,String warning,DocumentSuggestionsService.SuggestedFields suggestions,List<DeviceCandidate> matchedDevices,String reviewedTextPreview){}
  public record Overview(boolean canWrite,boolean canDelete,List<DocumentView> documents){}
  private ResponseStatusException error(HttpStatus code,String message){return new ResponseStatusException(code,message);}
  private AppUser actor(Authentication auth){
@@ -116,7 +117,28 @@ public class DocumentCenterController {
    // Conservative: do not match vague free text. Inventory numbers are suggested in a later release.
    matches=found.values().stream().map(d->new DeviceCandidate(d.getId(),d.getName(),d.getInventoryNumber(),d.getSerialNumber())).toList();
   }
-  return new AnalysisView(version,rev.extractionMethod,rev.extractionWarning,fields,matches);
+  return new AnalysisView(version,rev.extractionMethod,rev.extractionWarning,fields,matches,board(u)?rev.extractedText.substring(0,Math.min(6000,rev.extractedText.length())):null);
+ }
+ /** Only board users can submit a specifically reviewed, manually redacted excerpt.
+  * Confidential documents are categorically blocked even if a checkbox was sent. */
+ public record ExternalReviewRequest(boolean approvedNonConfidential,String reviewedExcerpt){}
+ public record ExternalReviewResponse(String suggestion){}
+ @GetMapping("/{id}/versions/{version}/external-status") @ResponseBody @Transactional(readOnly=true)
+ public Map<String,Boolean> externalStatus(@PathVariable Long id,@PathVariable int version,Authentication auth){
+  AppUser u=actor(auth);ArchiveDocument d=accessible(id,u);
+  revisions.findByDocumentIdAndVersionNumber(id,version).orElseThrow(()->error(HttpStatus.NOT_FOUND,"Version unbekannt"));
+  return Map.of("available",board(u)&&"MEMBERS".equals(d.visibility)&&external.enabled());
+ }
+ @PostMapping("/{id}/versions/{version}/external-review") @ResponseBody
+ public ExternalReviewResponse externalReview(@PathVariable Long id,@PathVariable int version,
+   @RequestBody ExternalReviewRequest request,Authentication auth){
+  AppUser u=actor(auth);if(!board(u))throw error(HttpStatus.FORBIDDEN,"Nur Vorstand oder Administration dürfen externe Auswertungen freigeben.");
+  ArchiveDocument d=accessible(id,u);
+  if(!"MEMBERS".equals(d.visibility))throw error(HttpStatus.FORBIDDEN,"Vertrauliche Dokumente dürfen niemals extern übertragen werden.");
+  revisions.findByDocumentIdAndVersionNumber(id,version).orElseThrow(()->error(HttpStatus.NOT_FOUND,"Version unbekannt"));
+  if(request==null||!request.approvedNonConfidential())
+   throw error(HttpStatus.BAD_REQUEST,"Ausdrückliche Bestätigung für nicht vertrauliche Inhalte erforderlich.");
+  return new ExternalReviewResponse(external.review(id,version,u.getUsername(),request.reviewedExcerpt()));
  }
  private String detected(byte[] data,String original,String declared){
   String name=original.toLowerCase(Locale.ROOT);
