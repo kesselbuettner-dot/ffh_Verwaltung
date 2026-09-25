@@ -44,6 +44,10 @@
   if(filter!=='ALL'&&task.source!==filter)return false;
   return !search||[task.title,task.description,task.assigneeName,categories[task.source]].some(v=>String(v||'').toLocaleLowerCase('de').includes(search));
  }
+ function filteredRows(){return last?last.items.filter(visible).sort((a,b)=>(a.status==='DONE')-(b.status==='DONE')||(a.dueOn||'9999').localeCompare(b.dueOn||'9999')):[];}
+ function taskListMarkup(rows){return (rows.length?rows.map((t,i)=>'<article class="mytasks-item"><div class="mytasks-item-top"><small>'+escHtml(categories[t.source]||t.source)+'</small>'+badge(t)+'</div><strong>'+escHtml(t.title)+'</strong><p>'+escHtml(t.description||'')+'</p><div class="mytasks-item-bottom"><span>'+escHtml(date(t.dueOn))+(t.assigneeName?' · '+escHtml(t.assigneeName):'')+'</span><button type="button" class="btn secondary" data-task-open="'+i+'">'+(t.source==='GENERAL'?'Bearbeiten':'Öffnen')+' →</button></div></article>').join(''):'<p class="empty">Für diese Auswahl liegen keine Aufgaben vor.</p>');}
+ function wireTaskRows(rows){content.querySelectorAll('[data-task-open]').forEach(button=>button.onclick=()=>rows[Number(button.dataset.taskOpen)].action());}
+ function refreshTaskList(){const list=content.querySelector('.mytasks-list');if(!list||!last)return;const rows=filteredRows();list.innerHTML=taskListMarkup(rows);wireTaskRows(rows);}
  function render(){
   if(!last)return;
   const {manual,items}=last;
@@ -51,21 +55,21 @@
   const overdue=active.filter(t=>t.dueOn&&t.dueOn<today()).length;
   const inProgress=active.filter(t=>t.status==='IN_PROGRESS').length;
   root.setMenuNoticeCount?.('my-tasks',items.filter(t=>t.source==='GENERAL'&&t.status!=='DONE'&&t.raw?.assigneeId===manual.currentUserId).length);
-  const rows=items.filter(visible).sort((a,b)=>(a.status==='DONE')-(b.status==='DONE')||(a.dueOn||'9999').localeCompare(b.dueOn||'9999'));
+  const rows=filteredRows();
   content.innerHTML='<section class="mytasks-page"><div class="title-row"><div><h1>Meine Aufgaben</h1><p class="sub">Alle persönlichen Aufgaben aus der Vereins- und Feuerwehrverwaltung</p></div>'+
    (manual.canCreate?'<button class="btn primary" id="mytasksCreate">＋ Aufgabe anlegen</button>':'')+'</div>'+
    '<div class="mytasks-metrics"><div><b>'+active.length+'</b><span>Offen</span></div><div><b>'+overdue+'</b><span>Überfällig</span></div><div><b>'+inProgress+'</b><span>In Bearbeitung</span></div></div>'+
    '<div class="mytasks-toolbar"><input id="mytasksSearch" aria-label="Aufgaben suchen" placeholder="Aufgaben suchen …" value="'+escHtml(search)+'"><select id="mytasksFilter" aria-label="Aufgabenart filtern">'+
    [['ALL','Alle Aufgaben'],...Object.entries(categories).map(([k,v])=>[k,v])].map(([k,v])=>'<option value="'+k+'"'+(filter===k?' selected':'')+'>'+escHtml(v)+'</option>').join('')+
    '</select><label><input type="checkbox" id="mytasksShowDone"'+(showDone?' checked':'')+'> Erledigte anzeigen</label><button class="btn secondary" id="mytasksReload">↻ Aktualisieren</button></div>'+
-   '<div class="mytasks-list">'+(rows.length?rows.map((t,i)=>'<article class="mytasks-item"><div class="mytasks-item-top"><small>'+escHtml(categories[t.source]||t.source)+'</small>'+badge(t)+'</div><strong>'+escHtml(t.title)+'</strong><p>'+escHtml(t.description||'')+'</p><div class="mytasks-item-bottom"><span>'+escHtml(date(t.dueOn))+(t.assigneeName?' · '+escHtml(t.assigneeName):'')+'</span><button type="button" class="btn secondary" data-task-open="'+i+'">'+(t.source==='GENERAL'?'Bearbeiten':'Öffnen')+' →</button></div></article>').join(''):'<p class="empty">Für diese Auswahl liegen keine Aufgaben vor.</p>')+'</div>'+
+   '<div class="mytasks-list">'+taskListMarkup(rows)+'</div>'+
    '<p class="sub">Geräteprüfungen und Führerscheinkontrollen werden ausschließlich in ihren Fachmodulen abgeschlossen. Das Öffnen einer Aufgabe ersetzt keine vorgeschriebene Prüfung oder Unterschrift.</p></section>';
   document.getElementById('mytasksCreate')?.addEventListener('click',()=>editTask(null));
   document.getElementById('mytasksReload').onclick=page;
-  document.getElementById('mytasksSearch').oninput=e=>{search=e.target.value.toLocaleLowerCase('de');render();document.getElementById('mytasksSearch')?.focus()};
+  document.getElementById('mytasksSearch').oninput=e=>{search=e.target.value.toLocaleLowerCase('de');refreshTaskList()};
   document.getElementById('mytasksFilter').onchange=e=>{filter=e.target.value;render()};
   document.getElementById('mytasksShowDone').onchange=e=>{showDone=e.target.checked;render()};
-  content.querySelectorAll('[data-task-open]').forEach(button=>button.onclick=()=>rows[Number(button.dataset.taskOpen)].action());
+  wireTaskRows(rows);
  }
  async function page(){
   setActive('my-tasks');closeMenu();
