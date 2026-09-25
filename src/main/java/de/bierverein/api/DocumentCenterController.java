@@ -102,6 +102,16 @@ public class DocumentCenterController {
   return revisions.findByDocumentIdOrderByVersionNumberDesc(id).stream()
     .map(v->new RevisionView(v.versionNumber,v.originalName,v.contentType,v.sizeBytes,v.uploadedAt,v.uploadedBy,v.extractionMethod,v.extractionWarning)).toList();
  }
+ @PostMapping("/{id}/versions/{version}/reanalyze") @ResponseBody @Transactional
+ public RevisionView reanalyze(@PathVariable Long id,@PathVariable int version,Authentication auth){
+  AppUser u=actor(auth);ArchiveDocument d=accessible(id,u);requireManage(u,d,"write");
+  ArchiveDocumentRevision rev=revisions.findByDocumentIdAndVersionNumber(id,version)
+    .orElseThrow(()->error(HttpStatus.NOT_FOUND,"Version unbekannt"));
+  rev.extractionMethod="PENDING";rev.extractionWarning="Texterkennung wurde erneut angefordert.";
+  revisions.save(rev);
+  return new RevisionView(rev.versionNumber,rev.originalName,rev.contentType,rev.sizeBytes,rev.uploadedAt,
+    rev.uploadedBy,rev.extractionMethod,rev.extractionWarning);
+ }
  /** Read-only suggestions. Requires document read rights, and does not change a device or inspection. */
  @GetMapping("/{id}/versions/{version}/analysis") @ResponseBody @Transactional(readOnly=true)
  public AnalysisView analysis(@PathVariable Long id,@PathVariable int version,Authentication auth){
