@@ -22,5 +22,7 @@ jobs:
         run: mvn -q -DskipTests package
       - name: Test
         run: mvn -q test
+      - name: PostgreSQL dashboard migration smoke test
+        run: bash src/test/scripts/dashboard-schema-smoke.sh
       - name: Document center and TV JavaScript smoke tests
         run: node src/test/js/document-center-wallboard-smoke.cjs
