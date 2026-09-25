@@ -22,3 +22,5 @@ jobs:
         run: mvn -q -DskipTests package
       - name: Test
         run: mvn -q test
+      - name: Document center and TV JavaScript smoke tests
+        run: node src/test/js/document-center-wallboard-smoke.cjs
