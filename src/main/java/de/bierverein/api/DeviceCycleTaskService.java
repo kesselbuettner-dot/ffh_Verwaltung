@@ -97,10 +97,40 @@ public class DeviceCycleTaskService {
   }
   return added;
  }
+ /**
+  * Reconcile older open task rows against an existing signed proof. A device may
+  * have been inspected from the planned-session page instead of this inbox.
+  * This never creates a second proof, advances dates, or forges a signature.
+  */
+ @Transactional
+ public int reconcileSignedInspections(){
+  int count=0;
+  for(DeviceCycleTask open:tasks.findByStatusInOrderByDueOnAsc(List.of("OPEN"))){
+   if(!open.getDevice().isActive())continue;
+   for(DeviceInspection proof:inspections.findByDeviceIdOrderByInspectionDateDesc(open.getDevice().getId())){
+    if(proof.getSignedAt()==null||proof.getSignatureData()==null||
+       proof.getResult()==null||proof.getInspectionDate()==null)continue;
+    // Only an inspection inside the same 30-day warning window (or later)
+    // is eligible. A proof from a previous cycle must not close a new task.
+    if(proof.getInspectionDate().isBefore(open.getDueOn().minusDays(WARNING_DAYS)))break;
+    if(proof.getInspectionDate().isAfter(LocalDate.now(zone)))continue;
+    if(proof.getNextInspectionDate()!=null&&
+       "BESTANDEN".equals(proof.getResult())&&
+       !proof.getNextInspectionDate().isAfter(open.getDueOn()))continue;
+    open.complete(proof.getResult(),proof.getNotes(),proof.getInspector());
+    open.setInspectionId(proof.getId());
+    tasks.save(open);
+    count++;
+    break;
+   }
+  }
+  return count;
+ }
  @Transactional
  public List<TaskView> list(Authentication auth,boolean includeDone){
   AppUser user=actor(auth);
   if(manager(user))generateDue(); // also works when the worker has not yet scheduled the morning run.
+  reconcileSignedInspections(); // signed group/individual inspection clears stale inbox entries
   List<String> states=includeDone?List.of("OPEN","DONE"):List.of("OPEN");
   List<DeviceCycleTask> source=manager(user)?
    tasks.findByStatusInOrderByDueOnAsc(states):tasks.findByAssignedUserIdAndStatusInOrderByDueOnAsc(user.getId(),states);
