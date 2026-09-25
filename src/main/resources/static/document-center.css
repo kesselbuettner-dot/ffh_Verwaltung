@@ -1,0 +1,21 @@
+/* Scoped document center components for light/dark app themes */
+.doc-tools{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:18px 0}
+.doc-tools label{font-size:13px;font-weight:700;flex:1 1 270px;display:grid;gap:5px}
+.doc-tools input{border:1px solid var(--line);color:var(--ink);background:var(--panel);padding:11px;border-radius:10px;width:100%;min-height:44px}
+.doc-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:13px}
+.doc-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:10px;min-width:0;box-shadow:var(--shadow)}
+.doc-item-head{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.doc-item-head strong{font-size:17px;overflow-wrap:anywhere}
+.doc-muted{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.doc-item p{font-size:13px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.doc-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.doc-actions button{font-size:12px}
+.doc-tag{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800}
+.doc-tag.late{background:#fee2e2;color:#991b1b}.doc-tag.soon{background:#fef3c7;color:#92400e}
+.doc-form{display:grid;gap:13px}.doc-form>label{display:grid;gap:6px;font-size:13px;font-weight:700}
+.doc-form input,.doc-form select,.doc-form textarea{width:100%;max-width:100%;border:1px solid var(--line);padding:11px;border-radius:9px;background:var(--panel);color:var(--ink);font:inherit}
+.doc-form-actions{display:flex;gap:9px;flex-wrap:wrap}
+.doc-form [role=alert],.doc-revisions+[role=alert]{color:#b42330;font-size:13px}
+.doc-revisions{display:grid;gap:10px;margin:10px 0 20px}.doc-revision{border:1px solid var(--line);padding:12px;border-radius:10px}
+.doc-revision button{margin-top:8px}
+@media(max-width:700px){.doc-list{grid-template-columns:1fr}.doc-actions>*{flex:1 1 auto}}
