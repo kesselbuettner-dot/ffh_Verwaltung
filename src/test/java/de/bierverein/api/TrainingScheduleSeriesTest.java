@@ -4,6 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,7 +25,7 @@ class TrainingScheduleSeriesTest {
     DeviceInspectionTaskRepository tasks = mock(DeviceInspectionTaskRepository.class);
     HolidayService holidays = mock(HolidayService.class);
     TrainingScheduleService service;
-    LocalDate monday = LocalDate.of(2026, 9, 21);
+    LocalDate monday = LocalDate.now(ZoneId.of("Europe/Berlin")).with(TemporalAdjusters.next(DayOfWeek.MONDAY));
 
     @BeforeEach void setup() {
         service = new TrainingScheduleService(events, attendance, exceptions, users, members, permissions, devices, tasks, holidays);
@@ -55,7 +58,7 @@ class TrainingScheduleSeriesTest {
         TrainingScheduleEvent series = new TrainingScheduleEvent();
         ReflectionTestUtils.setField(series,"id",10L);
         series.setType("SERVICE"); series.setStartDate(monday); series.setEndDate(monday.plusWeeks(2));
-        series.setRecurring(true); series.setWeekdays("MONDAY");
+        series.setRecurring(true); series.setWeekdays("MONDAY"); series.setAllDay(true);
         when(events.findById(10L)).thenReturn(Optional.of(series));
         when(events.saveAndFlush(any(TrainingScheduleEvent.class))).thenAnswer(a -> {
             TrainingScheduleEvent single = a.getArgument(0);
