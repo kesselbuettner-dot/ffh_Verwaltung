@@ -12,4 +12,4 @@ BEGIN
     ALTER COLUMN on_wallboard SET NOT NULL;
  END IF;
 END
-$$;
+$^^
